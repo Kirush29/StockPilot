@@ -1,0 +1,13 @@
+{
+  "workflowId": "uuid",
+  "objective": "Replenish Product P100 at Branch B01",
+  "initiatedBy": "user-id",
+  "currentStep": "DemandForecast",
+  "plan": [],
+  "toolExecutions": [],
+  "validationResults": [],
+  "errors": [],
+  "retryCount": 0,
+  "approvalStatus": "Pending",
+  "finalOutcome": null
+}

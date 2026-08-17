@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  repository-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify expected project folders
+        run: |
+          test -d backend
+          test -d web
+          test -d mobile
+          test -d agentic-ai
+          test -d docs
+      - name: Reminder
+        run: echo "Replace this baseline job with real dotnet, React and Flutter build/test jobs after scaffolding."
+
+# Minimum target after scaffolding:
+# - dotnet restore/build/test on every push/PR
+# Recommended additions:
+# - React: npm ci, lint, test, build
+# - Flutter: flutter analyze, flutter test
