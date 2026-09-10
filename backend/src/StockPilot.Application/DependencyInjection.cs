@@ -11,6 +11,7 @@ public static class DependencyInjection
         // Register Sales & Demand Services (Yours)
         services.AddScoped<ISalesService, SalesService>();
         services.AddScoped<IDemandForecastService, DemandForecastService>();
+        services.AddScoped<StockPilot.Application.AgenticAI.DemandForecastAgent.IDemandForecastAgent, StockPilot.Application.AgenticAI.DemandForecastAgent.DemandForecastAgent>();
 
         return services;
     }

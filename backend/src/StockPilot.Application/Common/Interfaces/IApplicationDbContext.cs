@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<DemandForecast> DemandForecasts { get; }
     DbSet<DemandForecastItem> DemandForecastItems { get; }
     DbSet<ProductDemandMetric> ProductDemandMetrics { get; }
+    DbSet<StockPilot.Domain.Entities.Agentic.AgentWorkflowAudit> AgentWorkflowAudits { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

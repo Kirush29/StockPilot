@@ -97,17 +97,71 @@ export interface TopSellingProduct {
   velocityCategory: string;
 }
 
+export interface SlowMovingProduct {
+  productId: string;
+  productSku: string;
+  productName: string;
+  unitsSold: number;
+  totalRevenue: number;
+  currentStock: number;
+  daysSinceLastSale: number;
+}
+
 export interface DailySalesTrend {
   date: string;
   totalRevenue: number;
   totalQuantity: number;
   orderCount: number;
+  isSpike?: boolean;
 }
 
 export interface CategorySalesShare {
   category: string;
   revenue: number;
+  unitsSold?: number;
   percentage: number;
+}
+
+// Alias for backwards compatibility
+export type CategorySalesDistribution = CategorySalesShare;
+
+export interface BranchSalesComparison {
+  branchId: string;
+  branchName: string;
+  revenue: number;
+  unitsSold: number;
+  orderCount: number;
+  percentageOfTotal: number;
+}
+
+export interface DayOfWeekPattern {
+  dayName: string;
+  dayIndex: number;
+  averageQuantity: number;
+  averageRevenue: number;
+  totalDaysObserved: number;
+}
+
+export interface TopCustomer {
+  customerReference: string;
+  orderCount: number;
+  totalSpend: number;
+  lastPurchaseDateUtc: string;
+}
+
+export interface CoPurchasedItem {
+  primaryProductSku: string;
+  primaryProductName: string;
+  secondaryProductSku: string;
+  secondaryProductName: string;
+  coOccurrenceCount: number;
+}
+
+export interface CustomerBehaviorSummary {
+  topCustomers: TopCustomer[];
+  repeatCustomerRate: number;
+  totalUniqueCustomers: number;
+  productsBoughtTogether: CoPurchasedItem[];
 }
 
 export interface SalesAnalyticsSummary {
@@ -116,6 +170,67 @@ export interface SalesAnalyticsSummary {
   totalUnitsSold: number;
   averageOrderValue: number;
   topSellingProducts: TopSellingProduct[];
+  slowMovingProducts?: SlowMovingProduct[];
   dailyTrends: DailySalesTrend[];
   categoryShares: CategorySalesShare[];
+  branchComparisons?: BranchSalesComparison[];
+  dayOfWeekPatterns?: DayOfWeekPattern[];
+  customerBehavior?: CustomerBehaviorSummary;
+}
+
+export interface WorkflowPlanStep {
+  stepIndex: number;
+  action: string;
+  status: 'Pending' | 'Running' | 'Completed' | 'Failed' | string;
+}
+
+export interface ToolExecution {
+  toolName: string;
+  inputParameters: Record<string, unknown>;
+  outputPayload: Record<string, unknown>;
+  executedAtUtc: string;
+  durationMs: number;
+  isSuccess: boolean;
+  errorMessage?: string;
+}
+
+export interface ValidationResult {
+  rule: string;
+  passed: boolean;
+  details: string;
+}
+
+export interface WorkflowState {
+  workflowId: string;
+  objective: string;
+  initiatedBy: string;
+  currentStep: string;
+  plan: WorkflowPlanStep[];
+  toolExecutions: ToolExecution[];
+  validationResults: ValidationResult[];
+  errors: string[];
+  retryCount: number;
+  approvalStatus: string;
+  finalOutcome?: Record<string, unknown>;
+}
+
+export interface AgentExecutionResult {
+  isSuccess: boolean;
+  forecast?: DemandForecast;
+  workflowState: WorkflowState;
+  summaryMessage: string;
+}
+
+export interface DemandForecastWorkflowRequest {
+  productId: string;
+  productSku: string;
+  productName: string;
+  branchId?: string;
+  branchName?: string;
+  forecastDays: number;
+  leadTimeDays: number;
+  currentStockLevel: number;
+  marketContextNotes?: string;
+  expectedUpliftPercent?: number;
+  initiatedBy?: string;
 }

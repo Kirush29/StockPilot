@@ -24,7 +24,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
 }) => {
   const [branchName, setBranchName] = useState('Colombo Central Branch');
   const [paymentMethod, setPaymentMethod] = useState(1);
-  const [customerReference] = useState('');
+  const [customerReference, setCustomerReference] = useState('');
   const [notes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -127,12 +127,12 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: 8, borderRadius: 'var(--radius-sm)', background: 'var(--primary-glow)', color: '#818CF8' }}>
+            <div style={{ padding: 8, borderRadius: 'var(--radius-sm)', background: 'rgba(0, 104, 255, 0.1)', color: 'var(--primary-color)' }}>
               <ShoppingCart size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.25rem', color: '#FFF', margin: 0 }}>Record Sales Transaction</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Store counter & dispatch sales entry</p>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>Record Sales Transaction</h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>Store counter & dispatch sales entry</p>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -141,8 +141,8 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Branch & Payment Method */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+          {/* Branch & Payment Method & Customer */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: 14, marginBottom: 20 }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
                 Branch Location
@@ -152,17 +152,16 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                 onChange={(e) => setBranchName(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-surface-elevated)',
+                  background: '#FFFFFF',
                   border: '1px solid var(--border-subtle)',
-                  color: '#FFF',
-                  fontSize: '0.875rem'
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
                 }}
               >
                 <option value="Colombo Central Branch">Colombo Central Branch</option>
-                <option value="Kandy Hillside Branch">Kandy Hillside Branch</option>
-                <option value="Galle Port Warehouse">Galle Port Warehouse</option>
+                <option value="Kandy City Branch">Kandy City Branch</option>
               </select>
             </div>
 
@@ -175,25 +174,45 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                 onChange={(e) => setPaymentMethod(Number(e.target.value))}
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-surface-elevated)',
+                  background: '#FFFFFF',
                   border: '1px solid var(--border-subtle)',
-                  color: '#FFF',
-                  fontSize: '0.875rem'
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
                 }}
               >
                 <option value={1}>Cash Payment</option>
-                <option value={2}>Card / POS Terminal</option>
+                <option value={2}>Card / POS</option>
                 <option value={3}>Bank Transfer</option>
-                <option value={4}>Digital Wallet</option>
               </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                Customer Reference
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Asiri Surgical Hospital"
+                value={customerReference}
+                onChange={(e) => setCustomerReference(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#FFFFFF',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
+                }}
+              />
             </div>
           </div>
 
           {/* Line items header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               Transaction Line Items ({items.length})
             </span>
             <button
@@ -207,7 +226,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
           </div>
 
           {/* Items list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, maxHeight: 220, overflowY: 'auto' }}>
             {items.map((item, idx) => {
               const lineTotal = (item.quantity * item.unitPrice) * (1 - item.discountPercent / 100);
 
@@ -219,14 +238,14 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                     gridTemplateColumns: '2.5fr 1fr 1fr 1fr auto',
                     gap: 10,
                     alignItems: 'center',
-                    background: 'rgba(31, 41, 55, 0.4)',
+                    background: '#F8FAFC',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-md)',
                     padding: '10px 14px'
                   }}
                 >
                   <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block' }}>Product</label>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Product</label>
                     <select
                       value={item.productId}
                       onChange={(e) => handleProductSelect(idx, e.target.value)}
@@ -234,9 +253,9 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                         width: '100%',
                         padding: '6px 8px',
                         borderRadius: 'var(--radius-sm)',
-                        background: '#1F2937',
+                        background: '#FFFFFF',
                         border: '1px solid var(--border-subtle)',
-                        color: '#FFF',
+                        color: 'var(--text-primary)',
                         fontSize: '0.8rem'
                       }}
                     >
@@ -247,7 +266,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block' }}>Qty</label>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Qty</label>
                     <input
                       type="number"
                       min={1}
@@ -257,9 +276,9 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                         width: '100%',
                         padding: '6px 8px',
                         borderRadius: 'var(--radius-sm)',
-                        background: '#1F2937',
+                        background: '#FFFFFF',
                         border: '1px solid var(--border-subtle)',
-                        color: '#FFF',
+                        color: 'var(--text-primary)',
                         fontSize: '0.8rem',
                         textAlign: 'center'
                       }}
@@ -267,7 +286,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block' }}>Disc %</label>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block' }}>Disc %</label>
                     <input
                       type="number"
                       min={0}
@@ -278,9 +297,9 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                         width: '100%',
                         padding: '6px 8px',
                         borderRadius: 'var(--radius-sm)',
-                        background: '#1F2937',
+                        background: '#FFFFFF',
                         border: '1px solid var(--border-subtle)',
-                        color: '#FFF',
+                        color: 'var(--text-primary)',
                         fontSize: '0.8rem',
                         textAlign: 'center'
                       }}
@@ -288,8 +307,8 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', display: 'block', textAlign: 'right' }}>Total</label>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFF', textAlign: 'right', paddingTop: 6 }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', textAlign: 'right' }}>Total</label>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', paddingTop: 6 }}>
                       ${lineTotal.toFixed(2)}
                     </div>
                   </div>
@@ -301,7 +320,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: items.length <= 1 ? 'var(--text-dim)' : '#FB7185',
+                      color: items.length <= 1 ? 'var(--text-muted)' : '#DC2626',
                       cursor: items.length <= 1 ? 'not-allowed' : 'pointer',
                       padding: 4,
                       marginTop: 14
@@ -316,7 +335,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
 
           {/* Subtotal / Tax / Total breakdown card */}
           <div style={{
-            background: 'rgba(31, 41, 55, 0.6)',
+            background: '#F8FAFC',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
             padding: 16,
@@ -324,29 +343,29 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 6 }}>
               <span>Subtotal</span>
-              <span style={{ color: '#FFF' }}>${subtotal.toFixed(2)}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${subtotal.toFixed(2)}</span>
             </div>
             {discountTotal > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#34D399', marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#059669', marginBottom: 6 }}>
                 <span>Total Discount</span>
                 <span>-${discountTotal.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 10 }}>
               <span>Standard Tax (5%)</span>
-              <span style={{ color: '#FFF' }}>+${tax.toFixed(2)}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>+${tax.toFixed(2)}</span>
             </div>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               fontSize: '1.25rem',
               fontWeight: 800,
-              color: '#FFF',
+              color: 'var(--text-primary)',
               borderTop: '1px solid var(--border-subtle)',
               paddingTop: 10
             }}>
               <span>Grand Total</span>
-              <span style={{ color: '#34D399' }}>${grandTotal.toFixed(2)}</span>
+              <span style={{ color: '#059669' }}>${grandTotal.toFixed(2)}</span>
             </div>
           </div>
 

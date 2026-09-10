@@ -43,10 +43,11 @@ public class SalesController : ControllerBase
         [FromQuery] Guid? branchId,
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,
+        [FromQuery] int? paymentMethod,
         [FromQuery] int take = 50,
         CancellationToken cancellationToken = default)
     {
-        var sales = await _salesService.GetSalesAsync(branchId, startDate, endDate, take, cancellationToken);
+        var sales = await _salesService.GetSalesAsync(branchId, startDate, endDate, paymentMethod, take, cancellationToken);
         return Ok(sales);
     }
 

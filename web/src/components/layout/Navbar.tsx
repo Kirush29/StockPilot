@@ -101,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
           >
             <TrendingUp size={16} />
-            Sales & Demand (Yours)
+            Sales & Demand
           </button>
 
           <button

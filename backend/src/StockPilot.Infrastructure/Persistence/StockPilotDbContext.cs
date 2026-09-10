@@ -18,6 +18,7 @@ public class StockPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<DemandForecast> DemandForecasts => Set<DemandForecast>();
     public DbSet<DemandForecastItem> DemandForecastItems => Set<DemandForecastItem>();
     public DbSet<ProductDemandMetric> ProductDemandMetrics => Set<ProductDemandMetric>();
+    public DbSet<StockPilot.Domain.Entities.Agentic.AgentWorkflowAudit> AgentWorkflowAudits => Set<StockPilot.Domain.Entities.Agentic.AgentWorkflowAudit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

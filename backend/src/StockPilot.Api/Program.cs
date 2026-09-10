@@ -48,5 +48,13 @@ app.MapGet("/api/health", () => Results.Ok(new
 
 app.MapControllers();
 
+// Ensure database tables are provisioned and seed initial Sales & Demand demo data
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+    await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(dbContext);
+}
+
 app.Run();
 
