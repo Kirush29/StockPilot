@@ -7,22 +7,37 @@ on:
     branches: [main]
 
 jobs:
-  repository-baseline:
+  backend-ci:
+    name: Backend Build & Test (.NET 8)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify expected project folders
-        run: |
-          test -d backend
-          test -d web
-          test -d mobile
-          test -d agentic-ai
-          test -d docs
-      - name: Reminder
-        run: echo "Replace this baseline job with real dotnet, React and Flutter build/test jobs after scaffolding."
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore dependencies
+        run: dotnet restore backend/StockPilot.sln
+      - name: Build solution
+        run: dotnet build --no-restore backend/StockPilot.sln
+      - name: Run unit & integration tests
+        run: dotnet test --no-build --verbosity normal backend/StockPilot.sln
 
-# Minimum target after scaffolding:
-# - dotnet restore/build/test on every push/PR
-# Recommended additions:
-# - React: npm ci, lint, test, build
-# - Flutter: flutter analyze, flutter test
+  web-ci:
+    name: Web Frontend Build & Lint (React 19)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+      - name: Run Linter
+        working-directory: ./web
+        run: npm run lint
+      - name: Build Web Application
+        working-directory: ./web
+        run: npm run build
