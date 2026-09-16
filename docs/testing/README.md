@@ -102,7 +102,7 @@ dotnet test backend/StockPilot.sln
 ```
 **Actual Output:**
 ```
-Passed!  - Failed:     0, Passed:     8, Skipped:     0, Total:     8, Duration: 935 ms - StockPilot.Api.Tests.dll (net8.0)
+Passed!  - Failed:     0, Passed:     9, Skipped:     0, Total:     9, Duration: 359 ms - StockPilot.Tests.dll (net8.0)
 ```
 
 ### Web Frontend Build & Type Validation
