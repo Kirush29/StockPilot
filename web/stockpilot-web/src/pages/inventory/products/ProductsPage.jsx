@@ -1,46 +1,56 @@
-import { useState, useEffect, useCallback } from 'react'
+// ProductsPage.jsx — Polished SaaS Product Management
+import React, { useState, useEffect, useCallback } from 'react'
 import { productsApi, categoriesApi } from '../../../api/inventoryApi'
+import Modal from '../../../components/ui/Modal'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
+import ErrorState from '../../../components/ui/ErrorState'
+import { TableSkeleton } from '../../../components/ui/Skeleton'
+import {
+  PlusIcon,
+  SearchIcon,
+  RefreshIcon,
+  EditIcon,
+  TrashIcon,
+  CloseIcon,
+  AlertCircleIcon,
+  ProductsIcon,
+} from '../../../components/ui/Icons'
 import '../../../styles/inventory.css'
 
-// ── Shared state components ───────────────────────────────────────────────────
-function Spinner() {
-  return <div className="state-container"><div className="spinner" /><p>Loading products…</p></div>
-}
-
-function ErrorBanner({ message, onRetry }) {
-  return (
-    <div className="error-box">
-      ⚠ {message}
-      <button className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={onRetry}>
-        Retry
-      </button>
-    </div>
-  )
-}
-
-// ── Product form modal ────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  name: '', sku: '', barcode: '', categoryId: '', unit: '',
-  costPrice: '', sellingPrice: '', minimumStockLevel: '',
-  reorderLevel: '', maximumStockLevel: '', isActive: true,
+  name: '',
+  sku: '',
+  barcode: '',
+  categoryId: '',
+  unit: '',
+  costPrice: '',
+  sellingPrice: '',
+  minimumStockLevel: '',
+  reorderLevel: '',
+  maximumStockLevel: '',
+  isActive: true,
 }
 
-function ProductModal({ initial, categories, onSave, onClose, saving }) {
-  const [form, setForm]     = useState(() => initial
-    ? {
-        name: initial.name,
-        sku: initial.sku,
-        barcode: initial.barcode ?? '',
-        categoryId: initial.categoryId,
-        unit: initial.unit,
-        costPrice: String(initial.costPrice),
-        sellingPrice: String(initial.sellingPrice),
-        minimumStockLevel: String(initial.minimumStockLevel),
-        reorderLevel: String(initial.reorderLevel),
-        maximumStockLevel: String(initial.maximumStockLevel),
-        isActive: initial.isActive,
-      }
-    : EMPTY_FORM
+// ── Add / Edit Product Modal ────────────────────────────────────────────────
+function ProductModal({ initial, categories, onSave, onClose, saving, apiError }) {
+  const isEdit = !!initial
+  const [form, setForm] = useState(() =>
+    initial
+      ? {
+          name: initial.name ?? '',
+          sku: initial.sku ?? '',
+          barcode: initial.barcode ?? '',
+          categoryId: initial.categoryId ?? '',
+          unit: initial.unit ?? '',
+          costPrice: String(initial.costPrice ?? ''),
+          sellingPrice: String(initial.sellingPrice ?? ''),
+          minimumStockLevel: String(initial.minimumStockLevel ?? ''),
+          reorderLevel: String(initial.reorderLevel ?? ''),
+          maximumStockLevel: String(initial.maximumStockLevel ?? ''),
+          isActive: initial.isActive ?? true,
+        }
+      : EMPTY_FORM
   )
   const [errors, setErrors] = useState({})
 
@@ -51,396 +61,606 @@ function ProductModal({ initial, categories, onSave, onClose, saving }) {
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim())       e.name       = 'Name is required.'
-    if (!form.sku.trim())        e.sku        = 'SKU is required.'
-    if (!form.categoryId)        e.categoryId = 'Category is required.'
-    if (!form.unit.trim())       e.unit       = 'Unit is required.'
+    if (!form.name.trim()) e.name = 'Product name is required.'
+    if (!form.sku.trim()) e.sku = 'SKU is required.'
+    if (!form.categoryId) e.categoryId = 'Category is required.'
+    if (!form.unit.trim()) e.unit = 'Unit is required (e.g. pcs, kg, box).'
+
     const cost   = parseFloat(form.costPrice)
     const sell   = parseFloat(form.sellingPrice)
     const minQty = parseFloat(form.minimumStockLevel)
     const reord  = parseFloat(form.reorderLevel)
     const maxQty = parseFloat(form.maximumStockLevel)
-    if (isNaN(cost)   || cost   < 0) e.costPrice          = 'Must be 0 or greater.'
-    if (isNaN(sell)   || sell   < 0) e.sellingPrice       = 'Must be 0 or greater.'
-    if (isNaN(minQty) || minQty < 0) e.minimumStockLevel  = 'Must be 0 or greater.'
-    if (isNaN(reord)  || reord  < 0) e.reorderLevel       = 'Must be 0 or greater.'
-    if (isNaN(maxQty) || maxQty < 0) e.maximumStockLevel  = 'Must be 0 or greater.'
+
+    if (form.costPrice === '' || isNaN(cost) || cost < 0) e.costPrice = 'Must be 0 or greater.'
+    if (form.sellingPrice === '' || isNaN(sell) || sell < 0) e.sellingPrice = 'Must be 0 or greater.'
+    if (form.minimumStockLevel !== '' && (isNaN(minQty) || minQty < 0)) e.minimumStockLevel = 'Must be 0 or greater.'
+    if (form.reorderLevel !== '' && (isNaN(reord) || reord < 0)) e.reorderLevel = 'Must be 0 or greater.'
+    if (form.maximumStockLevel !== '' && (isNaN(maxQty) || maxQty < 0)) e.maximumStockLevel = 'Must be 0 or greater.'
     return e
   }
 
   const handleSubmit = (ev) => {
     ev.preventDefault()
-    const e = validate()
-    if (Object.keys(e).length) { setErrors(e); return }
+    const errs = validate()
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
     onSave({
       name: form.name.trim(),
       sku: form.sku.trim(),
       barcode: form.barcode.trim() || null,
       categoryId: form.categoryId,
       unit: form.unit.trim(),
-      costPrice: parseFloat(form.costPrice),
-      sellingPrice: parseFloat(form.sellingPrice),
-      minimumStockLevel: parseFloat(form.minimumStockLevel),
-      reorderLevel: parseFloat(form.reorderLevel),
-      maximumStockLevel: parseFloat(form.maximumStockLevel),
+      costPrice: parseFloat(form.costPrice) || 0,
+      sellingPrice: parseFloat(form.sellingPrice) || 0,
+      minimumStockLevel: parseFloat(form.minimumStockLevel) || 0,
+      reorderLevel: parseFloat(form.reorderLevel) || 0,
+      maximumStockLevel: parseFloat(form.maximumStockLevel) || 0,
       isActive: form.isActive,
     })
   }
 
-  const isEdit = !!initial
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{isEdit ? 'Edit Product' : 'Add Product'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-
-            {/* Name */}
-            <div className="form-group">
-              <label>Name <span className="required">*</span></label>
-              <input className={`form-control ${errors.name ? 'error' : ''}`}
-                value={form.name} onChange={e => set('name', e.target.value)}
-                placeholder="Product name" maxLength={300} />
-              {errors.name && <span className="form-error">{errors.name}</span>}
-            </div>
-
-            {/* SKU + Barcode */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>SKU <span className="required">*</span></label>
-                <input className={`form-control ${errors.sku ? 'error' : ''}`}
-                  value={form.sku} onChange={e => set('sku', e.target.value)}
-                  placeholder="e.g. PROD-001" maxLength={100} />
-                {errors.sku && <span className="form-error">{errors.sku}</span>}
-              </div>
-              <div className="form-group">
-                <label>Barcode</label>
-                <input className="form-control"
-                  value={form.barcode} onChange={e => set('barcode', e.target.value)}
-                  placeholder="Optional" maxLength={100} />
-              </div>
-            </div>
-
-            {/* Category + Unit */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Category <span className="required">*</span></label>
-                <select className={`form-control ${errors.categoryId ? 'error' : ''}`}
-                  value={form.categoryId} onChange={e => set('categoryId', e.target.value)}>
-                  <option value="">Select category…</option>
-                  {categories.filter(c => c.isActive).map(c => (
-                    <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
-                  ))}
-                </select>
-                {errors.categoryId && <span className="form-error">{errors.categoryId}</span>}
-              </div>
-              <div className="form-group">
-                <label>Unit <span className="required">*</span></label>
-                <input className={`form-control ${errors.unit ? 'error' : ''}`}
-                  value={form.unit} onChange={e => set('unit', e.target.value)}
-                  placeholder="e.g. pcs, kg, L" maxLength={50} />
-                {errors.unit && <span className="form-error">{errors.unit}</span>}
-              </div>
-            </div>
-
-            {/* Cost + Selling price */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Cost Price <span className="required">*</span></label>
-                <input className={`form-control ${errors.costPrice ? 'error' : ''}`}
-                  type="number" min="0" step="0.01"
-                  value={form.costPrice} onChange={e => set('costPrice', e.target.value)} />
-                {errors.costPrice && <span className="form-error">{errors.costPrice}</span>}
-              </div>
-              <div className="form-group">
-                <label>Selling Price <span className="required">*</span></label>
-                <input className={`form-control ${errors.sellingPrice ? 'error' : ''}`}
-                  type="number" min="0" step="0.01"
-                  value={form.sellingPrice} onChange={e => set('sellingPrice', e.target.value)} />
-                {errors.sellingPrice && <span className="form-error">{errors.sellingPrice}</span>}
-              </div>
-            </div>
-
-            {/* Stock levels */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>Minimum Stock Level <span className="required">*</span></label>
-                <input className={`form-control ${errors.minimumStockLevel ? 'error' : ''}`}
-                  type="number" min="0" step="0.01"
-                  value={form.minimumStockLevel} onChange={e => set('minimumStockLevel', e.target.value)} />
-                {errors.minimumStockLevel && <span className="form-error">{errors.minimumStockLevel}</span>}
-              </div>
-              <div className="form-group">
-                <label>Reorder Level <span className="required">*</span></label>
-                <input className={`form-control ${errors.reorderLevel ? 'error' : ''}`}
-                  type="number" min="0" step="0.01"
-                  value={form.reorderLevel} onChange={e => set('reorderLevel', e.target.value)} />
-                {errors.reorderLevel && <span className="form-error">{errors.reorderLevel}</span>}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Maximum Stock Level <span className="required">*</span></label>
-              <input className={`form-control ${errors.maximumStockLevel ? 'error' : ''}`}
-                type="number" min="0" step="0.01"
-                value={form.maximumStockLevel} onChange={e => set('maximumStockLevel', e.target.value)} />
-              {errors.maximumStockLevel && <span className="form-error">{errors.maximumStockLevel}</span>}
-            </div>
-
-            {/* Active toggle — edit only */}
-            {isEdit && (
-              <div className="form-group">
-                <label style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', display: 'flex' }}>
-                  <input type="checkbox" checked={form.isActive}
-                    onChange={e => set('isActive', e.target.checked)} />
-                  Active
-                </label>
-              </div>
-            )}
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Product'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-// ── Deactivate confirmation ───────────────────────────────────────────────────
-function ConfirmModal({ product, onConfirm, onClose, saving }) {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Deactivate Product</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Modal
+      title={isEdit ? 'Edit Product' : 'Add New Product'}
+      subtitle={isEdit ? `Update properties for ${initial.name}` : 'Fill in the details to register a new product'}
+      onClose={onClose}
+      maxWidth="620px"
+    >
+      <form onSubmit={handleSubmit}>
         <div className="modal-body">
-          <p>Are you sure you want to deactivate <strong>{product.name}</strong>?</p>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-            The product will be marked inactive and excluded from new transactions.
-          </p>
+          {apiError && <div className="error-banner"><div className="error-banner-content"><AlertCircleIcon /><span>{apiError}</span></div></div>}
+
+          {/* Product Name */}
+          <div className="form-group">
+            <label>Product Name <span className="required">*</span></label>
+            <input
+              type="text"
+              className={`form-control ${errors.name ? 'error' : ''}`}
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+              placeholder="e.g. Wireless Barcode Scanner"
+              maxLength={300}
+              disabled={saving}
+            />
+            {errors.name && <span className="form-error">{errors.name}</span>}
+          </div>
+
+          {/* SKU & Barcode */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>SKU <span className="required">*</span></label>
+              <input
+                type="text"
+                className={`form-control ${errors.sku ? 'error' : ''}`}
+                value={form.sku}
+                onChange={e => set('sku', e.target.value)}
+                placeholder="e.g. SCAN-WL-01"
+                maxLength={100}
+                disabled={saving}
+              />
+              {errors.sku && <span className="form-error">{errors.sku}</span>}
+            </div>
+
+            <div className="form-group">
+              <label>Barcode / UPC</label>
+              <input
+                type="text"
+                className="form-control"
+                value={form.barcode}
+                onChange={e => set('barcode', e.target.value)}
+                placeholder="e.g. 012345678905"
+                maxLength={100}
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          {/* Category & Unit */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Category <span className="required">*</span></label>
+              <select
+                className={`form-control ${errors.categoryId ? 'error' : ''}`}
+                value={form.categoryId}
+                onChange={e => set('categoryId', e.target.value)}
+                disabled={saving}
+              >
+                <option value="">Select a category…</option>
+                {categories.map(c => (
+                  <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+                ))}
+              </select>
+              {errors.categoryId && <span className="form-error">{errors.categoryId}</span>}
+            </div>
+
+            <div className="form-group">
+              <label>Unit of Measure <span className="required">*</span></label>
+              <input
+                type="text"
+                className={`form-control ${errors.unit ? 'error' : ''}`}
+                value={form.unit}
+                onChange={e => set('unit', e.target.value)}
+                placeholder="e.g. pcs, box, kg"
+                maxLength={50}
+                disabled={saving}
+              />
+              {errors.unit && <span className="form-error">{errors.unit}</span>}
+            </div>
+          </div>
+
+          {/* Cost Price & Selling Price */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Cost Price ($) <span className="required">*</span></label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className={`form-control ${errors.costPrice ? 'error' : ''}`}
+                value={form.costPrice}
+                onChange={e => set('costPrice', e.target.value)}
+                placeholder="0.00"
+                disabled={saving}
+              />
+              {errors.costPrice && <span className="form-error">{errors.costPrice}</span>}
+            </div>
+
+            <div className="form-group">
+              <label>Selling Price ($) <span className="required">*</span></label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className={`form-control ${errors.sellingPrice ? 'error' : ''}`}
+                value={form.sellingPrice}
+                onChange={e => set('sellingPrice', e.target.value)}
+                placeholder="0.00"
+                disabled={saving}
+              />
+              {errors.sellingPrice && <span className="form-error">{errors.sellingPrice}</span>}
+            </div>
+          </div>
+
+          {/* Stock Levels Thresholds */}
+          <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div className="form-group">
+              <label>Min Stock</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className="form-control"
+                value={form.minimumStockLevel}
+                onChange={e => set('minimumStockLevel', e.target.value)}
+                placeholder="0"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Reorder Level</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className="form-control"
+                value={form.reorderLevel}
+                onChange={e => set('reorderLevel', e.target.value)}
+                placeholder="0"
+                disabled={saving}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Max Stock</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className="form-control"
+                value={form.maximumStockLevel}
+                onChange={e => set('maximumStockLevel', e.target.value)}
+                placeholder="0"
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          {/* Active Checkbox */}
+          {isEdit && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={e => set('isActive', e.target.checked)}
+                disabled={saving}
+              />
+              <span>Active Product Status</span>
+            </label>
+          )}
         </div>
+
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-danger" onClick={onConfirm} disabled={saving}>
-            {saving ? 'Deactivating…' : 'Deactivate'}
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Product'}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-export default function ProductsPage() {
-  const [products, setProducts]       = useState([])
-  const [categories, setCategories]   = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState(null)
-  const [search, setSearch]           = useState('')
-  const [showInactive, setShowInactive] = useState(false)
-  const [modal, setModal]             = useState(null)
-  const [saving, setSaving]           = useState(false)
-  const [saveError, setSaveError]     = useState(null)
+// ── Deactivate Confirmation Modal ───────────────────────────────────────────
+function DeactivateModal({ product, onConfirm, onClose, saving }) {
+  return (
+    <Modal
+      title="Deactivate Product"
+      subtitle="Are you sure you want to deactivate this item?"
+      onClose={onClose}
+      maxWidth="460px"
+    >
+      <div className="modal-body">
+        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+          Deactivating <strong>{product?.name}</strong> (<span className="sku-pill">{product?.sku}</span>) will prevent new purchase orders and stock receipts for this product.
+        </p>
+      </div>
+      <div className="modal-footer">
+        <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={() => onConfirm(product.productId)}
+          disabled={saving}
+        >
+          {saving ? 'Deactivating…' : 'Deactivate Product'}
+        </button>
+      </div>
+    </Modal>
+  )
+}
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null)
+// ── Main Products Page Component ────────────────────────────────────────────
+export default function ProductsPage() {
+  const [products, setProducts]         = useState([])
+  const [categories, setCategories]     = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(null)
+  const [successMsg, setSuccessMsg]     = useState(null)
+  const [search, setSearch]             = useState('')
+  const [categoryFilter, setCatFilter]  = useState('')
+  const [showInactive, setShowInactive] = useState(false)
+
+  // Modal states: null | { mode: 'add'|'edit'|'deactivate', data?: any }
+  const [modal, setModal]               = useState(null)
+  const [saving, setSaving]             = useState(false)
+  const [modalError, setModalError]     = useState(null)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [prodRes, catRes] = await Promise.all([
-        productsApi.getAll(true),   // include inactive so we can show them
-        categoriesApi.getAll(),
+        productsApi.getAll(showInactive),
+        categoriesApi.getAll().catch(() => ({ data: { data: [] } })),
       ])
       setProducts(prodRes.data?.data ?? [])
       setCategories(catRes.data?.data ?? [])
     } catch (err) {
-      setError(err.response?.data?.message ?? err.message ?? 'Failed to load products.')
+      const status = err.response?.status
+      if (status === 401 || status === 403) {
+        setError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
+      } else {
+        setError(err.response?.data?.message ?? 'Failed to load product catalog.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showInactive])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
-  // Client-side filter
-  const filtered = products.filter(p => {
-    const matchesSearch = !search.trim() ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      (p.barcode ?? '').toLowerCase().includes(search.toLowerCase())
-    const matchesActive = showInactive ? true : p.isActive
-    return matchesSearch && matchesActive
-  })
+  const showToast = (msg) => {
+    setSuccessMsg(msg)
+    setTimeout(() => setSuccessMsg(null), 4000)
+  }
 
-  const openAdd       = () => { setSaveError(null); setModal({ mode: 'add' }) }
-  const openEdit      = (p) => { setSaveError(null); setModal({ mode: 'edit', data: p }) }
-  const openDeactivate= (p) => { setSaveError(null); setModal({ mode: 'deactivate', data: p }) }
-  const closeModal    = () => setModal(null)
-
-  const handleSave = async (form) => {
-    setSaving(true); setSaveError(null)
+  const handleSaveProduct = async (payload) => {
+    setSaving(true)
+    setModalError(null)
     try {
-      if (modal.mode === 'add') {
-        await productsApi.create(form)
+      if (modal?.mode === 'edit') {
+        await productsApi.update(modal.data.productId, payload)
+        showToast(`Product "${payload.name}" updated successfully.`)
       } else {
-        await productsApi.update(modal.data.productId, form)
+        await productsApi.create(payload)
+        showToast(`Product "${payload.name}" created successfully.`)
       }
-      closeModal()
-      await load()
+      setModal(null)
+      loadData()
     } catch (err) {
-      setSaveError(err.response?.data?.message ?? err.message ?? 'Save failed.')
+      const status = err.response?.status
+      if (status === 401 || status === 403) {
+        setModalError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
+      } else {
+        setModalError(err.response?.data?.message ?? 'Failed to save product.')
+      }
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDeactivate = async () => {
-    setSaving(true); setSaveError(null)
+  const handleDeactivate = async (id) => {
+    setSaving(true)
     try {
-      await productsApi.deactivate(modal.data.productId)
-      closeModal()
-      await load()
+      await productsApi.deactivate(id)
+      showToast('Product deactivated successfully.')
+      setModal(null)
+      loadData()
     } catch (err) {
-      setSaveError(err.response?.data?.message ?? err.message ?? 'Deactivation failed.')
+      setError(err.response?.data?.message ?? 'Failed to deactivate product.')
     } finally {
       setSaving(false)
     }
   }
 
-  const getCategoryName = (id) =>
-    categories.find(c => c.categoryId === id)?.name ?? '—'
+  // Filter products in memory
+  const categoryMap = new Map(categories.map(c => [c.categoryId, c.name]))
+  const filtered = products.filter(p => {
+    if (categoryFilter && p.categoryId !== categoryFilter) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q))
+    )
+  })
 
   return (
     <div>
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="page-header">
-        <div>
+        <div className="page-header-text">
           <h1>Products</h1>
-          <p>Manage your product catalogue</p>
+          <p>Manage product catalog, SKUs, pricing, and reorder thresholds</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <button className="btn btn-secondary" onClick={load} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={loadData}
+            disabled={loading}
+          >
+            <RefreshIcon style={{ animation: loading ? 'spin 0.7s linear infinite' : 'none' }} />
+            Refresh
           </button>
-          <button className="btn btn-primary" onClick={openAdd}>+ Add Product</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setModal({ mode: 'add' })}
+          >
+            <PlusIcon />
+            Add Product
+          </button>
         </div>
       </div>
 
-      {error    && <ErrorBanner message={error} onRetry={load} />}
-      {saveError && <div className="error-box">⚠ {saveError}</div>}
-
-      {/* Search + filter */}
-      {!loading && (
-        <div className="search-bar">
-          <input
-            className="search-input"
-            placeholder="Search by name, SKU or barcode…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px',
-            fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={showInactive}
-              onChange={e => setShowInactive(e.target.checked)} />
-            Show inactive
-          </label>
+      {/* ── Success Toast ───────────────────────────────────────────────── */}
+      {successMsg && (
+        <div className="success-banner">
+          <span>✓ {successMsg}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessMsg(null)}
+            style={{ color: 'inherit', fontWeight: 600 }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {loading ? <Spinner /> : (
-        <div className="table-card">
-          <div className="table-card-header">
-            <span className="table-card-title">Products ({filtered.length})</span>
+      {/* ── Error Banner ───────────────────────────────────────────────── */}
+      {error && products.length > 0 && (
+        <ErrorState error={error} onRetry={loadData} inline />
+      )}
+
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      <div className="toolbar-card">
+        <div className="toolbar-left">
+          <div className="search-input-group">
+            <SearchIcon />
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search by product name, SKU, or barcode…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <CloseIcon style={{ width: 14, height: 14 }} />
+              </button>
+            )}
           </div>
-          {filtered.length === 0 ? (
-            <div className="state-container">
-              <p>{search ? 'No products match your search.' : 'No products found. Add one to get started.'}</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>SKU</th>
-                    <th>Barcode</th>
-                    <th>Category</th>
-                    <th>Unit</th>
-                    <th>Cost</th>
-                    <th>Price</th>
-                    <th>Reorder Lvl</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(p => (
-                    <tr key={p.productId}>
-                      <td><strong>{p.name}</strong></td>
-                      <td style={{ fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>{p.sku}</td>
-                      <td style={{ color: 'var(--color-text-muted)' }}>{p.barcode ?? '—'}</td>
-                      <td>{getCategoryName(p.categoryId)}</td>
-                      <td>{p.unit}</td>
-                      <td>{Number(p.costPrice).toFixed(2)}</td>
-                      <td>{Number(p.sellingPrice).toFixed(2)}</td>
-                      <td>{p.reorderLevel}</td>
-                      <td>
-                        <span className={`badge ${p.isActive ? 'badge-active' : 'badge-inactive'}`}>
-                          {p.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>
-                            Edit
-                          </button>
-                          {p.isActive && (
-                            <button className="btn btn-danger btn-sm" onClick={() => openDeactivate(p)}>
-                              Deactivate
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+
+          <select
+            className="form-control"
+            style={{ flex: '0 0 190px' }}
+            value={categoryFilter}
+            onChange={e => setCatFilter(e.target.value)}
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => (
+              <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+            ))}
+          </select>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={e => setShowInactive(e.target.checked)}
+            />
+            <span>Show Inactive</span>
+          </label>
+
+          {(search || categoryFilter) && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => { setSearch(''); setCatFilter('') }}
+            >
+              Clear Filters
+            </button>
           )}
         </div>
+      </div>
+
+      {/* ── Products Table / State ─────────────────────────────────────── */}
+      {loading ? (
+        <TableSkeleton rows={6} columns={8} title="Loading products catalog…" />
+      ) : error && products.length === 0 ? (
+        <div className="table-card">
+          <ErrorState error={error} onRetry={loadData} />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="table-card">
+          <EmptyState
+            icon={ProductsIcon}
+            title={search || categoryFilter ? 'No products match your criteria' : 'No products registered yet'}
+            description={
+              search || categoryFilter
+                ? 'Try adjusting your search query or category filter.'
+                : 'Get started by creating your first product.'
+            }
+            actionLabel={!search && !categoryFilter ? 'Add Product' : 'Clear Filters'}
+            actionIcon={!search && !categoryFilter ? PlusIcon : undefined}
+            onAction={!search && !categoryFilter ? () => setModal({ mode: 'add' }) : () => { setSearch(''); setCatFilter('') }}
+          />
+        </div>
+      ) : (
+        <div className="table-card">
+          <div className="table-card-header">
+            <div className="table-card-title">
+              <span>Products Catalog</span>
+              <span className="count-badge">{filtered.length} products</span>
+            </div>
+          </div>
+
+          <div className="data-table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Barcode</th>
+                  <th>Category</th>
+                  <th>Unit</th>
+                  <th style={{ textAlign: 'right' }}>Cost</th>
+                  <th style={{ textAlign: 'right' }}>Price</th>
+                  <th style={{ textAlign: 'right' }}>Reorder Lvl</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => (
+                  <tr key={p.productId}>
+                    <td>
+                      <strong style={{ color: 'var(--color-text)' }}>{p.name}</strong>
+                    </td>
+                    <td>
+                      <span className="sku-pill">{p.sku}</span>
+                    </td>
+                    <td style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
+                      {p.barcode || '—'}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                        {categoryMap.get(p.categoryId) ?? '—'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      {p.unit}
+                    </td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      ${Number(p.costPrice).toFixed(2)}
+                    </td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      <strong>${Number(p.sellingPrice).toFixed(2)}</strong>
+                    </td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {p.reorderLevel}
+                    </td>
+                    <td>
+                      <Badge variant={p.isActive ? 'active' : 'inactive'}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setModal({ mode: 'edit', data: p })}
+                          title="Edit Product"
+                        >
+                          <EditIcon />
+                          Edit
+                        </button>
+                        {p.isActive && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => setModal({ mode: 'deactivate', data: p })}
+                            title="Deactivate Product"
+                          >
+                            <TrashIcon />
+                            Deactivate
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-      {modal?.mode === 'add' && (
+      {/* ── Modals ─────────────────────────────────────────────────────── */}
+      {(modal?.mode === 'add' || modal?.mode === 'edit') && (
         <ProductModal
-          initial={null}
+          initial={modal.mode === 'edit' ? modal.data : null}
           categories={categories}
-          onSave={handleSave}
-          onClose={closeModal}
+          onSave={handleSaveProduct}
+          onClose={() => { setModal(null); setModalError(null) }}
           saving={saving}
+          apiError={modalError}
         />
       )}
-      {modal?.mode === 'edit' && (
-        <ProductModal
-          initial={modal.data}
-          categories={categories}
-          onSave={handleSave}
-          onClose={closeModal}
-          saving={saving}
-        />
-      )}
+
       {modal?.mode === 'deactivate' && (
-        <ConfirmModal
+        <DeactivateModal
           product={modal.data}
           onConfirm={handleDeactivate}
-          onClose={closeModal}
+          onClose={() => setModal(null)}
           saving={saving}
         />
       )}
