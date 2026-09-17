@@ -1,16 +1,42 @@
-import { useState, useEffect, useCallback } from 'react'
+// StockMovementsPage.jsx — Polished SaaS Inventory Audit & Movements Log
+import React, { useState, useEffect, useCallback } from 'react'
 import { movementsApi, productsApi, inventoryApi } from '../../api/inventoryApi'
+import Modal from '../../components/ui/Modal'
+import Badge from '../../components/ui/Badge'
+import EmptyState from '../../components/ui/EmptyState'
+import ErrorState from '../../components/ui/ErrorState'
+import { TableSkeleton } from '../../components/ui/Skeleton'
+import {
+  PlusIcon,
+  SearchIcon,
+  RefreshIcon,
+  CloseIcon,
+  AlertCircleIcon,
+  HistoryIcon,
+} from '../../components/ui/Icons'
 import '../../styles/inventory.css'
 
 // ── Movement types permitted for manual adjustment by the backend ────────────
-export const ADJUSTMENT_MOVEMENT_TYPES = [
+const ADJUSTMENT_MOVEMENT_TYPES = [
   { value: 2, label: 'Adjustment Increase', key: 'AdjustmentIncrease' },
   { value: 3, label: 'Adjustment Decrease', key: 'AdjustmentDecrease' },
   { value: 6, label: 'Damage',              key: 'Damage' },
   { value: 8, label: 'Return',              key: 'Return' },
 ]
 
-// Mapping for friendly display names across all movement types
+const ALL_MOVEMENT_FILTER_OPTIONS = [
+  { value: '',                   label: 'All Movement Types' },
+  { value: 'Receive',            label: 'Receive' },
+  { value: 'Sale',               label: 'Sale' },
+  { value: 'AdjustmentIncrease', label: 'Adjustment Increase' },
+  { value: 'AdjustmentDecrease', label: 'Adjustment Decrease' },
+  { value: 'TransferIn',         label: 'Transfer In' },
+  { value: 'TransferOut',        label: 'Transfer Out' },
+  { value: 'Damage',             label: 'Damage' },
+  { value: 'Expiry',             label: 'Expiry' },
+  { value: 'Return',             label: 'Return' },
+]
+
 const MOVEMENT_TYPE_LABELS = {
   0: 'Receive',
   1: 'Sale',
@@ -41,12 +67,12 @@ function MovementTypeBadge({ type }) {
   const norm = String(type).toLowerCase()
 
   if (norm.includes('increase') || norm === 'receive' || norm === 'return' || norm === 'transferin' || norm === '2' || norm === '0' || norm === '5' || norm === '8') {
-    return <span className="badge badge-ok">{label}</span>
+    return <Badge variant="success">{label}</Badge>
   }
   if (norm.includes('damage') || norm.includes('expiry') || norm === '6' || norm === '7') {
-    return <span className="badge badge-critical">{label}</span>
+    return <Badge variant="danger">{label}</Badge>
   }
-  return <span className="badge badge-low">{label}</span>
+  return <Badge variant="warning">{label}</Badge>
 }
 
 function formatDateTime(dateStr) {
@@ -73,8 +99,8 @@ const EMPTY_ADJUSTMENT_FORM = {
 }
 
 function AdjustmentModal({ products, branches, onClose, onSuccess }) {
-  const [form, setForm] = useState(EMPTY_ADJUSTMENT_FORM)
-  const [errors, setErrors] = useState({})
+  const [form, setForm]         = useState(EMPTY_ADJUSTMENT_FORM)
+  const [errors, setErrors]     = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState(null)
 
@@ -106,7 +132,6 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
     setSubmitting(true)
     setApiError(null)
 
-    // Construct reason combining reference and notes if provided
     const reasonParts = []
     if (form.reference.trim()) reasonParts.push(`Ref: ${form.reference.trim()}`)
     if (form.notes.trim()) reasonParts.push(form.notes.trim())
@@ -137,156 +162,152 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Record Stock Adjustment</h2>
-          <button className="modal-close" onClick={onClose} disabled={submitting}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            {apiError && <div className="error-box">⚠ {apiError}</div>}
-
-            {/* Product */}
-            <div className="form-group">
-              <label>
-                Product <span className="required">*</span>
-              </label>
-              <select
-                className={`form-control ${errors.productId ? 'error' : ''}`}
-                value={form.productId}
-                onChange={e => set('productId', e.target.value)}
-                disabled={submitting}
-              >
-                <option value="">Select a product…</option>
-                {products.map(p => (
-                  <option key={p.productId} value={p.productId}>
-                    {p.name} ({p.sku})
-                  </option>
-                ))}
-              </select>
-              {errors.productId && <span className="form-error">{errors.productId}</span>}
-            </div>
-
-            {/* Branch */}
-            <div className="form-group">
-              <label>
-                Branch <span className="required">*</span>
-              </label>
-              <select
-                className={`form-control ${errors.branchId ? 'error' : ''}`}
-                value={form.branchId}
-                onChange={e => set('branchId', e.target.value)}
-                disabled={submitting}
-              >
-                <option value="">Select a branch…</option>
-                {branches.map(b => (
-                  <option key={b.branchId} value={b.branchId}>
-                    {b.branchName}
-                  </option>
-                ))}
-              </select>
-              {errors.branchId && <span className="form-error">{errors.branchId}</span>}
-            </div>
-
-            {/* Movement Type & Quantity */}
-            <div className="form-row">
-              <div className="form-group">
-                <label>
-                  Movement Type <span className="required">*</span>
-                </label>
-                <select
-                  className={`form-control ${errors.movementType ? 'error' : ''}`}
-                  value={form.movementType}
-                  onChange={e => set('movementType', e.target.value)}
-                  disabled={submitting}
-                >
-                  {ADJUSTMENT_MOVEMENT_TYPES.map(t => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.movementType && <span className="form-error">{errors.movementType}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Quantity <span className="required">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0.0001"
-                  step="any"
-                  className={`form-control ${errors.quantity ? 'error' : ''}`}
-                  placeholder="e.g. 5"
-                  value={form.quantity}
-                  onChange={e => set('quantity', e.target.value)}
-                  disabled={submitting}
-                />
-                {errors.quantity && <span className="form-error">{errors.quantity}</span>}
+    <Modal
+      title="Record Stock Adjustment"
+      subtitle="Manually adjust quantity on hand for increases, write-offs, or returns"
+      onClose={onClose}
+      maxWidth="580px"
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="modal-body">
+          {apiError && (
+            <div className="error-banner">
+              <div className="error-banner-content">
+                <AlertCircleIcon />
+                <span>{apiError}</span>
               </div>
             </div>
+          )}
 
-            {/* Reference */}
+          {/* Product */}
+          <div className="form-group">
+            <label>Product <span className="required">*</span></label>
+            <select
+              className={`form-control ${errors.productId ? 'error' : ''}`}
+              value={form.productId}
+              onChange={e => set('productId', e.target.value)}
+              disabled={submitting}
+            >
+              <option value="">Select a product…</option>
+              {products.map(p => (
+                <option key={p.productId} value={p.productId}>
+                  {p.name} ({p.sku})
+                </option>
+              ))}
+            </select>
+            {errors.productId && <span className="form-error">{errors.productId}</span>}
+          </div>
+
+          {/* Branch */}
+          <div className="form-group">
+            <label>Branch <span className="required">*</span></label>
+            <select
+              className={`form-control ${errors.branchId ? 'error' : ''}`}
+              value={form.branchId}
+              onChange={e => set('branchId', e.target.value)}
+              disabled={submitting}
+            >
+              <option value="">Select a branch…</option>
+              {branches.map(b => (
+                <option key={b.branchId} value={b.branchId}>
+                  {b.branchName}
+                </option>
+              ))}
+            </select>
+            {errors.branchId && <span className="form-error">{errors.branchId}</span>}
+          </div>
+
+          {/* Movement Type & Quantity */}
+          <div className="form-row">
             <div className="form-group">
-              <label>Reference</label>
+              <label>Movement Type <span className="required">*</span></label>
+              <select
+                className={`form-control ${errors.movementType ? 'error' : ''}`}
+                value={form.movementType}
+                onChange={e => set('movementType', e.target.value)}
+                disabled={submitting}
+              >
+                {ADJUSTMENT_MOVEMENT_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              {errors.movementType && <span className="form-error">{errors.movementType}</span>}
+            </div>
+
+            <div className="form-group">
+              <label>Quantity <span className="required">*</span></label>
               <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. AUDIT-2026-09 or PO-1234"
-                value={form.reference}
-                onChange={e => set('reference', e.target.value)}
+                type="number"
+                min="0.0001"
+                step="any"
+                className={`form-control ${errors.quantity ? 'error' : ''}`}
+                placeholder="e.g. 5"
+                value={form.quantity}
+                onChange={e => set('quantity', e.target.value)}
                 disabled={submitting}
               />
-            </div>
-
-            {/* Notes */}
-            <div className="form-group">
-              <label>Notes</label>
-              <textarea
-                className="form-control"
-                placeholder="Reason or additional details for this adjustment…"
-                rows={3}
-                value={form.notes}
-                onChange={e => set('notes', e.target.value)}
-                disabled={submitting}
-              />
+              {errors.quantity && <span className="form-error">{errors.quantity}</span>}
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Recording…' : 'Record Adjustment'}
-            </button>
+          {/* Reference */}
+          <div className="form-group">
+            <label>Reference #</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="e.g. AUDIT-2026-09 or PO-1234"
+              value={form.reference}
+              onChange={e => set('reference', e.target.value)}
+              disabled={submitting}
+            />
           </div>
-        </form>
-      </div>
-    </div>
+
+          {/* Notes */}
+          <div className="form-group">
+            <label>Notes / Reason</label>
+            <textarea
+              className="form-control"
+              placeholder="Provide context or explanation for this stock adjustment…"
+              rows={3}
+              value={form.notes}
+              onChange={e => set('notes', e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? 'Recording…' : 'Record Adjustment'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
 // ── Main Stock Movements Page Component ─────────────────────────────────────
 export default function StockMovementsPage() {
-  const [movements, setMovements] = useState([])
-  const [products, setProducts]   = useState([])
-  const [branches, setBranches]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(null)
+  const [movements, setMovements]   = useState([])
+  const [products, setProducts]     = useState([])
+  const [branches, setBranches]     = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
 
   // Filters
-  const [productFilter, setProductFilter] = useState('')
-  const [branchFilter, setBranchFilter]   = useState('')
-  const [searchTerm, setSearchTerm]       = useState('')
+  const [productFilter, setProductFilter]   = useState('')
+  const [branchFilter, setBranchFilter]     = useState('')
+  const [typeFilter, setTypeFilter]         = useState('')
+  const [searchTerm, setSearchTerm]         = useState('')
 
   // Modal
   const [showModal, setShowModal] = useState(false)
 
-  // Fetch movements based on active filters
   const fetchMovements = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -303,7 +324,6 @@ export default function StockMovementsPage() {
       const list = res.data?.data ?? []
       setMovements(list)
 
-      // Collect any branches discovered from movements if not yet known
       setBranches(prev => {
         const branchMap = new Map(prev.map(b => [b.branchId, b]))
         list.forEach(m => {
@@ -325,7 +345,6 @@ export default function StockMovementsPage() {
     }
   }, [productFilter, branchFilter])
 
-  // Load products and branches initial options
   useEffect(() => {
     productsApi.getAll(true)
       .then(res => setProducts(res.data?.data ?? []))
@@ -353,20 +372,16 @@ export default function StockMovementsPage() {
     fetchMovements()
   }, [fetchMovements])
 
-  // Handle successful adjustment
   const handleAdjustmentSuccess = (message) => {
     setSuccessMsg(message)
     fetchMovements()
-    setTimeout(() => {
-      setSuccessMsg(null)
-    }, 5000)
+    setTimeout(() => setSuccessMsg(null), 5000)
   }
 
-  // Combined client-side filtering for search and dual-selected filters
   const filteredMovements = movements.filter(m => {
-    // If both product and branch filters were selected, getByProduct / getAll may need branch match
     if (productFilter && m.productId !== productFilter) return false
     if (branchFilter && m.branchId !== branchFilter) return false
+    if (typeFilter && String(m.movementType) !== typeFilter) return false
 
     if (!searchTerm.trim()) return true
     const q = searchTerm.toLowerCase()
@@ -374,7 +389,6 @@ export default function StockMovementsPage() {
       (m.productName && m.productName.toLowerCase().includes(q)) ||
       (m.sku && m.sku.toLowerCase().includes(q)) ||
       (m.branchName && m.branchName.toLowerCase().includes(q)) ||
-      (m.movementType && String(m.movementType).toLowerCase().includes(q)) ||
       (m.referenceType && m.referenceType.toLowerCase().includes(q)) ||
       (m.referenceId && m.referenceId.toLowerCase().includes(q)) ||
       (m.reason && m.reason.toLowerCase().includes(q))
@@ -384,6 +398,7 @@ export default function StockMovementsPage() {
   const handleResetFilters = () => {
     setProductFilter('')
     setBranchFilter('')
+    setTypeFilter('')
     setSearchTerm('')
   }
 
@@ -391,211 +406,239 @@ export default function StockMovementsPage() {
     <div>
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="page-header">
-        <div>
+        <div className="page-header-text">
           <h1>Stock Movements</h1>
-          <p>Audit trail of all inventory receipts, sales, adjustments, and transfers</p>
+          <p>Audit trail of all inventory changes, transfers, sales, and manual adjustments</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <button className="btn btn-secondary" onClick={fetchMovements} disabled={loading}>
-            ↻ Refresh
+        <div className="page-header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={fetchMovements}
+            disabled={loading}
+          >
+            <RefreshIcon style={{ animation: loading ? 'spin 0.7s linear infinite' : 'none' }} />
+            Refresh
           </button>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            + Record Adjustment
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowModal(true)}
+          >
+            <PlusIcon />
+            Record Adjustment
           </button>
         </div>
       </div>
 
       {/* ── Success Feedback Banner ─────────────────────────────────────── */}
       {successMsg && (
-        <div
-          style={{
-            background: '#dcfce7',
-            border: '1px solid #86efac',
-            borderRadius: 'var(--radius)',
-            padding: 'var(--space-4)',
-            color: '#15803d',
-            fontSize: 'var(--font-size-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 'var(--space-5)',
-          }}
-        >
+        <div className="success-banner">
           <span>✓ {successMsg}</span>
           <button
+            type="button"
             onClick={() => setSuccessMsg(null)}
-            style={{ background: 'none', border: 'none', color: '#15803d', cursor: 'pointer', fontWeight: 600 }}
+            style={{ color: 'inherit', fontWeight: 600 }}
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* ── Filter Bar ─────────────────────────────────────────────────── */}
-      <div className="search-bar">
-        <input
-          className="search-input"
-          placeholder="Search by product, SKU, reference, notes…"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-
-        {/* Product Filter */}
-        <select
-          className="form-control"
-          style={{ flex: '0 0 200px' }}
-          value={productFilter}
-          onChange={e => setProductFilter(e.target.value)}
-        >
-          <option value="">All Products</option>
-          {products.map(p => (
-            <option key={p.productId} value={p.productId}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Branch Filter */}
-        <select
-          className="form-control"
-          style={{ flex: '0 0 200px' }}
-          value={branchFilter}
-          onChange={e => setBranchFilter(e.target.value)}
-        >
-          <option value="">All Branches</option>
-          {branches.map(b => (
-            <option key={b.branchId} value={b.branchId}>
-              {b.branchName}
-            </option>
-          ))}
-        </select>
-
-        {(productFilter || branchFilter || searchTerm) && (
-          <button className="btn btn-secondary" onClick={handleResetFilters}>
-            Clear Filters
-          </button>
-        )}
-      </div>
-
       {/* ── Error Banner ───────────────────────────────────────────────── */}
-      {error && (
-        <div className="error-box">
-          <span>⚠ {error}</span>
-          <button
-            className="btn btn-secondary btn-sm"
-            style={{ marginLeft: 'auto' }}
-            onClick={fetchMovements}
-          >
-            Retry
-          </button>
-        </div>
+      {error && movements.length > 0 && (
+        <ErrorState error={error} onRetry={fetchMovements} inline />
       )}
 
-      {/* ── Movements Table Card ───────────────────────────────────────── */}
-      <div className="table-card">
-        <div className="table-card-header">
-          <span className="table-card-title">
-            Movement Log {!loading && `(${filteredMovements.length})`}
-          </span>
-        </div>
+      {/* ── Filter Toolbar ─────────────────────────────────────────────── */}
+      <div className="toolbar-card">
+        <div className="toolbar-left">
+          <div className="search-input-group">
+            <SearchIcon />
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search by product, SKU, reference, notes…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+              >
+                <CloseIcon style={{ width: 14, height: 14 }} />
+              </button>
+            )}
+          </div>
 
-        {loading ? (
-          <div className="state-container">
-            <div className="spinner" />
-            <p>Loading stock movements…</p>
+          <select
+            className="form-control"
+            style={{ flex: '0 0 180px' }}
+            value={productFilter}
+            onChange={e => setProductFilter(e.target.value)}
+          >
+            <option value="">All Products</option>
+            {products.map(p => (
+              <option key={p.productId} value={p.productId}>{p.name}</option>
+            ))}
+          </select>
+
+          <select
+            className="form-control"
+            style={{ flex: '0 0 180px' }}
+            value={branchFilter}
+            onChange={e => setBranchFilter(e.target.value)}
+          >
+            <option value="">All Branches</option>
+            {branches.map(b => (
+              <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
+            ))}
+          </select>
+
+          <select
+            className="form-control"
+            style={{ flex: '0 0 180px' }}
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+          >
+            {ALL_MOVEMENT_FILTER_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          {(productFilter || branchFilter || typeFilter || searchTerm) && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleResetFilters}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Table Card / Skeletons / State ─────────────────────────────── */}
+      {loading ? (
+        <TableSkeleton rows={7} columns={9} title="Loading inventory movements log…" />
+      ) : error && movements.length === 0 ? (
+        <div className="table-card">
+          <ErrorState error={error} onRetry={fetchMovements} />
+        </div>
+      ) : filteredMovements.length === 0 ? (
+        <div className="table-card">
+          <EmptyState
+            icon={HistoryIcon}
+            title={
+              searchTerm || productFilter || branchFilter || typeFilter
+                ? 'No movements match your filters'
+                : 'No stock movements recorded yet'
+            }
+            description={
+              searchTerm || productFilter || branchFilter || typeFilter
+                ? 'Try adjusting or clearing your filters to see more results.'
+                : 'Inventory adjustments, transfers, and order receipts will be logged here.'
+            }
+            actionLabel={
+              searchTerm || productFilter || branchFilter || typeFilter
+                ? 'Reset Filters'
+                : 'Record Adjustment'
+            }
+            actionIcon={
+              searchTerm || productFilter || branchFilter || typeFilter
+                ? undefined
+                : PlusIcon
+            }
+            onAction={
+              searchTerm || productFilter || branchFilter || typeFilter
+                ? handleResetFilters
+                : () => setShowModal(true)
+            }
+          />
+        </div>
+      ) : (
+        <div className="table-card">
+          <div className="table-card-header">
+            <div className="table-card-title">
+              <span>Movement Log</span>
+              <span className="count-badge">{filteredMovements.length} records</span>
+            </div>
           </div>
-        ) : filteredMovements.length === 0 ? (
-          <div className="state-container">
-            <p>
-              {searchTerm || productFilter || branchFilter
-                ? 'No stock movements match the selected filters.'
-                : 'No stock movements recorded yet.'}
-            </p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
+
+          <div className="data-table-container">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>Date & Time</th>
                   <th>Product</th>
                   <th>Branch</th>
                   <th>Movement Type</th>
-                  <th>Quantity</th>
-                  <th>Previous Qty</th>
-                  <th>New Qty</th>
+                  <th style={{ textAlign: 'right' }}>Quantity</th>
+                  <th style={{ textAlign: 'right' }}>Previous Stock</th>
+                  <th style={{ textAlign: 'right' }}>New Stock</th>
                   <th>Reference</th>
-                  <th>Notes</th>
+                  <th>Notes / Reason</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredMovements.map(m => (
-                  <tr key={m.stockMovementId}>
-                    {/* Date */}
-                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                      {formatDateTime(m.createdAt)}
-                    </td>
-
-                    {/* Product */}
-                    <td>
-                      <strong>{m.productName}</strong>
-                      {m.sku && (
-                        <div>
-                          <small style={{ color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
-                            {m.sku}
-                          </small>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Branch */}
-                    <td>{m.branchName}</td>
-
-                    {/* Movement Type */}
-                    <td>
-                      <MovementTypeBadge type={m.movementType} />
-                    </td>
-
-                    {/* Quantity */}
-                    <td>
-                      <strong>
-                        {m.newQuantity > m.previousQuantity ? `+${m.quantity}` : `-${m.quantity}`}
-                      </strong>
-                    </td>
-
-                    {/* Previous Quantity */}
-                    <td>{m.previousQuantity}</td>
-
-                    {/* New Quantity */}
-                    <td>
-                      <strong>{m.newQuantity}</strong>
-                    </td>
-
-                    {/* Reference */}
-                    <td style={{ fontSize: '0.8rem' }}>
-                      {m.referenceType ? (
-                        <span>
-                          {m.referenceType}
-                          {m.referenceId && (
-                            <span style={{ color: 'var(--color-text-muted)' }}> #{m.referenceId}</span>
-                          )}
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-
-                    {/* Notes */}
-                    <td style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', maxWidth: '240px' }}>
-                      {m.reason || '—'}
-                    </td>
-                  </tr>
-                ))}
+                {filteredMovements.map(m => {
+                  const isIncrease = Number(m.newQuantity) >= Number(m.previousQuantity)
+                  return (
+                    <tr key={m.stockMovementId}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        {formatDateTime(m.createdAt)}
+                      </td>
+                      <td>
+                        <strong style={{ color: 'var(--color-text)' }}>{m.productName}</strong>
+                        {m.sku && (
+                          <div>
+                            <span className="sku-pill" style={{ fontSize: '0.6875rem' }}>
+                              {m.sku}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td>{m.branchName}</td>
+                      <td>
+                        <MovementTypeBadge type={m.movementType} />
+                      </td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        <strong style={{ color: isIncrease ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                          {isIncrease ? `+${Number(m.quantity).toLocaleString()}` : `-${Number(m.quantity).toLocaleString()}`}
+                        </strong>
+                      </td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-muted)' }}>
+                        {Number(m.previousQuantity).toLocaleString()}
+                      </td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        <strong>{Number(m.newQuantity).toLocaleString()}</strong>
+                      </td>
+                      <td style={{ fontSize: 'var(--font-size-xs)' }}>
+                        {m.referenceType ? (
+                          <span>
+                            {m.referenceType}
+                            {m.referenceId && (
+                              <span style={{ color: 'var(--color-text-muted)' }}> #{m.referenceId}</span>
+                            )}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', maxWidth: '260px' }}>
+                        {m.reason || '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Adjustment Modal ───────────────────────────────────────────── */}
       {showModal && (

@@ -1,4 +1,4 @@
-/* global.css — reset + CSS custom properties */
+/* global.css — StockPilot Design System Tokens & Base Styles */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -7,51 +7,113 @@
 }
 
 :root {
-  /* Brand */
-  --color-primary:       #2563eb;
-  --color-primary-dark:  #1d4ed8;
-  --color-primary-light: #eff6ff;
+  /* ── Slate Neutral Palette ────────────────────────────────────────────── */
+  --slate-50:  #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
 
-  /* Semantic */
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-danger:  #dc2626;
-  --color-info:    #0891b2;
+  /* ── Brand Primary (Indigo/Blue) ──────────────────────────────────────── */
+  --color-primary:        #2563eb;
+  --color-primary-hover:  #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-light:  #eff6ff;
+  --color-primary-border: #bfdbfe;
+  --color-primary-glow:   rgba(37, 99, 235, 0.18);
 
-  /* Neutrals */
-  --color-bg:          #f8fafc;
-  --color-surface:     #ffffff;
-  --color-border:      #e2e8f0;
-  --color-text:        #1e293b;
-  --color-text-muted:  #64748b;
-  --color-sidebar-bg:  #1e293b;
-  --color-sidebar-text:#cbd5e1;
+  /* ── Semantic Colors (Accessible Contrast) ────────────────────────────── */
+  --color-success:        #059669;
+  --color-success-bg:     #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-text:   #065f46;
+
+  --color-warning:        #d97706;
+  --color-warning-bg:     #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text:   #92400e;
+
+  --color-danger:         #dc2626;
+  --color-danger-bg:      #fef2f2;
+  --color-danger-border:  #fecaca;
+  --color-danger-text:    #991b1b;
+
+  --color-info:           #0284c7;
+  --color-info-bg:        #f0f9ff;
+  --color-info-border:    #bae6fd;
+  --color-info-text:      #075985;
+
+  /* ── Layout & Surfaces ────────────────────────────────────────────────── */
+  --color-bg:             #f8fafc;
+  --color-surface:        #ffffff;
+  --color-surface-hover:  #f8fafc;
+  --color-border:         #e2e8f0;
+  --color-border-subtle:  #f1f5f9;
+  --color-border-hover:   #cbd5e1;
+
+  --color-text:           #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted:     #64748b;
+  --color-text-dim:       #94a3b8;
+
+  /* Sidebar Dark Theme */
+  --color-sidebar-bg:     #0f172a;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-text:   #94a3b8;
+  --color-sidebar-hover:  rgba(255, 255, 255, 0.06);
   --color-sidebar-active: #2563eb;
 
-  /* Spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+  /* ── Spacing ──────────────────────────────────────────────────────────── */
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
 
-  /* Typography */
-  --font-sans: system-ui, -apple-system, sans-serif;
-  --font-size-sm:   0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg:   1.125rem;
-  --font-size-xl:   1.25rem;
-  --font-size-2xl:  1.5rem;
+  /* ── Typography ───────────────────────────────────────────────────────── */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Misc */
-  --radius:     6px;
-  --radius-lg:  10px;
-  --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:  0 4px 12px rgba(0,0,0,.10);
-  --sidebar-width: 240px;
-  --topbar-height: 56px;
+  --font-size-xs:   0.75rem;     /* 12px */
+  --font-size-sm:   0.875rem;    /* 14px */
+  --font-size-base: 1rem;        /* 16px */
+  --font-size-md:   1.125rem;    /* 18px */
+  --font-size-lg:   1.25rem;     /* 20px */
+  --font-size-xl:   1.5rem;      /* 24px */
+  --font-size-2xl:  1.875rem;    /* 30px */
+
+  /* ── Radii & Shadows ──────────────────────────────────────────────────── */
+  --radius-sm:  6px;
+  --radius:     8px;
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  /* ── Dimensions ───────────────────────────────────────────────────────── */
+  --sidebar-width: 256px;
+  --topbar-height: 64px;
+
+  /* ── Transitions ──────────────────────────────────────────────────────── */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html, body, #root {
@@ -60,8 +122,73 @@ html, body, #root {
   font-size: var(--font-size-base);
   color: var(--color-text);
   background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a { color: inherit; text-decoration: none; }
-button { cursor: pointer; font-family: inherit; }
-input, select, textarea { font-family: inherit; }
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ── Focus rings for keyboard accessibility ────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar Styling ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-400);
+}
+
+/* ── Global Keyframes ──────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalContentScale {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
