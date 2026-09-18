@@ -1,25 +1,7 @@
 import axios from 'axios'
 
-/**
- * AUTH-INTEGRATION-POINT
- * ─────────────────────────────────────────────────────────────────────────────
- * The request interceptor below calls getAuthToken() to attach the JWT.
- *
- * What the auth team must do:
- *   Replace the getAuthToken() function body to return the real JWT string.
- *   Example implementations:
- *     - return localStorage.getItem('stockpilot_token')
- *     - return sessionStorage.getItem('token')
- *     - return yourAuthLibrary.getAccessToken()
- *
- * The interceptor already handles the Authorization header format.
- * No other changes to this file are needed once getAuthToken() is wired up.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
-// TODO [AUTH-TEAM]: Replace this function body with your real token retrieval.
 function getAuthToken() {
-  return null
+  return localStorage.getItem('stockpilot_token')
 }
 
 const apiClient = axios.create({
@@ -45,7 +27,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // TODO [AUTH-TEAM]: Redirect to login or trigger token refresh here.
+      localStorage.removeItem('stockpilot_token')
+      localStorage.removeItem('stockpilot_user')
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
       console.warn('StockPilot API: 401 Unauthorized — no valid token present.')
     }
     if (error.response?.status === 403) {
