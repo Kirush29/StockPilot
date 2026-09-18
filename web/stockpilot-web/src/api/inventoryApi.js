@@ -63,3 +63,15 @@ export const transfersApi = {
   getHistory: (productId, branchId) =>
     apiClient.get('/api/transfers/tools/history', { params: { productId, branchId } }),
 }
+
+// ── Branches ──────────────────────────────────────────────────────────────────
+export const branchesApi = {
+  getAll: () => apiClient.get('/api/branches'),
+}
+
+// ── AI Optimization ───────────────────────────────────────────────────────────
+export const optimizationApi = {
+  getRecommendations: (branchId) => apiClient.get(`/api/optimization/${branchId}/recommendations`),
+  generate: (branchId) => apiClient.post(`/api/optimization/${branchId}/generate`),
+  action: (id, action) => apiClient.post(`/api/optimization/recommendations/${id}/action`, null, { params: { action } }),
+}
