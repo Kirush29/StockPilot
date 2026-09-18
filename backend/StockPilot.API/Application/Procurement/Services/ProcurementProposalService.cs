@@ -156,6 +156,7 @@ public class ProcurementProposalService(
                 UpdatedAt = now
             };
             proposal.ApprovalDecisions.Add(decision);
+            unitOfWork.Add(decision);
 
             proposal.Status = request.Decision switch
             {

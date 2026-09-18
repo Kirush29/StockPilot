@@ -154,7 +154,7 @@ public class PurchaseOrderService(
                 }
             }
 
-            order.StatusHistory.Add(new PurchaseOrderStatusHistory
+            var historyEntry = new PurchaseOrderStatusHistory
             {
                 Id = Guid.NewGuid(),
                 FromStatus = fromStatus,
@@ -164,7 +164,9 @@ public class PurchaseOrderService(
                 Notes = request.Notes,
                 CreatedAt = now,
                 UpdatedAt = now
-            });
+            };
+            order.StatusHistory.Add(historyEntry);
+            unitOfWork.Add(historyEntry);
             order.Status = request.Status;
             order.UpdatedAt = now;
 

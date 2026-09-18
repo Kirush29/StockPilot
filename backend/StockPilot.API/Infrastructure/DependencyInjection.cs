@@ -10,16 +10,21 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var useInMemory = (bool.TryParse(configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
-                          string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
-
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? configuration["DATABASE_URL"]
             ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
+        var hasValidConnectionString = !string.IsNullOrWhiteSpace(connectionString)
+            && !connectionString.Contains("See appsettings", StringComparison.OrdinalIgnoreCase)
+            && !connectionString.Contains("environment variable", StringComparison.OrdinalIgnoreCase);
+
+        var useInMemory = !hasValidConnectionString ||
+                          (bool.TryParse(configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
+                          string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
+
         services.AddDbContext<StockPilotDbContext>(options =>
         {
-            if (useInMemory || string.IsNullOrWhiteSpace(connectionString))
+            if (useInMemory)
             {
                 options.UseInMemoryDatabase("StockPilotDb");
             }

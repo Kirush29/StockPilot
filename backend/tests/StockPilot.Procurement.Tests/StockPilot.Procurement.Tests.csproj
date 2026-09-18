@@ -24,9 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\StockPilot.Procurement.Application\StockPilot.Procurement.Application.csproj" />
-    <ProjectReference Include="..\..\src\StockPilot.Procurement.Domain\StockPilot.Procurement.Domain.csproj" />
-    <ProjectReference Include="..\..\src\StockPilot.Procurement.Infrastructure\StockPilot.Procurement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\StockPilot.API\StockPilot.API.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,12 @@ public class InMemoryUnitOfWork : IUnitOfWork
 {
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
 
+    public void Add<TEntity>(TEntity entity) where TEntity : class
+    {
+        // No-op: the in-memory test repositories already track entities via their parent's
+        // navigation collection, with no real change tracker to reconcile.
+    }
+
     public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken = default) =>
         operation(cancellationToken);
 }

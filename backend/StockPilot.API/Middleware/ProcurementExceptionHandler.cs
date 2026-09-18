@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using StockPilot.Procurement.Application.Exceptions;
 
-namespace StockPilot.Procurement.Api.Middleware;
+namespace StockPilot.API.Middleware;
 
 /// <summary>
 /// Translates every exception raised by the procurement module into a consistent

@@ -14,9 +14,24 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddProcurementInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = ResolveConnectionString(configuration);
+        var hasValidConnectionString = !string.IsNullOrWhiteSpace(connectionString);
+        var useInMemory = !hasValidConnectionString ||
+                          (bool.TryParse(configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
+                          string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
+
         services.AddDbContext<ProcurementDbContext>(options =>
-            options.UseNpgsql(ResolveConnectionString(configuration), npgsql =>
-                npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "procurement")));
+        {
+            if (useInMemory)
+            {
+                options.UseInMemoryDatabase("StockPilotProcurementDb");
+            }
+            else
+            {
+                options.UseNpgsql(connectionString, npgsql =>
+                    npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "procurement"));
+            }
+        });
 
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IProposalRepository, EfProposalRepository>();
@@ -33,7 +48,7 @@ public static class DependencyInjection
         return services;
     }
 
-    public static string ResolveConnectionString(IConfiguration configuration)
+    public static string? ResolveConnectionString(IConfiguration configuration)
     {
         var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
         if (!string.IsNullOrWhiteSpace(databaseUrl))
@@ -41,8 +56,6 @@ public static class DependencyInjection
             return DatabaseUrlParser.ToNpgsqlConnectionString(databaseUrl);
         }
 
-        return configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException(
-                "No database connection configured. Set the DATABASE_URL environment variable or ConnectionStrings:Postgres in appsettings.");
+        return configuration.GetConnectionString("DefaultConnection");
     }
 }
