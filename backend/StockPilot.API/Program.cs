@@ -83,6 +83,23 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var devEmail = builder.Configuration["DevAuth:Email"] ?? "dev@stockpilot.local";
+    if (!db.Users.Any(u => u.Email == devEmail))
+    {
+        db.Users.Add(new StockPilot.API.Entities.User
+        {
+            UserId = Guid.NewGuid(),
+            Email = devEmail,
+            FullName = "StockPilot Developer",
+            Role = "BusinessOwner",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        db.SaveChanges();
+    }
 }
 
 app.UseCors();
