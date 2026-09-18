@@ -1,14 +1,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StockPilot.Procurement.Api.Common;
+using StockPilot.API.Common;
 using StockPilot.Procurement.Application.Dtos.Common;
 using StockPilot.Procurement.Application.Dtos.Orders;
 using StockPilot.Procurement.Application.Services;
 using StockPilot.Procurement.Domain.Common;
 using StockPilot.Procurement.Domain.Enums;
 
-namespace StockPilot.Procurement.Api.Controllers;
+namespace StockPilot.API.Controllers;
 
 [Route("api/procurement/orders")]
 [Authorize(Roles = ProcurementRoles.RaiseOrView)]

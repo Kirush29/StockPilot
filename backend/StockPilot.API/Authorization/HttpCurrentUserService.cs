@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using StockPilot.Procurement.Application.Abstractions;
 
-namespace StockPilot.Procurement.Api.Authorization;
+namespace StockPilot.API.Authorization;
 
 /// <summary>
 /// Resolves the authenticated caller from the claims on the JWT issued by the shared Identity

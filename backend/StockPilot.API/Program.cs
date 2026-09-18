@@ -1,36 +1,56 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StockPilot.API.Authorization;
 using StockPilot.API.Data;
 using StockPilot.API.Interfaces;
 using StockPilot.API.Middleware;
 using StockPilot.API.Services;
 using StockPilot.Application;
 using StockPilot.Infrastructure;
+using StockPilot.Procurement.Application;
+using StockPilot.Procurement.Application.Abstractions;
+using StockPilot.Procurement.Application.Services;
+using StockPilot.Procurement.Infrastructure;
+using StockPilot.Procurement.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Database Configuration ───────────────────────────────────────────────────
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+var hasValidConnectionString = !string.IsNullOrWhiteSpace(defaultConnection)
+    && !defaultConnection.Contains("See appsettings", StringComparison.OrdinalIgnoreCase)
+    && !defaultConnection.Contains("environment variable", StringComparison.OrdinalIgnoreCase);
+
+var useInMemory = !hasValidConnectionString ||
+                  (bool.TryParse(builder.Configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
+                  string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var cs = builder.Configuration.GetConnectionString("DefaultConnection");
-    var useInMemory = (bool.TryParse(builder.Configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
-                      string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
-    if (useInMemory || string.IsNullOrWhiteSpace(cs))
+    if (useInMemory)
     {
         options.UseInMemoryDatabase("StockPilotAppDb");
     }
     else
     {
-        options.UseNpgsql(cs);
+        options.UseNpgsql(defaultConnection);
     }
 });
 
 // Clean Architecture layers (Sales & Demand, Agentic AI, Persistence)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Procurement module (proposals, approvals, purchase orders, budgets)
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, HttpCurrentUserService>();
+builder.Services.AddProcurementApplication(builder.Configuration);
+builder.Services.AddProcurementInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<IAuthorizationHandler, ProcurementApprovalHandler>();
 
 // ── Inventory Management Services ────────────────────────────────────────────
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -59,7 +79,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanApproveProcurement", policy => policy.Requirements.Add(new ProcurementApprovalRequirement()));
+});
+
+builder.Services.AddExceptionHandler<ProcurementExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 // ── Web API Services & Controllers ───────────────────────────────────────────
 builder.Services.AddControllers();
@@ -100,6 +126,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -131,6 +158,16 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
     await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(dbContext);
+
+    var procurementDb = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
+    if (useInMemory)
+    {
+        await procurementDb.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await procurementDb.Database.MigrateAsync();
+    }
 }
 
 app.Run();

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using StockPilot.Procurement.Application.Dtos.Proposals;
 using StockPilot.Procurement.Application.Services;
 
-namespace StockPilot.Procurement.Api.Authorization;
+namespace StockPilot.API.Authorization;
 
 /// <summary>Marker requirement for the "CanApproveProcurement" policy: caller's role must permit the proposal's amount.</summary>
 public class ProcurementApprovalRequirement : IAuthorizationRequirement;

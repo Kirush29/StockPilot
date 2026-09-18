@@ -2,7 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using StockPilot.Procurement.Application.Exceptions;
 
-namespace StockPilot.Procurement.Api.Common;
+namespace StockPilot.API.Common;
 
 [ApiController]
 public abstract class ProcurementControllerBase : ControllerBase

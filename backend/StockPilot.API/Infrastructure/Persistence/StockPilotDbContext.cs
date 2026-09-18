@@ -23,8 +23,11 @@ public class StockPilotDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // Automatically discovers and applies configurations from this assembly
-        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        // Automatically discovers and applies configurations from this assembly, scoped to this
+        // module's own namespace so the Procurement module's configurations (same assembly since
+        // the merge into StockPilot.API) aren't picked up into this unrelated DbContext's model.
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly(),
+            type => type.Namespace is not null && type.Namespace.StartsWith("StockPilot.Infrastructure", StringComparison.Ordinal));
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
