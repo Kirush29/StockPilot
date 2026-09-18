@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPilot.API", "StockPilo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPilot.Tests", "StockPilot.Tests\StockPilot.Tests.csproj", "{D62334CB-BCB7-4871-B0BE-E2F9A8AA133F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StockPilot.Procurement.Tests", "tests\StockPilot.Procurement.Tests\StockPilot.Procurement.Tests.csproj", "{B71115CE-DF87-44D7-ACD2-413C06B269BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{D62334CB-BCB7-4871-B0BE-E2F9A8AA133F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D62334CB-BCB7-4871-B0BE-E2F9A8AA133F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D62334CB-BCB7-4871-B0BE-E2F9A8AA133F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B71115CE-DF87-44D7-ACD2-413C06B269BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B71115CE-DF87-44D7-ACD2-413C06B269BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B71115CE-DF87-44D7-ACD2-413C06B269BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B71115CE-DF87-44D7-ACD2-413C06B269BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
