@@ -1,4 +1,4 @@
-// InventoryDashboard.jsx — Redesigned SaaS ERP Inventory Dashboard
+// BusinessOwnerDashboard.jsx — Full inventory overview for Business Owner role
 import React, { useState, useEffect, useCallback } from 'react'
 import { inventoryApi, batchesApi } from '../../api/inventoryApi'
 import StatCard from '../../components/ui/StatCard'
@@ -15,9 +15,10 @@ import {
   ClockIcon,
   CloseIcon,
 } from '../../components/ui/Icons'
+import AiInsightsWidget from '../../components/ui/AiInsightsWidget'
 import '../../styles/inventory.css'
 
-export default function InventoryDashboard() {
+export default function BusinessOwnerDashboard() {
   const [allItems, setAllItems]           = useState([])
   const [lowStock, setLowStock]           = useState([])
   const [expiringBatches, setExpiring]    = useState([])
@@ -40,12 +41,7 @@ export default function InventoryDashboard() {
       setLowStock(lowRes.data?.data ?? [])
       setExpiring(expiringRes.data?.data ?? [])
     } catch (err) {
-      const status = err.response?.status
-      if (status === 401 || status === 403) {
-        setError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
-      } else {
-        setError(err.response?.data?.message ?? err.message ?? 'Failed to load inventory data.')
-      }
+      setError(err.response?.data?.message ?? err.message ?? 'Failed to load inventory data.')
     } finally {
       setLoading(false)
     }
@@ -93,8 +89,8 @@ export default function InventoryDashboard() {
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="page-header">
         <div className="page-header-text">
-          <h1>Inventory Dashboard</h1>
-          <p>Overview of current stock health, quantities, and alerts across all branches</p>
+          <h1>Business Overview</h1>
+          <p>Complete inventory health, stock levels, and alerts across all branches</p>
         </div>
         <div className="page-header-actions">
           <button
@@ -113,6 +109,8 @@ export default function InventoryDashboard() {
       {error && allItems.length > 0 && (
         <ErrorState error={error} onRetry={fetchDashboard} inline />
       )}
+
+      <AiInsightsWidget />
 
       {/* ── Metric Summary Cards ─────────────────────────────────────────── */}
       {loading ? (

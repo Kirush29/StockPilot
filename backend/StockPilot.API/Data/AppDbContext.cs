@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<StockTransferItem> StockTransferItems => Set<StockTransferItem>();
+    public DbSet<AiRecommendation> AiRecommendations => Set<AiRecommendation>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -218,6 +219,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany(b => b.TransferItems)
              .HasForeignKey(i => i.BatchId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+        // ── AiRecommendation ───────────────────────────────────────────────────
+        mb.Entity<AiRecommendation>(e =>
+        {
+            e.HasKey(a => a.RecommendationId);
+            e.Property(a => a.RecommendationType).IsRequired().HasMaxLength(50);
+            e.Property(a => a.Reasoning).HasMaxLength(2000);
+            e.Property(a => a.SuggestedQuantity).HasPrecision(18, 4);
+            e.Property(a => a.ConfidenceScore).HasPrecision(4, 3);
+            e.Property(a => a.Status).HasMaxLength(50);
+            
+            e.HasOne(a => a.Branch)
+             .WithMany()
+             .HasForeignKey(a => a.BranchId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.Product)
+             .WithMany()
+             .HasForeignKey(a => a.ProductId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.SemanticKernel;
 using StockPilot.API.Authorization;
 using StockPilot.API.Data;
 using StockPilot.API.Interfaces;
@@ -32,20 +33,16 @@ var useInMemory = !hasValidConnectionString ||
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (useInMemory)
-    {
         options.UseInMemoryDatabase("StockPilotAppDb");
-    }
     else
-    {
         options.UseNpgsql(defaultConnection);
-    }
 });
 
-// Clean Architecture layers (Sales & Demand, Agentic AI, Persistence)
+// ── Clean Architecture layers (Sales & Demand, Agentic AI, Persistence) ─────
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Procurement module (proposals, approvals, purchase orders, budgets)
+// ── Procurement module ────────────────────────────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, HttpCurrentUserService>();
 builder.Services.AddProcurementApplication(builder.Configuration);
@@ -59,8 +56,21 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IBatchService, BatchService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
+builder.Services.AddScoped<IInventoryOptimizationService, InventoryOptimizationService>();
+
+// ── AI & Semantic Kernel ──────────────────────────────────────────────────────
+var openAiKey = builder.Configuration["OpenAI:ApiKey"];
+if (!string.IsNullOrEmpty(openAiKey))
+{
+    var skBuilder = builder.Services.AddKernel();
+    skBuilder.AddOpenAIChatCompletion(
+        modelId: "gpt-4o-mini",
+        apiKey: openAiKey
+    );
+}
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
+// AUTH-INTEGRATION-POINT: The auth team should replace or extend this configuration.
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var signingKey = jwtSection["SigningKey"] ?? "StockPilotSuperSecretDevelopmentKeyForJWTValidation2026";
 
@@ -128,7 +138,6 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseExceptionHandler();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -136,26 +145,35 @@ if (app.Environment.IsDevelopment())
 
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var devEmail = builder.Configuration["DevAuth:Email"] ?? "dev@stockpilot.local";
-    if (!db.Users.Any(u => u.Email == devEmail))
+
+    var devAccounts = new[]
     {
-        db.Users.Add(new StockPilot.API.Entities.User
+        new { Email = "business@stockpilot.local", Role = "BusinessOwner", Name = "StockPilot Business Owner" },
+        new { Email = "procurement@stockpilot.local", Role = "ProcurementManager", Name = "StockPilot Procurement" },
+        new { Email = "branch@stockpilot.local", Role = "BranchManager", Name = "StockPilot Branch Mgr" },
+        new { Email = "employee@stockpilot.local", Role = "StoreEmployee", Name = "StockPilot Employee" }
+    };
+
+    foreach (var account in devAccounts)
+    {
+        if (!db.Users.Any(u => u.Email == account.Email))
         {
-            UserId = Guid.NewGuid(),
-            Email = devEmail,
-            FullName = "StockPilot Developer",
-            Role = "BusinessOwner",
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        });
-        db.SaveChanges();
+            db.Users.Add(new StockPilot.API.Entities.User
+            {
+                UserId = Guid.NewGuid(),
+                Email = account.Email,
+                FullName = account.Name,
+                Role = account.Role,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
     }
+    db.SaveChanges();
 }
 
 app.UseCors("AllowStockPilotClients");
-
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -169,7 +187,7 @@ app.MapGet("/api/health", () => Results.Ok(new
 
 app.MapControllers();
 
-// Ensure database tables are provisioned and seed initial Sales & Demand demo data
+// Ensure database tables are provisioned and seed initial data
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
@@ -178,13 +196,9 @@ using (var scope = app.Services.CreateScope())
 
     var procurementDb = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
     if (useInMemory)
-    {
         await procurementDb.Database.EnsureCreatedAsync();
-    }
     else
-    {
         await procurementDb.Database.MigrateAsync();
-    }
 }
 
 app.Run();
