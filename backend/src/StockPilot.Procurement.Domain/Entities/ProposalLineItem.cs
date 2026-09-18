@@ -16,4 +16,8 @@ public class ProposalLineItem
     public decimal UnitPrice { get; set; }
 
     public decimal LineTotal { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
 }

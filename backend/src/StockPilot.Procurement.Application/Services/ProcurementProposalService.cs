@@ -141,27 +141,33 @@ public class ProcurementProposalService(
             }
         }
 
-        var decision = new ApprovalDecision
+        await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            Id = Guid.NewGuid(),
-            ProposalId = proposal.Id,
-            DecidedByUserId = currentUser.UserId,
-            Decision = request.Decision,
-            Comment = request.Comment,
-            DecidedAt = DateTimeOffset.UtcNow
-        };
-        proposal.ApprovalDecisions.Add(decision);
+            var now = DateTimeOffset.UtcNow;
+            var decision = new ApprovalDecision
+            {
+                Id = Guid.NewGuid(),
+                ProposalId = proposal.Id,
+                DecidedByUserId = currentUser.UserId,
+                Decision = request.Decision,
+                Comment = request.Comment,
+                DecidedAt = now,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            proposal.ApprovalDecisions.Add(decision);
 
-        proposal.Status = request.Decision switch
-        {
-            ApprovalDecisionType.Approved => ProposalStatus.Approved,
-            ApprovalDecisionType.Rejected => ProposalStatus.Rejected,
-            ApprovalDecisionType.RevisionRequested => ProposalStatus.RevisionRequested,
-            _ => throw new ProcurementValidationException("decision", "Unrecognized decision type.")
-        };
-        proposal.UpdatedAt = DateTimeOffset.UtcNow;
+            proposal.Status = request.Decision switch
+            {
+                ApprovalDecisionType.Approved => ProposalStatus.Approved,
+                ApprovalDecisionType.Rejected => ProposalStatus.Rejected,
+                ApprovalDecisionType.RevisionRequested => ProposalStatus.RevisionRequested,
+                _ => throw new ProcurementValidationException("decision", "Unrecognized decision type.")
+            };
+            proposal.UpdatedAt = now;
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(ct);
+        }, cancellationToken);
 
         logger.LogInformation(
             "Proposal {ProposalId} decided as {Decision} by user {UserId}; new status {Status}",
@@ -224,13 +230,16 @@ public class ProcurementProposalService(
 
             var lineTotal = item.Quantity * item.UnitPrice;
             total += lineTotal;
+            var now = DateTimeOffset.UtcNow;
             lineItems.Add(new ProposalLineItem
             {
                 Id = Guid.NewGuid(),
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,
-                LineTotal = lineTotal
+                LineTotal = lineTotal,
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 

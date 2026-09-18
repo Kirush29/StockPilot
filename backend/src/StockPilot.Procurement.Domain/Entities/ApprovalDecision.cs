@@ -18,4 +18,10 @@ public class ApprovalDecision
     public string? Comment { get; set; }
 
     public DateTimeOffset DecidedAt { get; set; }
+
+    /// <summary>Audit column. Always equal to <see cref="UpdatedAt"/> since decisions are immutable.</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Audit column. Always equal to <see cref="CreatedAt"/> since decisions are immutable.</summary>
+    public DateTimeOffset UpdatedAt { get; set; }
 }

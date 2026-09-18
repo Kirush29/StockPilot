@@ -11,7 +11,9 @@ public class PurchaseOrderLineItemConfiguration : IEntityTypeConfiguration<Purch
         builder.ToTable("PurchaseOrderLineItems");
         builder.HasKey(li => li.Id);
 
-        builder.Property(li => li.UnitPrice).HasPrecision(18, 2);
+        builder.Property(li => li.UnitPrice).HasPrecision(12, 2);
+        builder.Property(li => li.CreatedAt).HasColumnType("timestamptz");
+        builder.Property(li => li.UpdatedAt).HasColumnType("timestamptz");
         builder.Ignore(li => li.LineTotal);
 
         builder.HasIndex(li => li.PurchaseOrderId);

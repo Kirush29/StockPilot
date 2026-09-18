@@ -63,7 +63,9 @@ public class PurchaseOrderService(
                 Id = Guid.NewGuid(),
                 ProductId = li.ProductId,
                 Quantity = li.Quantity,
-                UnitPrice = li.UnitPrice
+                UnitPrice = li.UnitPrice,
+                CreatedAt = now,
+                UpdatedAt = now
             }).ToList()
         };
         order.StatusHistory.Add(new PurchaseOrderStatusHistory
@@ -73,17 +75,23 @@ public class PurchaseOrderService(
             ToStatus = PurchaseOrderStatus.Ordered,
             ChangedByUserId = currentUser.UserId,
             ChangedAt = now,
-            Notes = $"Converted from proposal {proposal.Id}."
+            Notes = $"Converted from proposal {proposal.Id}.",
+            CreatedAt = now,
+            UpdatedAt = now
         });
 
-        budget.SpentAmount += order.TotalCost;
-        budget.UpdatedAt = now;
+        // Decision (convert) -> proposal status change -> budget update, committed atomically.
+        await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            budget.SpentAmount += order.TotalCost;
+            budget.UpdatedAt = now;
 
-        proposal.Status = ProposalStatus.Converted;
-        proposal.UpdatedAt = now;
+            proposal.Status = ProposalStatus.Converted;
+            proposal.UpdatedAt = now;
 
-        await orders.AddAsync(order, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+            await orders.AddAsync(order, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+        }, cancellationToken);
 
         logger.LogInformation(
             "Proposal {ProposalId} converted to purchase order {OrderNumber} ({OrderId}) totalling {TotalCost:C} by user {UserId}; budget {BudgetId} committed spend now {SpentAmount:C}",
@@ -119,39 +127,49 @@ public class PurchaseOrderService(
 
         var now = DateTimeOffset.UtcNow;
 
-        if (request.Status == PurchaseOrderStatus.Cancelled)
-        {
-            var budget = await budgets.FindActiveBudgetAsync(
-                order.Proposal!.BranchId, DateOnly.FromDateTime(order.CreatedAt.UtcDateTime), cancellationToken);
-            if (budget is not null)
-            {
-                budget.SpentAmount -= order.TotalCost;
-                budget.UpdatedAt = now;
-            }
-        }
-        else if (request.Status == PurchaseOrderStatus.Received)
+        if (request.Status == PurchaseOrderStatus.Received)
         {
             // Partial-quantity receiving isn't modeled yet (no per-line received quantity on the
-            // request), so inventory is only notified once the order is fully Received.
+            // request), so inventory is only notified once the order is fully Received. This is a
+            // call to an external module, so it stays outside the database transaction below.
             foreach (var line in order.LineItems)
             {
                 await inventory.NotifyStockReceivedAsync(order.Proposal!.BranchId, line.ProductId, line.Quantity, order.Id, cancellationToken);
             }
         }
 
-        order.StatusHistory.Add(new PurchaseOrderStatusHistory
-        {
-            Id = Guid.NewGuid(),
-            FromStatus = order.Status,
-            ToStatus = request.Status,
-            ChangedByUserId = currentUser.UserId,
-            ChangedAt = now,
-            Notes = request.Notes
-        });
-        order.Status = request.Status;
-        order.UpdatedAt = now;
+        var fromStatus = order.Status;
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        // Status change -> optional budget update (refund on cancellation), committed atomically.
+        await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            if (request.Status == PurchaseOrderStatus.Cancelled)
+            {
+                var budget = await budgets.FindActiveBudgetAsync(
+                    order.Proposal!.BranchId, DateOnly.FromDateTime(order.CreatedAt.UtcDateTime), ct);
+                if (budget is not null)
+                {
+                    budget.SpentAmount -= order.TotalCost;
+                    budget.UpdatedAt = now;
+                }
+            }
+
+            order.StatusHistory.Add(new PurchaseOrderStatusHistory
+            {
+                Id = Guid.NewGuid(),
+                FromStatus = fromStatus,
+                ToStatus = request.Status,
+                ChangedByUserId = currentUser.UserId,
+                ChangedAt = now,
+                Notes = request.Notes,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            order.Status = request.Status;
+            order.UpdatedAt = now;
+
+            await unitOfWork.SaveChangesAsync(ct);
+        }, cancellationToken);
 
         logger.LogInformation(
             "Purchase order {OrderId} ({OrderNumber}) moved to status {Status} by user {UserId}",

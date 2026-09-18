@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using StockPilot.Procurement.Domain.Entities;
+using StockPilot.Procurement.Domain.Enums;
 
 namespace StockPilot.Procurement.Infrastructure.Persistence.Configurations;
 
@@ -8,12 +9,16 @@ public class ProcurementProposalConfiguration : IEntityTypeConfiguration<Procure
 {
     public void Configure(EntityTypeBuilder<ProcurementProposal> builder)
     {
-        builder.ToTable("ProcurementProposals");
+        var statuses = string.Join(", ", Enum.GetNames<ProposalStatus>().Select(n => $"'{n}'"));
+        builder.ToTable("ProcurementProposals", t => t.HasCheckConstraint(
+            "CK_ProcurementProposals_Status", $"\"Status\" IN ({statuses})"));
         builder.HasKey(p => p.Id);
 
-        builder.Property(p => p.TotalEstimatedCost).HasPrecision(18, 2);
+        builder.Property(p => p.TotalEstimatedCost).HasPrecision(12, 2);
         builder.Property(p => p.Justification).HasMaxLength(2000);
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(32);
+        builder.Property(p => p.CreatedAt).HasColumnType("timestamptz");
+        builder.Property(p => p.UpdatedAt).HasColumnType("timestamptz");
 
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.SupplierId);

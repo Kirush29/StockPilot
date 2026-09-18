@@ -72,10 +72,10 @@ public static class ProcurementDataSeeder
             });
 
         builder.Entity<ProposalLineItem>().HasData(
-            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001"), ProposalId = SeedIds.ProposalDraft, ProductId = SeedIds.ProductChair, Quantity = 2, UnitPrice = 15_000m, LineTotal = 30_000m },
-            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002"), ProposalId = SeedIds.ProposalPendingApproval, ProductId = SeedIds.ProductPaper, Quantity = 50, UnitPrice = 500m, LineTotal = 25_000m },
-            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000003"), ProposalId = SeedIds.ProposalConverted, ProductId = SeedIds.ProductPaper, Quantity = 10, UnitPrice = 500m, LineTotal = 5_000m },
-            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000004"), ProposalId = SeedIds.ProposalConverted, ProductId = SeedIds.ProductInk, Quantity = 5, UnitPrice = 200m, LineTotal = 1_000m });
+            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001"), ProposalId = SeedIds.ProposalDraft, ProductId = SeedIds.ProductChair, Quantity = 2, UnitPrice = 15_000m, LineTotal = 30_000m, CreatedAt = ts, UpdatedAt = ts },
+            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002"), ProposalId = SeedIds.ProposalPendingApproval, ProductId = SeedIds.ProductPaper, Quantity = 50, UnitPrice = 500m, LineTotal = 25_000m, CreatedAt = ts, UpdatedAt = ts },
+            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000003"), ProposalId = SeedIds.ProposalConverted, ProductId = SeedIds.ProductPaper, Quantity = 10, UnitPrice = 500m, LineTotal = 5_000m, CreatedAt = ts, UpdatedAt = ts },
+            new ProposalLineItem { Id = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000004"), ProposalId = SeedIds.ProposalConverted, ProductId = SeedIds.ProductInk, Quantity = 5, UnitPrice = 200m, LineTotal = 1_000m, CreatedAt = ts, UpdatedAt = ts });
 
         builder.Entity<ApprovalDecision>().HasData(new ApprovalDecision
         {
@@ -84,7 +84,9 @@ public static class ProcurementDataSeeder
             DecidedByUserId = SeedIds.UserBusinessOwner,
             Decision = ApprovalDecisionType.Approved,
             Comment = "Within budget, approved for standing consumables order.",
-            DecidedAt = ts
+            DecidedAt = ts,
+            CreatedAt = ts,
+            UpdatedAt = ts
         });
 
         builder.Entity<PurchaseOrder>().HasData(new PurchaseOrder
@@ -101,11 +103,11 @@ public static class ProcurementDataSeeder
         });
 
         builder.Entity<PurchaseOrderLineItem>().HasData(
-            new PurchaseOrderLineItem { Id = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001"), PurchaseOrderId = SeedIds.PurchaseOrder, ProductId = SeedIds.ProductPaper, Quantity = 10, UnitPrice = 500m },
-            new PurchaseOrderLineItem { Id = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002"), PurchaseOrderId = SeedIds.PurchaseOrder, ProductId = SeedIds.ProductInk, Quantity = 5, UnitPrice = 200m });
+            new PurchaseOrderLineItem { Id = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001"), PurchaseOrderId = SeedIds.PurchaseOrder, ProductId = SeedIds.ProductPaper, Quantity = 10, UnitPrice = 500m, CreatedAt = ts, UpdatedAt = ts },
+            new PurchaseOrderLineItem { Id = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002"), PurchaseOrderId = SeedIds.PurchaseOrder, ProductId = SeedIds.ProductInk, Quantity = 5, UnitPrice = 200m, CreatedAt = ts, UpdatedAt = ts });
 
         builder.Entity<PurchaseOrderStatusHistory>().HasData(
-            new PurchaseOrderStatusHistory { Id = Guid.Parse("cccccccc-0000-0000-0000-000000000001"), PurchaseOrderId = SeedIds.PurchaseOrder, FromStatus = null, ToStatus = PurchaseOrderStatus.Ordered, ChangedByUserId = SeedIds.UserProcurementManager, ChangedAt = ts, Notes = "Converted from proposal." },
-            new PurchaseOrderStatusHistory { Id = Guid.Parse("cccccccc-0000-0000-0000-000000000002"), PurchaseOrderId = SeedIds.PurchaseOrder, FromStatus = PurchaseOrderStatus.Ordered, ToStatus = PurchaseOrderStatus.Received, ChangedByUserId = SeedIds.UserProcurementManager, ChangedAt = ts.AddDays(6), Notes = "Delivery received in full." });
+            new PurchaseOrderStatusHistory { Id = Guid.Parse("cccccccc-0000-0000-0000-000000000001"), PurchaseOrderId = SeedIds.PurchaseOrder, FromStatus = null, ToStatus = PurchaseOrderStatus.Ordered, ChangedByUserId = SeedIds.UserProcurementManager, ChangedAt = ts, Notes = "Converted from proposal.", CreatedAt = ts, UpdatedAt = ts },
+            new PurchaseOrderStatusHistory { Id = Guid.Parse("cccccccc-0000-0000-0000-000000000002"), PurchaseOrderId = SeedIds.PurchaseOrder, FromStatus = PurchaseOrderStatus.Ordered, ToStatus = PurchaseOrderStatus.Received, ChangedByUserId = SeedIds.UserProcurementManager, ChangedAt = ts.AddDays(6), Notes = "Delivery received in full.", CreatedAt = ts.AddDays(6), UpdatedAt = ts.AddDays(6) });
     }
 }
