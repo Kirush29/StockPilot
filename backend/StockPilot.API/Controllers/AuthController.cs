@@ -25,17 +25,11 @@ public class AuthController(AppDbContext db, IConfiguration configuration, IWebH
             return Unauthorized(new { Message = "Login is currently only supported in the Development environment." });
         }
 
-        var devEmail = configuration["DevAuth:Email"] ?? "dev@stockpilot.local";
         var devPasswordHash = configuration["DevAuth:PasswordHash"];
 
         if (string.IsNullOrEmpty(devPasswordHash))
         {
             return StatusCode(500, new { Message = "Development authentication is not configured properly." });
-        }
-
-        if (request.Email != devEmail)
-        {
-            return Unauthorized(new { Message = "Invalid credentials." });
         }
 
         var hasher = new PasswordHasher<User>();
