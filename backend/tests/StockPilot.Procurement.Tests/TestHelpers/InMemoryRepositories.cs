@@ -9,6 +9,9 @@ namespace StockPilot.Procurement.Tests.TestHelpers;
 public class InMemoryUnitOfWork : IUnitOfWork
 {
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+    public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken = default) =>
+        operation(cancellationToken);
 }
 
 public class InMemoryProposalRepository : IProposalRepository

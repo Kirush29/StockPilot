@@ -20,4 +20,10 @@ public class PurchaseOrderStatusHistory
     public DateTimeOffset ChangedAt { get; set; }
 
     public string? Notes { get; set; }
+
+    /// <summary>Audit column. Always equal to <see cref="UpdatedAt"/> since history entries are immutable.</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Audit column. Always equal to <see cref="CreatedAt"/> since history entries are immutable.</summary>
+    public DateTimeOffset UpdatedAt { get; set; }
 }

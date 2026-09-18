@@ -11,8 +11,10 @@ public class BudgetConfiguration : IEntityTypeConfiguration<Budget>
         builder.ToTable("Budgets");
         builder.HasKey(b => b.Id);
 
-        builder.Property(b => b.AllocatedAmount).HasPrecision(18, 2);
-        builder.Property(b => b.SpentAmount).HasPrecision(18, 2);
+        builder.Property(b => b.AllocatedAmount).HasPrecision(12, 2);
+        builder.Property(b => b.SpentAmount).HasPrecision(12, 2);
+        builder.Property(b => b.CreatedAt).HasColumnType("timestamptz");
+        builder.Property(b => b.UpdatedAt).HasColumnType("timestamptz");
 
         builder.Ignore(b => b.RemainingAmount);
 
