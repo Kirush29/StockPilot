@@ -1,43 +1,53 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
+using StockPilot.API.Authorization;
 using StockPilot.API.Data;
 using StockPilot.API.Interfaces;
 using StockPilot.API.Middleware;
 using StockPilot.API.Services;
+using StockPilot.Application;
+using StockPilot.Infrastructure;
+using StockPilot.Procurement.Application;
+using StockPilot.Procurement.Application.Abstractions;
+using StockPilot.Procurement.Application.Services;
+using StockPilot.Procurement.Infrastructure;
+using StockPilot.Procurement.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Database ─────────────────────────────────────────────────────────────────
+// ── Database Configuration ───────────────────────────────────────────────────
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+var hasValidConnectionString = !string.IsNullOrWhiteSpace(defaultConnection)
+    && !defaultConnection.Contains("See appsettings", StringComparison.OrdinalIgnoreCase)
+    && !defaultConnection.Contains("environment variable", StringComparison.OrdinalIgnoreCase);
+
+var useInMemory = !hasValidConnectionString ||
+                  (bool.TryParse(builder.Configuration["UseInMemoryDatabase"], out var inMem) && inMem) ||
+                  string.Equals(Environment.GetEnvironmentVariable("USE_IN_MEMORY"), "true", StringComparison.OrdinalIgnoreCase);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (useInMemory)
+        options.UseInMemoryDatabase("StockPilotAppDb");
+    else
+        options.UseNpgsql(defaultConnection);
+});
 
-// ── JWT Authentication ────────────────────────────────────────────────────────
-// AUTH-INTEGRATION-POINT: The auth team should replace or extend this configuration.
-// This wires up JWT validation so [Authorize] attributes work on Inventory endpoints.
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var signingKey = jwtSection["SigningKey"]
-    ?? throw new InvalidOperationException("JWT SigningKey is not configured.");
+// ── Clean Architecture layers (Sales & Demand, Agentic AI, Persistence) ─────
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSection["Issuer"],
-            ValidAudience = jwtSection["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey))
-        };
-    });
-
-builder.Services.AddAuthorization();
+// ── Procurement module ────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, HttpCurrentUserService>();
+builder.Services.AddProcurementApplication(builder.Configuration);
+builder.Services.AddProcurementInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<IAuthorizationHandler, ProcurementApprovalHandler>();
 
 // ── Inventory Management Services ────────────────────────────────────────────
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -54,14 +64,41 @@ if (!string.IsNullOrEmpty(openAiKey))
 {
     var skBuilder = builder.Services.AddKernel();
     skBuilder.AddOpenAIChatCompletion(
-        modelId: "gpt-4o-mini", // Or whatever model you prefer
+        modelId: "gpt-4o-mini",
         apiKey: openAiKey
     );
 }
 
-builder.Services.AddControllers();
+// ── JWT Authentication ────────────────────────────────────────────────────────
+// AUTH-INTEGRATION-POINT: The auth team should replace or extend this configuration.
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var signingKey = jwtSection["SigningKey"] ?? "StockPilotSuperSecretDevelopmentKeyForJWTValidation2026";
 
-// ── Swagger ───────────────────────────────────────────────────────────────────
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSection["Issuer"] ?? "StockPilot",
+            ValidAudience = jwtSection["Audience"] ?? "StockPilotClients",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanApproveProcurement", policy => policy.Requirements.Add(new ProcurementApprovalRequirement()));
+});
+
+builder.Services.AddExceptionHandler<ProcurementExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+// ── Web API Services & Controllers ───────────────────────────────────────────
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -83,14 +120,23 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ── CORS (dev permissive — tighten for production) ────────────────────────────
+// ── CORS Configuration ────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowStockPilotClients", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+});
 
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -126,11 +172,34 @@ if (app.Environment.IsDevelopment())
     db.SaveChanges();
 }
 
-app.UseCors();
+app.UseCors("AllowStockPilotClients");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/api/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    service = "StockPilot.Api",
+    timestamp = DateTime.UtcNow,
+    component = "Sales & Demand and Inventory Integration Ready"
+}));
+
 app.MapControllers();
+
+// Ensure database tables are provisioned and seed initial data
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+    await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(dbContext);
+
+    var procurementDb = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
+    if (useInMemory)
+        await procurementDb.Database.EnsureCreatedAsync();
+    else
+        await procurementDb.Database.MigrateAsync();
+}
 
 app.Run();
 

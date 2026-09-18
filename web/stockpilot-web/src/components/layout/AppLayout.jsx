@@ -14,6 +14,10 @@ const routeTitles = {
   '/inventory/batches':    'Batches & Expiry',
   '/inventory/movements':  'Stock Movements',
   '/inventory/transfers':  'Stock Transfers',
+  '/procurement/proposals': 'Procurement Proposals',
+  '/procurement/orders':    'Purchase Orders',
+  '/procurement/approvals': 'Approval Queue',
+  '/procurement/budgets':   'Budget Dashboard',
 }
 
 const ROLE_LABELS = {
@@ -33,6 +37,8 @@ export default function AppLayout() {
   const currentTitle = Object.entries(routeTitles)
     .find(([path]) => pathname.startsWith(path) && (pathname === path || pathname[path.length] === '/'))
     ?.[1] ?? 'StockPilot'
+
+  const sectionLabel = pathname.startsWith('/procurement') ? 'Procurement' : 'Inventory'
 
   const handleLogout = () => {
     logout()
@@ -62,7 +68,7 @@ export default function AppLayout() {
               <MenuIcon style={{ width: 20, height: 20 }} />
             </button>
             <div className="topbar-breadcrumbs">
-              <span>Inventory</span>
+              <span>{sectionLabel}</span>
               <span>/</span>
               <span className="current">{currentTitle}</span>
             </div>

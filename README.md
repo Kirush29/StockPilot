@@ -15,10 +15,10 @@ StockPilot is an integrated inventory and procurement management system built fo
 
 | Component | Suggested AI agent | Owner |
 |---|---|---|
-| Inventory Management | Inventory Optimization Agent | TBD |
-| Sales & Demand | Demand Forecast Agent | TBD |
-| Supplier Management | Supplier Evaluation Agent | TBD |
-| Procurement Management | Procurement Coordinator Agent | TBD |
+| Inventory Management | Inventory Optimization Agent | Teammate 1 (TBD) |
+| Sales & Demand | Demand Forecast Agent | Ravi (Active Implementation) |
+| Supplier Management | Supplier Evaluation Agent | Teammate 3 (TBD) |
+| Procurement Management | Procurement Coordinator Agent | Kirushan (Under Development) |
 
 ## Repository layout
 
