@@ -3,12 +3,13 @@ import { AuthProvider } from './context/AuthContext'
 import AppLayout from './components/layout/AppLayout'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import LoginPage from './pages/auth/LoginPage'
-import InventoryDashboard from './pages/inventory/InventoryDashboard'
+import RoleBasedDashboard from './pages/inventory/RoleBasedDashboard'
 import ProductsPage from './pages/inventory/products/ProductsPage'
 import CategoriesPage from './pages/inventory/categories/CategoriesPage'
 import StockLevelsPage from './pages/inventory/stock/StockLevelsPage'
 import BatchesPage from './pages/inventory/batches/BatchesPage'
 import StockMovementsPage from './pages/inventory/StockMovementsPage'
+import TransfersPage from './pages/inventory/TransfersPage'
 
 export default function App() {
   return (
@@ -23,12 +24,13 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route index element={<Navigate to="/inventory" replace />} />
 
-              <Route path="/inventory"            element={<InventoryDashboard />} />
+              <Route path="/inventory"            element={<RoleBasedDashboard />} />
               <Route path="/inventory/products"   element={<ProductsPage />} />
               <Route path="/inventory/categories" element={<CategoriesPage />} />
               <Route path="/inventory/stock"      element={<StockLevelsPage />} />
               <Route path="/inventory/batches"    element={<BatchesPage />} />
               <Route path="/inventory/movements"  element={<StockMovementsPage />} />
+              <Route path="/inventory/transfers"  element={<TransfersPage />} />
             </Route>
           </Route>
         </Routes>

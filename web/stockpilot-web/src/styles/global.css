@@ -19,13 +19,13 @@
   --slate-800: #1e293b;
   --slate-900: #0f172a;
 
-  /* ── Brand Primary (Indigo/Blue) ──────────────────────────────────────── */
-  --color-primary:        #2563eb;
-  --color-primary-hover:  #1d4ed8;
-  --color-primary-active: #1e40af;
-  --color-primary-light:  #eff6ff;
-  --color-primary-border: #bfdbfe;
-  --color-primary-glow:   rgba(37, 99, 235, 0.18);
+  /* ── Brand Primary (Monochrome) ──────────────────────────────────────── */
+  --color-primary:        #000000;
+  --color-primary-hover:  #1a1a1a;
+  --color-primary-active: #333333;
+  --color-primary-light:  #f5f5f5;
+  --color-primary-border: #e5e5e5;
+  --color-primary-glow:   rgba(0, 0, 0, 0.1);
 
   /* ── Semantic Colors (Accessible Contrast) ────────────────────────────── */
   --color-success:        #059669;
@@ -43,10 +43,10 @@
   --color-danger-border:  #fecaca;
   --color-danger-text:    #991b1b;
 
-  --color-info:           #0284c7;
-  --color-info-bg:        #f0f9ff;
-  --color-info-border:    #bae6fd;
-  --color-info-text:      #075985;
+  --color-info:           #2563eb; /* Kept subtle blue for info only */
+  --color-info-bg:        #eff6ff;
+  --color-info-border:    #bfdbfe;
+  --color-info-text:      #1e40af;
 
   /* ── Layout & Surfaces ────────────────────────────────────────────────── */
   --color-bg:             #f8fafc;
@@ -61,12 +61,12 @@
   --color-text-muted:     #64748b;
   --color-text-dim:       #94a3b8;
 
-  /* Sidebar Dark Theme */
-  --color-sidebar-bg:     #0f172a;
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
-  --color-sidebar-text:   #94a3b8;
-  --color-sidebar-hover:  rgba(255, 255, 255, 0.06);
-  --color-sidebar-active: #2563eb;
+  /* Sidebar Premium Monochrome Theme */
+  --color-sidebar-bg:     #000000;
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-text:   #a3a3a3;
+  --color-sidebar-hover:  rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: #ffffff;
 
   /* ── Spacing ──────────────────────────────────────────────────────────── */
   --space-0-5: 2px;
