@@ -1,6 +1,7 @@
 // Sidebar.jsx — Polished SaaS Sidebar Navigation
 import React from 'react'
 import { NavLink } from 'react-router-dom'
+import { useProcurement } from '../../context/ProcurementContext'
 import {
   DashboardIcon,
   ProductsIcon,
@@ -25,6 +26,15 @@ const inventoryLinks = [
 ]
 
 export default function Sidebar({ isOpen = false, onClose }) {
+  const { canAccessProcurement, canDecideOrManage } = useProcurement()
+
+  const procurementLinks = [
+    { to: '/procurement/proposals', label: 'Proposals',        icon: ProductsIcon },
+    { to: '/procurement/orders',    label: 'Purchase Orders',  icon: TransfersIcon },
+    canDecideOrManage && { to: '/procurement/approvals', label: 'Approval Queue',  icon: HistoryIcon },
+    canDecideOrManage && { to: '/procurement/budgets',   label: 'Budget Dashboard', icon: StockIcon },
+  ].filter(Boolean)
+
   return (
     <>
       {/* Mobile drawer backdrop */}
@@ -80,6 +90,28 @@ export default function Sidebar({ isOpen = false, onClose }) {
               ))}
             </ul>
           </div>
+
+          {canAccessProcurement && (
+            <div className="sidebar-section">
+              <p className="sidebar-section-label">Procurement</p>
+              <ul className="sidebar-nav">
+                {procurementLinks.map(({ to, label, icon: Icon }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      className={({ isActive }) =>
+                        `sidebar-nav-link ${isActive ? 'active' : ''}`
+                      }
+                      onClick={onClose}
+                    >
+                      <Icon />
+                      <span>{label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Footer State */}
