@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState('dev@stockpilot.local')
+  const [email, setEmail] = useState('business@stockpilot.local')
   const [password, setPassword] = useState('DevPassword123!')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
