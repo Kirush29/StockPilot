@@ -182,7 +182,8 @@ app.MapGet("/api/health", () => Results.Ok(new
     status = "Healthy",
     service = "StockPilot.Api",
     timestamp = DateTime.UtcNow,
-    component = "Sales & Demand and Inventory Integration Ready"
+    component = "Sales & Demand and Inventory Integration Ready",
+    databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
 }));
 
 app.MapControllers();
@@ -193,6 +194,12 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
     await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(dbContext);
+
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (useInMemory)
+        await appDb.Database.EnsureCreatedAsync();
+    else
+        await appDb.Database.MigrateAsync();
 
     var procurementDb = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
     if (useInMemory)
