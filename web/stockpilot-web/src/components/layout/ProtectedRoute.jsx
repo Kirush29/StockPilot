@@ -31,6 +31,12 @@ export default function ProtectedRoute({ roles, redirectTo = '/' }) {
     return <Navigate to="/login" replace />
   }
 
+  // Ensure user changes password if required, but avoid infinite loops if they are already on the change-password page.
+  // Note: we'd need to know the current path. Let's use `window.location.pathname`.
+  if (user?.mustChangePassword && window.location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
   if (roles && !roles.includes(user?.role)) {
     return <Navigate to={redirectTo} replace />
   }

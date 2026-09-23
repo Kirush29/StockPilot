@@ -18,6 +18,8 @@ import EditProposalPage from './pages/procurement/EditProposalPage'
 import ApprovalQueuePage from './pages/procurement/ApprovalQueuePage'
 import PurchaseOrdersPage from './pages/procurement/PurchaseOrdersPage'
 import BudgetDashboardPage from './pages/procurement/BudgetDashboardPage'
+import ProfilePage from './pages/auth/ProfilePage'
+import ChangePasswordPage from './pages/auth/ChangePasswordPage'
 
 // Role gate constants
 const RAISE_OR_VIEW_ROLES = ['BranchManager', 'ProcurementManager', 'BusinessOwner']
@@ -36,6 +38,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route index element={<Navigate to="/inventory" replace />} />
+
+                {/* Auth Profile */}
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/change-password" element={<ChangePasswordPage />} />
 
                 {/* Inventory Management */}
                 <Route path="/inventory"            element={<RoleBasedDashboard />} />

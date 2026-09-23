@@ -32,9 +32,9 @@ export default function BranchManagerDashboard() {
     setError(null)
     try {
       const [invRes, trRes, expRes] = await Promise.all([
-        inventoryApi.getLowStock(),
-        transfersApi.getAll().catch(() => ({ data: { data: [] } })),
-        batchesApi.getExpiring(30).catch(() => ({ data: { data: [] } })),
+        inventoryApi.getLowStock().catch(err => { console.error(err); return { data: { data: [] } }; }),
+        transfersApi.getAll().catch(err => { console.error(err); return { data: { data: [] } }; }),
+        batchesApi.getExpiring(30).catch(err => { console.error(err); return { data: { data: [] } }; }),
       ])
       setInventory(invRes.data?.data ?? [])
       setTransfers(trRes.data?.data ?? [])

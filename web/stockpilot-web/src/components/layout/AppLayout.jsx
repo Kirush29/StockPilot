@@ -18,6 +18,8 @@ const routeTitles = {
   '/procurement/orders':    'Purchase Orders',
   '/procurement/approvals': 'Approval Queue',
   '/procurement/budgets':   'Budget Dashboard',
+  '/profile':               'My Profile',
+  '/change-password':       'Change Password',
 }
 
 const ROLE_LABELS = {
@@ -38,7 +40,9 @@ export default function AppLayout() {
     .find(([path]) => pathname.startsWith(path) && (pathname === path || pathname[path.length] === '/'))
     ?.[1] ?? 'StockPilot'
 
-  const sectionLabel = pathname.startsWith('/procurement') ? 'Procurement' : 'Inventory'
+  let sectionLabel = 'Inventory'
+  if (pathname.startsWith('/procurement')) sectionLabel = 'Procurement'
+  if (pathname.startsWith('/profile') || pathname.startsWith('/change-password')) sectionLabel = 'Account'
 
   const handleLogout = () => {
     logout()
@@ -111,6 +115,31 @@ export default function AppLayout() {
                         </div>
                       </div>
                       <div className="topbar-user-menu-divider" />
+
+                      <button
+                        type="button"
+                        className="topbar-user-menu-item"
+                        onClick={() => { setShowUserMenu(false); navigate('/profile'); }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Profile
+                      </button>
+
+                      <button
+                        type="button"
+                        className="topbar-user-menu-item"
+                        onClick={() => { setShowUserMenu(false); navigate('/change-password'); }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Change Password
+                      </button>
+
+                      <div className="topbar-user-menu-divider" />
+
                       <button
                         type="button"
                         className="topbar-user-menu-item logout"
