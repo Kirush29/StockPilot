@@ -47,6 +47,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(b => b.BranchCode).IsUnique();
             e.Property(b => b.Name).IsRequired().HasMaxLength(200);
             e.Property(b => b.Address).HasMaxLength(500);
+            e.Property(b => b.City).HasMaxLength(100);
+            e.Property(b => b.PhoneNumber).HasMaxLength(50);
+            e.Property(b => b.Email).HasMaxLength(200);
+            e.Property(b => b.ManagerName).HasMaxLength(200);
         });
 
         // ── Category ─────────────────────────────────────────────────────────
@@ -67,8 +71,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(p => p.Barcode).IsUnique().HasFilter("\"Barcode\" IS NOT NULL");
             e.Property(p => p.Name).IsRequired().HasMaxLength(300);
             e.Property(p => p.Unit).IsRequired().HasMaxLength(50);
-            e.Property(p => p.CostPrice).HasPrecision(18, 4);
-            e.Property(p => p.SellingPrice).HasPrecision(18, 4);
+            e.Property(p => p.CostPrice).HasPrecision(18, 2);
+            e.Property(p => p.SellingPrice).HasPrecision(18, 2);
             e.Property(p => p.MinimumStockLevel).HasPrecision(18, 4);
             e.Property(p => p.ReorderLevel).HasPrecision(18, 4);
             e.Property(p => p.MaximumStockLevel).HasPrecision(18, 4);
@@ -119,7 +123,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(b => new { b.BatchNumber, b.BranchId }).IsUnique();
             e.HasIndex(b => b.ExpiryDate);
             e.Property(b => b.Quantity).HasPrecision(18, 4);
-            e.Property(b => b.UnitCost).HasPrecision(18, 4);
+            e.Property(b => b.UnitCost).HasPrecision(18, 2);
             e.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Batch_Quantity", "\"Quantity\" >= 0");
