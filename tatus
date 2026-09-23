@@ -1,0 +1,29 @@
+warning: in the working copy of 'backend/StockPilot.API/Entities/Branch.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/StockPilot.API/Services/BatchService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'web/stockpilot-web/src/components/layout/AppLayout.jsx', LF will be replaced by CRLF the next time Git touches it
+backend/StockPilot.API/Entities/User.cs:14: trailing whitespace.
+[32m+[m[41m    [m
+backend/StockPilot.API/Program.cs:188: trailing whitespace.
+[32m+[m[41m            [m
+backend/StockPilot.API/Services/BatchService.cs:159: trailing whitespace.
+[32m+[m[41m        [m
+backend/StockPilot.API/Services/InventoryOptimizationService.cs:194: trailing whitespace.
+[32m+[m[32m                    .Where(b => b.ProductId == inv.ProductId[m[41m [m
+backend/StockPilot.API/Services/InventoryOptimizationService.cs:195: trailing whitespace.
+[32m+[m[32m                             && validSourceBranchIds.Contains(b.BranchId)[m[41m [m
+backend/StockPilot.API/Services/InventoryOptimizationService.cs:196: trailing whitespace.
+[32m+[m[32m                             && b.Quantity >= shortage[m[41m [m
+web/stockpilot-web/src/App.jsx:41: trailing whitespace.
+[32m+[m[41m                [m
+web/stockpilot-web/src/components/layout/AppLayout.jsx:118: trailing whitespace.
+[32m+[m[41m                      [m
+web/stockpilot-web/src/components/layout/AppLayout.jsx:142: trailing whitespace.
+[32m+[m[41m                      [m
+web/stockpilot-web/src/components/ui/AiInsightsWidget.jsx:184: trailing whitespace.
+[32m+[m[32m                        <button[m[41m [m
+web/stockpilot-web/src/components/ui/AiInsightsWidget.jsx:185: trailing whitespace.
+[32m+[m[32m                          type="button"[m[41m [m
+web/stockpilot-web/src/components/ui/AiInsightsWidget.jsx:191: trailing whitespace.
+[32m+[m[32m                        <button[m[41m [m
+web/stockpilot-web/src/components/ui/AiInsightsWidget.jsx:192: trailing whitespace.
+[32m+[m[32m                          type="button"[m[41m [m

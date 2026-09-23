@@ -63,16 +63,15 @@ export default function AiInsightsWidget() {
   const handleAction = async (rec, action) => {
     try {
       if (action === 'Approve') {
-        await optimizationApi.approve(rec.recommendationId)
-        alert('Recommendation approved. Stock transfer requested successfully.')
+        const res = await optimizationApi.approve(rec.recommendationId)
+        const updatedRec = res.data?.data || res.data
+        setRecommendations(prev => prev.map(r => r.recommendationId === rec.recommendationId ? updatedRec : r))
       } else if (action === 'Reject') {
         const reason = window.prompt("Reason for rejection:")
         if (!reason) return // Cancelled
         await optimizationApi.reject(rec.recommendationId, reason)
-        alert('Recommendation dismissed.')
+        setRecommendations(prev => prev.filter(r => r.recommendationId !== rec.recommendationId))
       }
-      
-      setRecommendations(prev => prev.filter(r => r.recommendationId !== rec.recommendationId))
     } catch (err) {
       alert('Failed to apply action: ' + (err.response?.data?.message ?? err.message))
     }
@@ -175,22 +174,29 @@ export default function AiInsightsWidget() {
                     </p>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-success btn-sm"
-                        onClick={() => handleAction(rec, 'Approve')}
-                      >
-                        Approve
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-danger-outline btn-sm"
-                        onClick={() => handleAction(rec, 'Reject')}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
+                    {rec.status === 'TransferCreated' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Transfer Created</span>
+                        <a href="/inventory/transfers" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>View Transfers →</a>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <button
+                          type="button"
+                          className="btn btn-success btn-sm"
+                          onClick={() => handleAction(rec, 'Approve')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger-outline btn-sm"
+                          onClick={() => handleAction(rec, 'Reject')}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
