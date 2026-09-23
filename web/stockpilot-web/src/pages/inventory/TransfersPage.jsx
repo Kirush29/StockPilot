@@ -485,12 +485,12 @@ export default function TransfersPage() {
     try {
       const [trRes, brRes, prRes] = await Promise.all([
         transfersApi.getAll(),
-        branchesApi.getAll().catch(() => ({ data: { data: [] } })),
-        productsApi.getAll().catch(() => ({ data: { data: [] } })),
+        branchesApi.getAll().catch(() => ({ data: [] })),
+        productsApi.getAll().catch(() => ({ data: [] })),
       ])
-      setTransfers(trRes.data?.data ?? [])
-      setBranches(brRes.data?.data ?? [])
-      setProducts(prRes.data?.data ?? [])
+      setTransfers(trRes.data?.data ?? trRes.data ?? [])
+      setBranches(brRes.data?.data ?? brRes.data ?? [])
+      setProducts(prRes.data?.data ?? prRes.data ?? [])
     } catch (err) {
       setError(err.response?.data?.message ?? err.message ?? 'Failed to load transfers.')
     } finally {

@@ -17,6 +17,7 @@ import {
   ClockIcon,
   BatchesIcon,
 } from '../../../components/ui/Icons'
+import { formatCurrency } from '../../../utils/currencyFormatter'
 import '../../../styles/inventory.css'
 
 const BATCH_STATUSES = ['Active', 'Expired', 'Damaged', 'Depleted']
@@ -237,7 +238,7 @@ function BatchModal({ batch, products, onClose, onSaved }) {
             </div>
 
             <div className="form-group">
-              <label>Unit Cost ($)</label>
+              <label>Unit Cost (Rs.)</label>
               <input
                 type="number"
                 min="0"
@@ -618,7 +619,7 @@ export default function BatchesPage() {
                         <strong>{Number(b.quantity).toLocaleString()}</strong>
                       </td>
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-muted)' }}>
-                        ${Number(b.unitCost || 0).toFixed(2)}
+                        {formatCurrency(b.unitCost)}
                       </td>
                       <td style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                         {formatDate(b.manufacturingDate)}

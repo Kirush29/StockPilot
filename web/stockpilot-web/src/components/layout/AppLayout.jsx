@@ -8,6 +8,7 @@ import '../../styles/layout.css'
 
 const routeTitles = {
   '/inventory':            'Inventory Dashboard',
+  '/inventory/branches':   'Branches Management',
   '/inventory/products':   'Products Management',
   '/inventory/categories': 'Product Categories',
   '/inventory/stock':      'Stock Levels',

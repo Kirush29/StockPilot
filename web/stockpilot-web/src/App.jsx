@@ -11,6 +11,7 @@ import StockLevelsPage from './pages/inventory/stock/StockLevelsPage'
 import BatchesPage from './pages/inventory/batches/BatchesPage'
 import StockMovementsPage from './pages/inventory/StockMovementsPage'
 import TransfersPage from './pages/inventory/TransfersPage'
+import BranchesPage from './pages/inventory/branches/BranchesPage'
 import ProposalsListPage from './pages/procurement/ProposalsListPage'
 import ProposalDetailPage from './pages/procurement/ProposalDetailPage'
 import NewProposalPage from './pages/procurement/NewProposalPage'
@@ -69,6 +70,13 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/procurement/approvals" element={<ApprovalQueuePage />} />
                   <Route path="/procurement/budgets"   element={<BudgetDashboardPage />} />
+                </Route>
+              </Route>
+
+              {/* System Admin / BusinessOwner only */}
+              <Route element={<ProtectedRoute roles={['BusinessOwner']} redirectTo="/inventory" />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/inventory/branches" element={<BranchesPage />} />
                 </Route>
               </Route>
             </Route>

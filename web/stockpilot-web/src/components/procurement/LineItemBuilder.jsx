@@ -1,6 +1,7 @@
 // LineItemBuilder.jsx — add/remove/edit proposal line items with inline validation
 import React from 'react'
 import { PlusIcon, TrashIcon } from '../ui/Icons'
+import { formatCurrency } from '../../utils/currencyFormatter'
 
 const EMPTY_ROW = { productId: '', quantity: '1', unitPrice: '' }
 
@@ -26,7 +27,7 @@ export default function LineItemBuilder({ items, onChange, products, errors = {}
       <div className="line-item-header">
         <span>Product</span>
         <span>Quantity</span>
-        <span>Unit Price ($)</span>
+        <span>Unit Price (Rs.)</span>
         <span>Line Total</span>
         <span />
       </div>
@@ -85,7 +86,7 @@ export default function LineItemBuilder({ items, onChange, products, errors = {}
               {rowErrors.unitPrice && <span className="form-error">{rowErrors.unitPrice}</span>}
             </div>
 
-            <div className="line-item-total">${(qty * price).toFixed(2)}</div>
+            <div className="line-item-total">{formatCurrency(qty * price)}</div>
 
             <div>
               <button
@@ -111,7 +112,7 @@ export default function LineItemBuilder({ items, onChange, products, errors = {}
           Add Line Item
         </button>
         <div className="line-item-grand-total">
-          Total Estimated Cost: <strong>${total.toFixed(2)}</strong>
+          Total Estimated Cost: <strong>{formatCurrency(total)}</strong>
         </div>
       </div>
     </div>

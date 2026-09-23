@@ -16,6 +16,7 @@ import {
   AlertCircleIcon,
   ProductsIcon,
 } from '../../../components/ui/Icons'
+import { formatCurrency } from '../../../utils/currencyFormatter'
 import '../../../styles/inventory.css'
 
 const EMPTY_FORM = {
@@ -194,7 +195,7 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
           {/* Cost Price & Selling Price */}
           <div className="form-row">
             <div className="form-group">
-              <label>Cost Price ($) <span className="required">*</span></label>
+              <label>Cost Price (Rs.) <span className="required">*</span></label>
               <input
                 type="number"
                 min="0"
@@ -209,7 +210,7 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
             </div>
 
             <div className="form-group">
-              <label>Selling Price ($) <span className="required">*</span></label>
+              <label>Selling Price (Rs.) <span className="required">*</span></label>
               <input
                 type="number"
                 min="0"
@@ -599,10 +600,10 @@ export default function ProductsPage() {
                       {p.unit}
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      ${Number(p.costPrice).toFixed(2)}
+                      {formatCurrency(p.costPrice)}
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      <strong>${Number(p.sellingPrice).toFixed(2)}</strong>
+                      <strong>{formatCurrency(p.sellingPrice)}</strong>
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {p.reorderLevel}

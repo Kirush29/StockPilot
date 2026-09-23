@@ -1,6 +1,7 @@
 // BudgetDashboardPage.jsx — allocated vs spent vs remaining per branch, with a simple bar chart
 import React, { useState, useEffect, useCallback } from 'react'
 import { budgetsApi } from '../../api/procurementApi'
+import { branchesApi } from '../../api/inventoryApi'
 import StatCard from '../../components/ui/StatCard'
 import Modal from '../../components/ui/Modal'
 import EmptyState from '../../components/ui/EmptyState'
@@ -14,7 +15,7 @@ import '../../styles/procurement.css'
 
 const EMPTY_FORM = { branchId: '', periodStart: '', periodEnd: '', allocatedAmount: '' }
 
-function NewBudgetModal({ onSave, onClose, saving, apiError }) {
+function NewBudgetModal({ onSave, onClose, saving, apiError, branches }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
 
@@ -57,15 +58,18 @@ function NewBudgetModal({ onSave, onClose, saving, apiError }) {
             </div>
           )}
           <div className="form-group">
-            <label>Branch ID <span className="required">*</span></label>
-            <input
-              type="text"
+            <label>Branch <span className="required">*</span></label>
+            <select
               className={`form-control ${errors.branchId ? 'error' : ''}`}
               value={form.branchId}
               onChange={(e) => set('branchId', e.target.value)}
-              placeholder="e.g. 11111111-1111-1111-1111-111111111111"
               disabled={saving}
-            />
+            >
+              <option value="">Select a branch…</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+              ))}
+            </select>
             {errors.branchId && <span className="form-error">{errors.branchId}</span>}
           </div>
           <div className="form-row">
@@ -81,7 +85,7 @@ function NewBudgetModal({ onSave, onClose, saving, apiError }) {
             </div>
           </div>
           <div className="form-group">
-            <label>Allocated Amount ($) <span className="required">*</span></label>
+            <label>Allocated Amount (Rs.) <span className="required">*</span></label>
             <input type="number" min="0" step="0.01" className={`form-control ${errors.allocatedAmount ? 'error' : ''}`} value={form.allocatedAmount} onChange={(e) => set('allocatedAmount', e.target.value)} disabled={saving} />
             {errors.allocatedAmount && <span className="form-error">{errors.allocatedAmount}</span>}
           </div>
@@ -97,6 +101,7 @@ function NewBudgetModal({ onSave, onClose, saving, apiError }) {
 
 export default function BudgetDashboardPage() {
   const [budgets, setBudgets] = useState([])
+  const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showNew, setShowNew] = useState(false)
@@ -107,8 +112,12 @@ export default function BudgetDashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await budgetsApi.list()
-      setBudgets(res.data ?? [])
+      const [bRes, brRes] = await Promise.all([
+        budgetsApi.list(),
+        branchesApi.getAll().catch(() => ({ data: [] }))
+      ])
+      setBudgets(bRes.data ?? [])
+      setBranches(brRes.data?.data ?? brRes.data ?? [])
     } catch (err) {
       const s = err.response?.status
       if (s === 401 || s === 403) setError('You do not have access to the budget dashboard.')
@@ -188,15 +197,18 @@ export default function BudgetDashboardPage() {
         </div>
       ) : !loading ? (
         <div className="budget-dashboard-grid">
-          {budgets.map((b) => (
-            <div className="budget-dashboard-card" key={b.id}>
-              <div className="budget-dashboard-card-head">
-                <h3>Branch <span className="sku-pill" title={b.branchId}>{formatGuid(b.branchId)}</span></h3>
-                <span>{b.periodStart} – {b.periodEnd}</span>
+          {budgets.map((b) => {
+            const branch = branches.find(br => br.id === b.branchId)
+            return (
+              <div className="budget-dashboard-card" key={b.id}>
+                <div className="budget-dashboard-card-head">
+                  <h3>Branch: <span className="sku-pill" title={b.branchId}>{branch ? branch.name : formatGuid(b.branchId)}</span></h3>
+                  <span>{b.periodStart} – {b.periodEnd}</span>
+                </div>
+                <BudgetBar allocated={b.allocatedAmount} spent={b.spentAmount} />
               </div>
-              <BudgetBar allocated={b.allocatedAmount} spent={b.spentAmount} />
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : null}
 
@@ -206,6 +218,7 @@ export default function BudgetDashboardPage() {
           onClose={() => { setShowNew(false); setModalError(null) }}
           saving={saving}
           apiError={modalError}
+          branches={branches}
         />
       )}
     </div>

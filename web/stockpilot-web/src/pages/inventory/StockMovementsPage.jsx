@@ -1,6 +1,6 @@
 // StockMovementsPage.jsx — Polished SaaS Inventory Audit & Movements Log
 import React, { useState, useEffect, useCallback } from 'react'
-import { movementsApi, productsApi, inventoryApi } from '../../api/inventoryApi'
+import { movementsApi, productsApi, inventoryApi, branchesApi } from '../../api/inventoryApi'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
@@ -209,8 +209,8 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
             >
               <option value="">Select a branch…</option>
               {branches.map(b => (
-                <option key={b.branchId} value={b.branchId}>
-                  {b.branchName}
+                <option key={b.id || b.branchId} value={b.id || b.branchId}>
+                  {b.name || b.branchName}
                 </option>
               ))}
             </select>
@@ -325,10 +325,10 @@ export default function StockMovementsPage() {
       setMovements(list)
 
       setBranches(prev => {
-        const branchMap = new Map(prev.map(b => [b.branchId, b]))
+        const branchMap = new Map(prev.map(b => [b.id || b.branchId, b]))
         list.forEach(m => {
           if (m.branchId && m.branchName && !branchMap.has(m.branchId)) {
-            branchMap.set(m.branchId, { branchId: m.branchId, branchName: m.branchName })
+            branchMap.set(m.branchId, { branchId: m.branchId, branchName: m.branchName, name: m.branchName, id: m.branchId })
           }
         })
         return Array.from(branchMap.values())
@@ -350,18 +350,12 @@ export default function StockMovementsPage() {
       .then(res => setProducts(res.data?.data ?? []))
       .catch(() => {})
 
-    inventoryApi.getAll()
+    branchesApi.getAll()
       .then(res => {
-        const items = res.data?.data ?? []
-        const branchMap = new Map()
-        items.forEach(i => {
-          if (i.branchId && i.branchName && !branchMap.has(i.branchId)) {
-            branchMap.set(i.branchId, { branchId: i.branchId, branchName: i.branchName })
-          }
-        })
+        const branchList = res.data?.data ?? res.data ?? []
         setBranches(prev => {
-          const merged = new Map(prev.map(b => [b.branchId, b]))
-          branchMap.forEach((v, k) => merged.set(k, v))
+          const merged = new Map(prev.map(b => [b.id || b.branchId, b]))
+          branchList.forEach(b => merged.set(b.id, b))
           return Array.from(merged.values())
         })
       })
@@ -494,7 +488,7 @@ export default function StockMovementsPage() {
           >
             <option value="">All Branches</option>
             {branches.map(b => (
-              <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
+              <option key={b.id || b.branchId} value={b.id || b.branchId}>{b.name || b.branchName}</option>
             ))}
           </select>
 

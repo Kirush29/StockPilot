@@ -66,7 +66,11 @@ export const transfersApi = {
 
 // ── Branches ──────────────────────────────────────────────────────────────────
 export const branchesApi = {
-  getAll: () => apiClient.get('/api/branches'),
+  getAll:       ()           => apiClient.get('/api/branches'),
+  getById:      (id)         => apiClient.get(`/api/branches/${id}`),
+  create:       (data)       => apiClient.post('/api/branches', data),
+  update:       (id, data)   => apiClient.put(`/api/branches/${id}`, data),
+  toggleStatus: (id, active) => apiClient.patch(`/api/branches/${id}/status`, { isActive: active }),
 }
 
 // ── AI Optimization ───────────────────────────────────────────────────────────
