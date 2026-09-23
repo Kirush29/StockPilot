@@ -183,13 +183,34 @@ public class InventoryOptimizationService(
                 var shortage = inv.Product.ReorderLevel - availableQty;
                 if (shortage <= 0) shortage = 10; 
 
-                // Find valid sources
+                // Find valid sources based on excess inventory
                 var possibleSources = otherBranchesInventory
                     .Where(o => o.ProductId == inv.ProductId && (o.AvailableQuantity - o.Product.ReorderLevel) >= shortage)
-                    .OrderByDescending(o => o.AvailableQuantity)
                     .ToList();
 
-                var source = possibleSources.FirstOrDefault();
+                // FEFO: Find the earliest expiring batch across all valid sources that can fulfill the shortage
+                var validSourceBranchIds = possibleSources.Select(s => s.BranchId).ToList();
+                var bestBatch = await db.Batches
+                    .Where(b => b.ProductId == inv.ProductId
+                             && validSourceBranchIds.Contains(b.BranchId)
+                             && b.Quantity >= shortage
+                             && b.Status == BatchStatus.Active)
+                    .OrderBy(b => b.ExpiryDate)
+                    .FirstOrDefaultAsync();
+
+                Inventory? source = null;
+                Guid? selectedBatchId = null;
+
+                if (bestBatch != null)
+                {
+                    source = possibleSources.First(s => s.BranchId == bestBatch.BranchId);
+                    selectedBatchId = bestBatch.BatchId;
+                }
+                else
+                {
+                    source = possibleSources.OrderByDescending(o => o.AvailableQuantity).FirstOrDefault();
+                }
+
                 var recQty = shortage;
                 
                 // Prevent duplicate recommendation
@@ -204,6 +225,7 @@ public class InventoryOptimizationService(
                     DestinationBranchId = branchId,
                     ProductId = inv.ProductId,
                     SourceBranchId = source?.BranchId,
+                    BatchId = selectedBatchId,
                     RecommendationType = source != null ? RecommendationType.Transfer : RecommendationType.Reorder,
                     IssueType = issueType,
                     SuggestedQuantity = recQty,
