@@ -224,20 +224,48 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         mb.Entity<AiRecommendation>(e =>
         {
             e.HasKey(a => a.RecommendationId);
-            e.Property(a => a.RecommendationType).IsRequired().HasMaxLength(50);
+            e.Property(a => a.RecommendationType).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.IssueType).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.Priority).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.Status).HasConversion<string>().IsRequired().HasMaxLength(50);
             e.Property(a => a.Reasoning).HasMaxLength(2000);
+            e.Property(a => a.RejectionReason).HasMaxLength(1000);
             e.Property(a => a.SuggestedQuantity).HasPrecision(18, 4);
             e.Property(a => a.ConfidenceScore).HasPrecision(4, 3);
-            e.Property(a => a.Status).HasMaxLength(50);
             
-            e.HasOne(a => a.Branch)
+            e.HasIndex(a => new { a.DestinationBranchId, a.Status });
+            e.HasIndex(a => new { a.ProductId, a.Status });
+            e.HasIndex(a => a.IssueType);
+            e.HasIndex(a => a.CreatedAt);
+            
+            e.HasOne(a => a.DestinationBranch)
              .WithMany()
-             .HasForeignKey(a => a.BranchId)
+             .HasForeignKey(a => a.DestinationBranchId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.SourceBranch)
+             .WithMany()
+             .HasForeignKey(a => a.SourceBranchId)
              .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(a => a.Product)
              .WithMany()
              .HasForeignKey(a => a.ProductId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.Batch)
+             .WithMany()
+             .HasForeignKey(a => a.BatchId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(a => a.CreatedTransfer)
+             .WithMany()
+             .HasForeignKey(a => a.CreatedTransferId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(a => a.ReviewedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.ReviewedBy)
              .OnDelete(DeleteBehavior.Restrict);
         });
     }

@@ -71,7 +71,10 @@ export const branchesApi = {
 
 // ── AI Optimization ───────────────────────────────────────────────────────────
 export const optimizationApi = {
-  getRecommendations: (branchId) => apiClient.get(`/api/optimization/${branchId}/recommendations`),
-  generate: (branchId) => apiClient.post(`/api/optimization/${branchId}/generate`),
-  action: (id, action) => apiClient.post(`/api/optimization/recommendations/${id}/action`, null, { params: { action } }),
+  getRecommendations: (branchId) => apiClient.get('/api/optimization/recommendations', { params: { branchId } }),
+  getRecommendation: (id) => apiClient.get(`/api/optimization/recommendations/${id}`),
+  analyze: (branchId) => apiClient.post('/api/optimization/analyze', { branchId }),
+  approve: (id) => apiClient.post(`/api/optimization/recommendations/${id}/approve`),
+  reject: (id, reason) => apiClient.post(`/api/optimization/recommendations/${id}/reject`, { reason }),
+  verify: (id) => apiClient.post(`/api/optimization/recommendations/${id}/verify`),
 }
