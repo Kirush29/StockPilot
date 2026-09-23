@@ -1,8 +1,9 @@
 import json
 import sys
 import os
+import pytest
 
-def test_json_validity(filepath):
+def check_json_validity(filepath):
     try:
         with open(filepath, 'r') as f:
             data = json.load(f)
@@ -18,6 +19,16 @@ def test_json_validity(filepath):
         print(f"FAIL: {os.path.basename(filepath)} failed with error: {e}")
         return False
 
+contracts_dir = os.path.join(os.path.dirname(__file__), "..", "contracts")
+schemas = [
+    os.path.join(contracts_dir, "supplier-evaluation-input.schema.json"),
+    os.path.join(contracts_dir, "supplier-evaluation-output.schema.json")
+]
+
+@pytest.mark.parametrize("filepath", schemas)
+def test_json_validity(filepath):
+    assert check_json_validity(filepath) is True
+
 def main():
     contracts_dir = os.path.join(os.path.dirname(__file__), "..", "contracts")
     schemas = [
@@ -27,7 +38,7 @@ def main():
     
     all_passed = True
     for schema in schemas:
-        if not test_json_validity(os.path.join(contracts_dir, schema)):
+        if not check_json_validity(os.path.join(contracts_dir, schema)):
             all_passed = False
             
     if all_passed:

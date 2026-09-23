@@ -1,4 +1,4 @@
-from .decision_engine import decide_supplier
+from .decision_engine import decide_supplier, decide_supplier_ai
 
 def validate_input(data):
     if not isinstance(data, dict):
@@ -33,7 +33,7 @@ def validate_input(data):
         if not isinstance(candidate["overallScore"], (int, float)):
             raise ValueError(f"Candidate at index {i} has invalid 'overallScore'.")
 
-def execute_workflow(input_data):
+def execute_workflow(input_data, mode="deterministic"):
     # Step 1: Validate input
     validate_input(input_data)
     
@@ -41,8 +41,16 @@ def execute_workflow(input_data):
     candidates = input_data["candidates"]
     product_id = input_data["productId"]
     
-    # Step 3: Invoke the deterministic decision engine
-    decision_output = decide_supplier(product_id, candidates)
+    # Step 3: Invoke the deterministic or AI decision engine
+    if mode == "deterministic":
+        decision_output = decide_supplier(product_id, candidates)
+    elif mode == "ai":
+        decision_output = decide_supplier_ai(product_id, candidates)
+    else:
+        raise ValueError(f"Invalid mode: {mode}")
+        
+    # Enforce global safety boundary at orchestrator level as well
+    decision_output["humanApprovalRequired"] = True
     
     # Step 4: Return the output contract
     return decision_output
