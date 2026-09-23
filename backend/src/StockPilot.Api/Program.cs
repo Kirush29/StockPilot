@@ -4,6 +4,8 @@ using StockPilot.Application.Interfaces;
 using StockPilot.Application.Services;
 using StockPilot.Infrastructure.Data;
 using StockPilot.Infrastructure.Repositories;
+using StockPilot.Application.Models;
+using StockPilot.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,11 @@ builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
 builder.Services.AddScoped<IQuotationService, QuotationService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ISupplierEvaluationService, SupplierEvaluationService>();
+
+builder.Services.Configure<AgenticAiSettings>(
+    builder.Configuration.GetSection("AgenticAi"));
+builder.Services.AddScoped<IAgenticAiIntegrationService, AgenticAiIntegrationService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
