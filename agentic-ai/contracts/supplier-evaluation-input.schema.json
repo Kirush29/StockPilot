@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supplier Evaluation Agent Input Contract",
+  "type": "object",
+  "properties": {
+    "productId": { "type": "string", "format": "uuid" },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "supplierId": { "type": "string", "format": "uuid" },
+          "quotationId": { "type": "string", "format": "uuid" },
+          "unitPrice": { "type": "number" },
+          "deliveryDays": { "type": "integer" },
+          "supplierRating": { "type": ["number", "null"] },
+          "priceScore": { "type": "number" },
+          "deliveryScore": { "type": "number" },
+          "ratingScore": { "type": "number" },
+          "overallScore": { "type": "number" }
+        },
+        "required": [
+          "supplierId",
+          "quotationId",
+          "unitPrice",
+          "deliveryDays",
+          "priceScore",
+          "deliveryScore",
+          "ratingScore",
+          "overallScore"
+        ]
+      }
+    }
+  },
+  "required": ["productId", "candidates"]
+}
