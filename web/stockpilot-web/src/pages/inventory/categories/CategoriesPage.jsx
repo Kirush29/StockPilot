@@ -12,15 +12,15 @@ import {
   RefreshIcon,
   EditIcon,
   CloseIcon,
-  AlertCircleIcon,
   CategoriesIcon,
 } from '../../../components/ui/Icons'
+import { FormInput } from '../../../components/ui/FormControls'
 import '../../../styles/inventory.css'
 
 const EMPTY_CATEGORY_FORM = { name: '', description: '', isActive: true }
 
 // ── Add / Edit Category Modal ───────────────────────────────────────────────
-function CategoryModal({ initial, onSave, onClose, saving, apiError }) {
+function CategoryModal({ initial, onSave, onClose, saving, apiError, fieldErrors }) {
   const isEdit = !!initial
   const [form, setForm] = useState(() =>
     initial
@@ -31,11 +31,11 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError }) {
         }
       : EMPTY_CATEGORY_FORM
   )
-  const [errors, setErrors] = useState({})
+  const [localErrors, setLocalErrors] = useState({})
 
   const set = (field, value) => {
     setForm(f => ({ ...f, [field]: value }))
-    setErrors(e => ({ ...e, [field]: undefined }))
+    setLocalErrors(e => ({ ...e, [field]: undefined }))
   }
 
   const validate = () => {
@@ -48,7 +48,7 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError }) {
     ev.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
-      setErrors(errs)
+      setLocalErrors(errs)
       return
     }
     onSave({
@@ -66,45 +66,40 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError }) {
       maxWidth="500px"
     >
       <form onSubmit={handleSubmit}>
-        <div className="modal-body">
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {apiError && (
-            <div className="error-banner">
-              <div className="error-banner-content">
-                <AlertCircleIcon />
-                <span>{apiError}</span>
-              </div>
-            </div>
+            <ErrorState error={apiError} inline />
           )}
 
-          {/* Category Name */}
-          <div className="form-group">
-            <label>Category Name <span className="required">*</span></label>
-            <input
-              type="text"
-              className={`form-control ${errors.name ? 'error' : ''}`}
-              value={form.name}
-              onChange={e => set('name', e.target.value)}
-              placeholder="e.g. Perishables, Electronics, Packaging"
-              maxLength={200}
-              disabled={saving}
-            />
-            {errors.name && <span className="form-error">{errors.name}</span>}
-          </div>
+          <FormInput
+            label="Category Name"
+            value={form.name}
+            onChange={e => set('name', e.target.value)}
+            error={localErrors.name || fieldErrors?.name}
+            placeholder="e.g. Perishables, Electronics, Packaging"
+            maxLength={200}
+            disabled={saving}
+            required
+          />
 
-          {/* Description */}
           <div className="form-group">
-            <label>Description</label>
+            <label>
+                Description
+                <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>
+                    (Optional)
+                </span>
+            </label>
             <textarea
-              className="form-control"
+              className={`form-control ${fieldErrors?.description ? 'error' : ''}`}
               value={form.description}
               onChange={e => set('description', e.target.value)}
               placeholder="Optional notes or description regarding this category…"
               rows={3}
               disabled={saving}
             />
+            {fieldErrors?.description && <span className="form-error">{fieldErrors.description}</span>}
           </div>
 
-          {/* Active Status */}
           {isEdit && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
               <input
@@ -142,6 +137,7 @@ export default function CategoriesPage() {
   const [modal, setModal]             = useState(null) // null | { mode: 'add'|'edit', data? }
   const [saving, setSaving]           = useState(false)
   const [modalError, setModalError]   = useState(null)
+  const [modalFieldErrors, setModalFieldErrors] = useState({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -170,9 +166,10 @@ export default function CategoriesPage() {
     setTimeout(() => setSuccessMsg(null), 4000)
   }
 
-  const handleSave = async (payload) => {
+    const handleSave = async (payload) => {
     setSaving(true)
     setModalError(null)
+    setModalFieldErrors({})
     try {
       if (modal?.mode === 'edit') {
         await categoriesApi.update(modal.data.categoryId, payload)
@@ -184,11 +181,9 @@ export default function CategoriesPage() {
       setModal(null)
       load()
     } catch (err) {
-      const status = err.response?.status
-      if (status === 401 || status === 403) {
-        setModalError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
-      } else {
-        setModalError(err.response?.data?.message ?? 'Failed to save category.')
+      setModalError(err.displayMessage || 'Failed to save category.')
+      if (err.fieldErrors) {
+        setModalFieldErrors(err.fieldErrors)
       }
     } finally {
       setSaving(false)
@@ -368,9 +363,10 @@ export default function CategoriesPage() {
         <CategoryModal
           initial={modal.mode === 'edit' ? modal.data : null}
           onSave={handleSave}
-          onClose={() => { setModal(null); setModalError(null) }}
+          onClose={() => { setModal(null); setModalError(null); setModalFieldErrors({}) }}
           saving={saving}
           apiError={modalError}
+          fieldErrors={modalFieldErrors}
         />
       )}
     </div>

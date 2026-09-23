@@ -1,6 +1,7 @@
 // LineItemBuilder.jsx — add/remove/edit proposal line items with inline validation
 import React from 'react'
 import { PlusIcon, TrashIcon } from '../ui/Icons'
+import { FormInput, SearchableDropdown } from '../ui/FormControls'
 import { formatCurrency } from '../../utils/currencyFormatter'
 
 const EMPTY_ROW = { productId: '', quantity: '1', unitPrice: '' }
@@ -40,50 +41,45 @@ export default function LineItemBuilder({ items, onChange, products, errors = {}
 
         return (
           <div className="line-item-row" key={index}>
-            <div>
-              <select
-                className={`form-control ${rowErrors.productId ? 'error' : ''}`}
+            <div style={{ flex: 2 }}>
+              <SearchableDropdown
+                required
+                options={products}
                 value={row.productId}
-                onChange={(e) => setRow(index, { productId: e.target.value })}
+                onChange={(val) => setRow(index, { productId: val })}
+                error={rowErrors.productId || (rowErrors[`LineItems[${index}].ProductId`] ? rowErrors[`LineItems[${index}].ProductId`][0] : null)}
+                placeholder="— Select a product —"
+                getOptionValue={(opt) => opt.productId}
+                renderOption={(opt) => `${opt.name} (${opt.sku})`}
                 disabled={disabled}
-              >
-                <option value="">Select a product…</option>
-                {products.map((p) => (
-                  <option key={p.productId} value={p.productId}>
-                    {p.name} ({p.sku})
-                  </option>
-                ))}
-              </select>
-              {rowErrors.productId && <span className="form-error">{rowErrors.productId}</span>}
+              />
               {row.productId && !product && (
-                <span className="form-hint">Not in the loaded catalog — double-check the product.</span>
+                <span className="form-hint" style={{ display: 'block', marginTop: '4px' }}>Not in the loaded catalog — double-check the product.</span>
               )}
             </div>
 
-            <div>
-              <input
+            <div style={{ flex: 1 }}>
+              <FormInput
                 type="number"
                 min="1"
                 step="1"
-                className={`form-control ${rowErrors.quantity ? 'error' : ''}`}
                 value={row.quantity}
                 onChange={(e) => setRow(index, { quantity: e.target.value })}
                 disabled={disabled}
+                error={rowErrors.quantity || (rowErrors[`LineItems[${index}].Quantity`] ? rowErrors[`LineItems[${index}].Quantity`][0] : null)}
               />
-              {rowErrors.quantity && <span className="form-error">{rowErrors.quantity}</span>}
             </div>
 
-            <div>
-              <input
+            <div style={{ flex: 1 }}>
+              <FormInput
                 type="number"
                 min="0"
                 step="0.01"
-                className={`form-control ${rowErrors.unitPrice ? 'error' : ''}`}
                 value={row.unitPrice}
                 onChange={(e) => setRow(index, { unitPrice: e.target.value })}
                 disabled={disabled}
+                error={rowErrors.unitPrice || (rowErrors[`LineItems[${index}].UnitPrice`] ? rowErrors[`LineItems[${index}].UnitPrice`][0] : null)}
               />
-              {rowErrors.unitPrice && <span className="form-error">{rowErrors.unitPrice}</span>}
             </div>
 
             <div className="line-item-total">{formatCurrency(qty * price)}</div>

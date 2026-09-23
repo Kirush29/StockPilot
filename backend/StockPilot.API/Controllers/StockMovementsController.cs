@@ -23,8 +23,15 @@ public class StockMovementsController(IStockMovementService service) : Controlle
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApiResponse<StockMovementDto>>> GetById(Guid id)
     {
-        var result = await service.GetByIdAsync(id);
-        return Ok(ApiResponse<StockMovementDto>.Ok(result));
+        try
+        {
+            var result = await service.GetByIdAsync(id);
+            return Ok(ApiResponse<StockMovementDto>.Ok(result));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpGet("product/{productId:guid}")]
@@ -47,10 +54,28 @@ public class StockMovementsController(IStockMovementService service) : Controlle
     public async Task<ActionResult<ApiResponse<StockMovementDto>>> CreateAdjustment(
         [FromBody] CreateAdjustmentDto dto)
     {
-        var performedBy = GetUserId();
-        var result = await service.CreateAdjustmentAsync(dto, performedBy);
-        return CreatedAtAction(nameof(GetById), new { id = result.StockMovementId },
-            ApiResponse<StockMovementDto>.Ok(result, "Stock adjustment recorded."));
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var performedBy = GetUserId();
+            var result = await service.CreateAdjustmentAsync(dto, performedBy);
+            return CreatedAtAction(nameof(GetById), new { id = result.StockMovementId },
+                ApiResponse<StockMovementDto>.Ok(result, "Stock adjustment recorded."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     // AUTH-INTEGRATION-POINT: Replace with the auth team's claim type if different.

@@ -20,10 +20,10 @@ public class AuthController(AppDbContext db, IConfiguration configuration) : Con
     [AllowAnonymous]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto request)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Username);
         if (user == null || !user.IsActive)
         {
-            return Unauthorized(new { Message = "Invalid email or password." });
+            return Unauthorized(new { Message = "Invalid username or password." });
         }
 
         var hasher = new PasswordHasher<User>();
@@ -31,7 +31,7 @@ public class AuthController(AppDbContext db, IConfiguration configuration) : Con
 
         if (result == PasswordVerificationResult.Failed)
         {
-            return Unauthorized(new { Message = "Invalid email or password." });
+            return Unauthorized(new { Message = "Invalid username or password." });
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();

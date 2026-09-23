@@ -57,7 +57,7 @@ public class BranchesController(AppDbContext db) : ControllerBase
             })
             .FirstOrDefaultAsync();
 
-        if (branch == null) return NotFound(ApiResponse<BranchDto>.Fail("Branch not found."));
+        if (branch == null) return Problem(statusCode: 404, title: "Branch not found.");
         return Ok(ApiResponse<BranchDto>.Ok(branch));
     }
 
@@ -66,7 +66,10 @@ public class BranchesController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<ApiResponse<BranchDto>>> Create([FromBody] CreateBranchDto dto)
     {
         if (await db.Branches.AnyAsync(b => b.BranchCode == dto.BranchCode))
-            return BadRequest(ApiResponse<BranchDto>.Fail("Branch code already exists."));
+        {
+            ModelState.AddModelError("BranchCode", "This branch code is already in use.");
+            return ValidationProblem(ModelState);
+        }
 
         var branch = new StockPilot.API.Entities.Branch
         {
@@ -105,7 +108,7 @@ public class BranchesController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<ApiResponse<BranchDto>>> Update(Guid id, [FromBody] UpdateBranchDto dto)
     {
         var branch = await db.Branches.FindAsync(id);
-        if (branch == null) return NotFound(ApiResponse<BranchDto>.Fail("Branch not found."));
+        if (branch == null) return Problem(statusCode: 404, title: "Branch not found.");
 
         branch.Name        = dto.Name;
         branch.Address     = dto.Address;
@@ -139,7 +142,7 @@ public class BranchesController(AppDbContext db) : ControllerBase
     public async Task<ActionResult<ApiResponse<BranchDto>>> ToggleStatus(Guid id, [FromBody] bool isActive)
     {
         var branch = await db.Branches.FindAsync(id);
-        if (branch == null) return NotFound(ApiResponse<BranchDto>.Fail("Branch not found."));
+        if (branch == null) return Problem(statusCode: 404, title: "Branch not found.");
 
         branch.IsActive  = isActive;
         branch.UpdatedAt = DateTime.UtcNow;

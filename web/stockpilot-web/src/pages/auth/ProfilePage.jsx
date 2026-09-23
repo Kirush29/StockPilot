@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosClient';
 import { useAuth } from '../../context/AuthContext';
+import { FormInput } from '../../components/ui/FormControls';
+import ErrorState from '../../components/ui/ErrorState';
+import { CheckCircleIcon, RefreshIcon } from '../../components/ui/Icons';
 
 export default function ProfilePage() {
-    const { user, login } = useAuth(); // Assuming login updates context, or we might need an update method
+    const { user, login } = useAuth();
     const [formData, setFormData] = useState({
         fullName: '',
         phoneNumber: '',
@@ -12,7 +15,8 @@ export default function ProfilePage() {
     });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         if (user) {
@@ -27,97 +31,120 @@ export default function ProfilePage() {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFieldErrors({ ...fieldErrors, [e.target.name]: undefined });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
+        setError(null);
+        setFieldErrors({});
         setSuccess('');
 
         try {
-            const response = await api.put('/auth/profile', formData);
-            // Ideally update the auth context user object here
+            const response = await api.put('/api/auth/profile', formData);
+            login(localStorage.getItem('stockpilot_token'), response.data);
             setSuccess('Profile updated successfully!');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update profile.');
+            setError(err.displayMessage || 'Failed to update profile.');
+            if (err.fieldErrors) {
+                setFieldErrors(err.fieldErrors);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
+        <div className="page-container">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">My Profile</h1>
+                    <p className="page-subtitle">Update your personal information</p>
+                </div>
+            </div>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
-                    {error}
+                <div style={{ marginBottom: '24px' }}>
+                    <ErrorState error={error} inline />
                 </div>
             )}
 
             {success && (
-                <div className="bg-green-50 text-green-600 p-4 rounded-md mb-6">
-                    {success}
+                <div className="success-banner" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', background: 'var(--color-success-light)', color: 'var(--color-success-dark)', borderRadius: '8px' }}>
+                    <CheckCircleIcon style={{ width: 20, height: 20 }} />
+                    <span>{success}</span>
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow rounded-lg p-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input
-                        type="text"
+            <div className="card" style={{ maxWidth: '600px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <FormInput
+                        label="Full Name"
                         name="fullName"
                         value={formData.fullName}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        error={fieldErrors.fullName}
                         required
+                        disabled={loading}
                     />
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input
-                        type="text"
+                    <FormInput
+                        label="Phone Number"
                         name="phoneNumber"
                         value={formData.phoneNumber}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        error={fieldErrors.phoneNumber}
+                        optionalText
+                        placeholder="e.g. 0771234567"
+                        disabled={loading}
                     />
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Address</label>
-                    <textarea
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        rows={3}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
+                    <div className="form-group">
+                        <label>
+                            Address
+                            <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>
+                                (Optional)
+                            </span>
+                        </label>
+                        <textarea
+                            name="address"
+                            className={`form-control ${fieldErrors.address ? 'error' : ''}`}
+                            value={formData.address}
+                            onChange={handleChange}
+                            rows={3}
+                            disabled={loading}
+                        />
+                        {fieldErrors.address && <span className="form-error">{fieldErrors.address}</span>}
+                    </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Profile Image URL</label>
-                    <input
+                    <FormInput
+                        label="Profile Image URL"
                         type="url"
                         name="profileImageUrl"
                         value={formData.profileImageUrl}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                </div>
-
-                <div className="flex justify-end">
-                    <button
-                        type="submit"
+                        error={fieldErrors.profileImageUrl}
+                        optionalText
                         disabled={loading}
-                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        {loading ? 'Saving...' : 'Save Changes'}
-                    </button>
-                </div>
-            </form>
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <RefreshIcon style={{ animation: 'spin 0.7s linear infinite', width: 14, height: 14, marginRight: 6 }} />
+                                    Saving...
+                                </>
+                            ) : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

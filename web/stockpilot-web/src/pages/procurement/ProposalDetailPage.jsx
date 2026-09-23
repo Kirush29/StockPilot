@@ -7,6 +7,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import ErrorState from '../../components/ui/ErrorState'
 import { TableSkeleton } from '../../components/ui/Skeleton'
+import { FormInput } from '../../components/ui/FormControls'
 import { AlertCircleIcon, EditIcon } from '../../components/ui/Icons'
 import DecisionTimeline from '../../components/procurement/DecisionTimeline'
 import BudgetBar from '../../components/procurement/BudgetBar'
@@ -42,16 +43,14 @@ function DecisionModal({ decision, onConfirm, onClose, saving, apiError }) {
             <div className="error-banner-content"><AlertCircleIcon /><span>{apiError}</span></div>
           </div>
         )}
-        <div className="form-group">
-          <label>Comment <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
-          <textarea
-            className="form-control"
-            rows={3}
-            maxLength={2000}
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FormInput
+            label={<span>Comment <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></span>}
+            type="text"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Add context for this decision…"
             disabled={saving}
+            placeholder="Add context for this decision…"
           />
         </div>
       </div>

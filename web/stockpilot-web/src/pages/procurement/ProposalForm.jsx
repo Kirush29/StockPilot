@@ -5,6 +5,7 @@ import { proposalsApi } from '../../api/procurementApi'
 import { productsApi, branchesApi } from '../../api/inventoryApi'
 import LineItemBuilder from '../../components/procurement/LineItemBuilder'
 import ErrorState from '../../components/ui/ErrorState'
+import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
 import { AlertCircleIcon } from '../../components/ui/Icons'
 import '../../styles/inventory.css'
 import '../../styles/procurement.css'
@@ -122,6 +123,9 @@ export default function ProposalForm({ initial }) {
         setApiError('You do not have permission to save this proposal.')
       } else if (status === 409) {
         setApiError(err.response?.data?.detail ?? 'This proposal can no longer be edited in its current status.')
+      } else if (status === 400 && err.response?.data?.errors) {
+        setErrors(err.response.data.errors)
+        setApiError('Please fix the validation errors below.')
       } else {
         const problem = err.response?.data
         const fieldErrors = problem?.errors
@@ -156,52 +160,50 @@ export default function ProposalForm({ initial }) {
       <div className="detail-card">
         <h3>Proposal Details</h3>
         <div className="form-row">
-          <div className="form-group">
-            <label>Branch <span className="required">*</span></label>
-            <select
-              className={`form-control ${errors.branchId ? 'error' : ''}`}
+          <div style={{ flex: 1 }}>
+            <SearchableDropdown
+              label={<span>Branch <span className="required">*</span></span>}
+              required
+              options={branches}
               value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
+              onChange={setBranchId}
+              error={errors.branchId || (errors.BranchId ? errors.BranchId[0] : null)}
+              placeholder="— Select a branch —"
+              getOptionValue={(opt) => opt.id}
+              renderOption={(opt) => `${opt.name} (${opt.code})`}
               disabled={saving || isEdit}
-            >
-              <option value="">Select a branch…</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
-              ))}
-            </select>
-            {errors.branchId && <span className="form-error">{errors.branchId}</span>}
-            {isEdit && <span className="form-hint">Branch cannot be changed after a proposal is created.</span>}
+            />
+            {isEdit && <span className="form-hint" style={{ display: 'block', marginTop: '4px' }}>Branch cannot be changed after a proposal is created.</span>}
           </div>
 
-          <div className="form-group">
-            <label>Supplier ID <span className="required">*</span></label>
-            <input
+          <div style={{ flex: 1 }}>
+            <FormInput
+              label={<span>Supplier ID <span className="required">*</span></span>}
+              required
               type="text"
-              className={`form-control ${errors.supplierId ? 'error' : ''}`}
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
               placeholder="e.g. 22222222-2222-2222-2222-222222222222"
               disabled={saving}
+              error={errors.supplierId || (errors.SupplierId ? errors.SupplierId[0] : null)}
             />
-            {errors.supplierId && <span className="form-error">{errors.supplierId}</span>}
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Quotation ID <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
-          <input
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FormInput
+            label={<span>Quotation ID <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></span>}
             type="text"
-            className={`form-control ${errors.quotationId ? 'error' : ''}`}
             value={quotationId}
             onChange={(e) => setQuotationId(e.target.value)}
             placeholder="Link to a supplier quotation, if one exists"
             disabled={saving}
+            error={errors.quotationId || (errors.QuotationId ? errors.QuotationId[0] : null)}
           />
-          {errors.quotationId && <span className="form-error">{errors.quotationId}</span>}
         </div>
 
-        <div className="form-group">
-          <label>Justification</label>
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <label className="form-label">Justification</label>
           <textarea
             className="form-control"
             rows={3}

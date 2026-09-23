@@ -22,63 +22,172 @@ public class TransfersController(ITransferService service) : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> GetById(Guid id)
     {
-        var result = await service.GetByIdAsync(id);
-        return Ok(ApiResponse<TransferDto>.Ok(result));
+        try
+        {
+            var result = await service.GetByIdAsync(id);
+            return Ok(ApiResponse<TransferDto>.Ok(result));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost]
     [Authorize(Roles = "BranchManager")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Create([FromBody] CreateTransferDto dto)
     {
-        var requestedBy = GetUserId();
-        var result = await service.CreateAsync(dto, requestedBy);
-        return CreatedAtAction(nameof(GetById), new { id = result.StockTransferId },
-            ApiResponse<TransferDto>.Ok(result, "Transfer request created."));
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var requestedBy = GetUserId();
+            var result = await service.CreateAsync(dto, requestedBy);
+            return CreatedAtAction(nameof(GetById), new { id = result.StockTransferId },
+                ApiResponse<TransferDto>.Ok(result, "Transfer request created."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost("{id:guid}/approve")]
     [Authorize(Roles = "BranchManager,ProcurementManager")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Approve(Guid id, [FromBody] ApproveTransferDto dto)
     {
-        var approvedBy = GetUserId();
-        var result = await service.ApproveAsync(id, dto, approvedBy);
-        return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer approved."));
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var approvedBy = GetUserId();
+            var result = await service.ApproveAsync(id, dto, approvedBy);
+            return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer approved."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost("{id:guid}/reject")]
     [Authorize(Roles = "BranchManager,ProcurementManager")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Reject(Guid id, [FromBody] RejectTransferDto dto)
     {
-        var rejectedBy = GetUserId();
-        var result = await service.RejectAsync(id, dto, rejectedBy);
-        return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer rejected."));
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var rejectedBy = GetUserId();
+            var result = await service.RejectAsync(id, dto, rejectedBy);
+            return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer rejected."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost("{id:guid}/ship")]
     [Authorize(Roles = "BranchManager,StoreEmployee")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Ship(Guid id)
     {
-        var shippedBy = GetUserId();
-        var result = await service.ShipAsync(id, shippedBy);
-        return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer shipped."));
+        try
+        {
+            var shippedBy = GetUserId();
+            var result = await service.ShipAsync(id, shippedBy);
+            return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer shipped."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost("{id:guid}/receive")]
     [Authorize(Roles = "BranchManager,StoreEmployee")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Receive(Guid id, [FromBody] ReceiveTransferDto dto)
     {
-        var receivedBy = GetUserId();
-        var result = await service.ReceiveAsync(id, dto, receivedBy);
-        return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer received."));
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var receivedBy = GetUserId();
+            var result = await service.ReceiveAsync(id, dto, receivedBy);
+            return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer received."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     [HttpPost("{id:guid}/cancel")]
     [Authorize(Roles = "BranchManager,ProcurementManager")]
     public async Task<ActionResult<ApiResponse<TransferDto>>> Cancel(Guid id)
     {
-        var cancelledBy = GetUserId();
-        var result = await service.CancelAsync(id, cancelledBy);
-        return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer cancelled."));
+        try
+        {
+            var cancelledBy = GetUserId();
+            var result = await service.CancelAsync(id, cancelledBy);
+            return Ok(ApiResponse<TransferDto>.Ok(result, "Transfer cancelled."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
     }
 
     // AI tool endpoint — read-only transfer history

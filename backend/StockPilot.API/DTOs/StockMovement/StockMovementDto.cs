@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using StockPilot.API.Entities;
 
 namespace StockPilot.API.DTOs.StockMovement;
@@ -26,10 +27,17 @@ public class StockMovementDto
 
 public class CreateAdjustmentDto
 {
+    [Required(ErrorMessage = "Product is required.")]
     public Guid ProductId { get; set; }
+
+    [Required(ErrorMessage = "Branch is required.")]
     public Guid BranchId { get; set; }
     public Guid? BatchId { get; set; }
+
+    [Required(ErrorMessage = "Movement type is required.")]
     public MovementType MovementType { get; set; }   // AdjustmentIncrease | AdjustmentDecrease | Damage | Return
+
+    [Range(0.0001, double.MaxValue, ErrorMessage = "Quantity must be greater than zero.")]
     public decimal Quantity { get; set; }
     public string? Reason { get; set; }
 }

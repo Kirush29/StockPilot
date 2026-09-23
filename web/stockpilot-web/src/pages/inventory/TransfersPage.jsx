@@ -7,6 +7,7 @@ import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
+import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
 import { RefreshIcon, TransfersIcon, CloseIcon } from '../../components/ui/Icons'
 import '../../styles/inventory.css'
 
@@ -35,13 +36,14 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
   const [destinationBranchId, setDestinationBranchId] = useState(prefill?.destinationBranchId || '')
   const [notes, setNotes]                             = useState(prefill?.reason || '')
   const [items, setItems]                             = useState(
-    prefill?.productId 
-      ? [{ productId: prefill.productId, requestedQuantity: prefill.quantity || '' }] 
+    prefill?.productId
+      ? [{ productId: prefill.productId, requestedQuantity: prefill.quantity || '' }]
       : [{ productId: '', requestedQuantity: '' }]
   )
   const [availableStock, setAvailableStock]           = useState({})
   const [submitting, setSubmitting]                   = useState(false)
   const [error, setError]                             = useState(null)
+  const [errors, setErrors]                           = useState({})
 
   // Initialize stock for prefill if source is given
   useEffect(() => {
@@ -105,6 +107,7 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
     }
 
     setSubmitting(true)
+    setErrors({})
     try {
       await transfersApi.create({
         sourceBranchId,
@@ -118,7 +121,11 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
       onCreated()
       onClose()
     } catch (err) {
-      setError(err.response?.data?.message ?? err.message ?? 'Failed to create transfer.')
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        setErrors(err.response.data.errors);
+      } else {
+        setError(err.response?.data?.message ?? err.message ?? 'Failed to create transfer.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -146,28 +153,36 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
             )}
 
             <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="ct-source">Source Branch <span className="required">*</span></label>
-                <select id="ct-source" className="form-control" value={sourceBranchId} onChange={e => handleSourceChange(e.target.value)} required>
-                  <option value="">— Select source branch —</option>
-                  {branches.map(b => (
-                    <option key={b.branchId} value={b.branchId}>{b.name} ({b.branchCode})</option>
-                  ))}
-                </select>
+              <div style={{ flex: 1 }}>
+                <SearchableDropdown
+                  label="Source Branch"
+                  required
+                  options={branches}
+                  value={sourceBranchId}
+                  onChange={handleSourceChange}
+                  error={errors.sourceBranchId || (errors.SourceBranchId ? errors.SourceBranchId[0] : null)}
+                  placeholder="— Select source branch —"
+                  getOptionValue={(opt) => opt.branchId}
+                  renderOption={(opt) => `${opt.name} (${opt.branchCode})`}
+                />
               </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="ct-dest">Destination Branch <span className="required">*</span></label>
-                <select id="ct-dest" className="form-control" value={destinationBranchId} onChange={e => setDestinationBranchId(e.target.value)} required>
-                  <option value="">— Select destination branch —</option>
-                  {branches.filter(b => b.branchId !== sourceBranchId).map(b => (
-                    <option key={b.branchId} value={b.branchId}>{b.name} ({b.branchCode})</option>
-                  ))}
-                </select>
+              <div style={{ flex: 1 }}>
+                <SearchableDropdown
+                  label="Destination Branch"
+                  required
+                  options={branches.filter(b => b.branchId !== sourceBranchId)}
+                  value={destinationBranchId}
+                  onChange={setDestinationBranchId}
+                  error={errors.destinationBranchId || (errors.DestinationBranchId ? errors.DestinationBranchId[0] : null)}
+                  placeholder="— Select destination branch —"
+                  getOptionValue={(opt) => opt.branchId}
+                  renderOption={(opt) => `${opt.name} (${opt.branchCode})`}
+                />
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="ct-notes">Notes (Optional)</label>
+              <label className="form-label" htmlFor="ct-notes">Notes <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></label>
               <textarea id="ct-notes" className="form-control" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add notes about this transfer request…" />
             </div>
 
@@ -178,37 +193,38 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
               return (
                 <div key={idx} className="transfer-item-row">
                   <div className="transfer-item-fields">
-                    <div className="form-group" style={{ flex: 2 }}>
-                      <label className="form-label">Product</label>
-                      <select
-                        className="form-control"
-                        value={item.productId}
-                        onChange={e => handleItemChange(idx, 'productId', e.target.value)}
+                    <div style={{ flex: 2 }}>
+                      <SearchableDropdown
+                        label="Product"
                         required
-                      >
-                        <option value="">— Select product —</option>
-                        {products.map(p => (
-                          <option key={p.productId} value={p.productId}>{p.name} ({p.sku})</option>
-                        ))}
-                      </select>
+                        options={products}
+                        value={item.productId}
+                        onChange={(val) => handleItemChange(idx, 'productId', val)}
+                        error={errors[`Items[${idx}].ProductId`] ? errors[`Items[${idx}].ProductId`][0] : null}
+                        placeholder="— Select product —"
+                        getOptionValue={(opt) => opt.productId}
+                        renderOption={(opt) => `${opt.name} (${opt.sku})`}
+                      />
                     </div>
-                    <div className="form-group" style={{ flex: 1 }}>
-                      <label className="form-label">
-                        Quantity
-                        {stock && (
-                          <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.6875rem', marginLeft: 6 }}>
-                            Available: {Number(stock.availableQuantity).toLocaleString()}
+                    <div style={{ flex: 1 }}>
+                      <FormInput
+                        label={
+                          <span>
+                            Quantity
+                            {stock && (
+                              <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.6875rem', marginLeft: 6 }}>
+                                Available: {Number(stock.availableQuantity).toLocaleString()}
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </label>
-                      <input
+                        }
+                        required
                         type="number"
-                        className="form-control"
                         min="0.01"
                         step="0.01"
                         value={item.requestedQuantity}
                         onChange={e => handleItemChange(idx, 'requestedQuantity', e.target.value)}
-                        required
+                        error={errors[`Items[${idx}].RequestedQuantity`] ? errors[`Items[${idx}].RequestedQuantity`][0] : null}
                       />
                     </div>
                   </div>
@@ -247,6 +263,7 @@ function TransferDetailModal({ transfer, userRole, onClose, onAction }) {
   const [receivedQtys, setRQ]       = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState(null)
+  const [errors, setErrors]         = useState({})
 
   useEffect(() => {
     if (transfer) {
@@ -270,6 +287,7 @@ function TransferDetailModal({ transfer, userRole, onClose, onAction }) {
 
   const handleConfirm = async () => {
     setError(null)
+    setErrors({})
     setSubmitting(true)
     try {
       if (action === 'approve') {
@@ -295,7 +313,11 @@ function TransferDetailModal({ transfer, userRole, onClose, onAction }) {
       onAction()
       onClose()
     } catch (err) {
-      setError(err.response?.data?.message ?? err.message ?? 'Action failed.')
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        setErrors(err.response.data.errors);
+      } else {
+        setError(err.response?.data?.message ?? err.message ?? 'Action failed.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -407,9 +429,16 @@ function TransferDetailModal({ transfer, userRole, onClose, onAction }) {
 
           {/* Action sub-panel */}
           {action === 'reject' && (
-            <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label className="form-label">Rejection Reason <span className="required">*</span></label>
-              <textarea className="form-control" rows={2} value={rejectionReason} onChange={e => setRej(e.target.value)} placeholder="Explain why this transfer is being rejected…" />
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <FormInput
+                label="Rejection Reason"
+                required
+                type="text"
+                value={rejectionReason}
+                onChange={e => setRej(e.target.value)}
+                placeholder="Explain why this transfer is being rejected…"
+                error={errors.rejectionReason || (errors.RejectionReason ? errors.RejectionReason[0] : null)}
+              />
             </div>
           )}
         </div>
@@ -467,7 +496,7 @@ export default function TransfersPage() {
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(null)
   const [statusFilter, setStatusFilter]   = useState('all')
-  
+
   const initialPrefill = location.state?.prefill
   const [showCreate, setShowCreate]       = useState(!!initialPrefill)
   const [selectedTransfer, setSelected]   = useState(null)

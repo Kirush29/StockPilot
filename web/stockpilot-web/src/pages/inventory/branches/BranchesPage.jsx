@@ -29,7 +29,7 @@ const EMPTY_BRANCH_FORM = {
 }
 
 // ── Add / Edit Branch Modal ──────────────────────────────────────────────────
-function BranchModal({ initial, onSave, onClose, saving, apiError }) {
+function BranchModal({ initial, onSave, onClose, saving, apiError, apiFieldErrors }) {
   const isEdit = !!initial
   const [form, setForm] = useState(() =>
     initial
@@ -47,6 +47,12 @@ function BranchModal({ initial, onSave, onClose, saving, apiError }) {
   )
   const [errors, setErrors] = useState({})
 
+  useEffect(() => {
+    if (apiFieldErrors) {
+      setErrors(prev => ({ ...prev, ...apiFieldErrors }))
+    }
+  }, [apiFieldErrors])
+
   const set = (field, value) => {
     setForm(f => ({ ...f, [field]: value }))
     setErrors(e => ({ ...e, [field]: undefined }))
@@ -56,6 +62,18 @@ function BranchModal({ initial, onSave, onClose, saving, apiError }) {
     const e = {}
     if (!form.name.trim()) e.name = 'Branch name is required.'
     if (!isEdit && !form.code.trim()) e.code = 'Branch code is required.'
+
+    if (form.code && !/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(form.code)) {
+      e.code = 'Code must consist of uppercase letters, numbers, and single hyphens (e.g. CMB-001).'
+    }
+    if (!form.location?.trim()) e.location = 'Address is required.'
+    if (!form.city?.trim()) e.city = 'City is required.'
+    if (!form.phoneNumber?.trim()) e.phoneNumber = 'Phone number is required.'
+    if (form.phoneNumber && !/^(?:\+94|0)7\d{8}$/.test(form.phoneNumber)) {
+      e.phoneNumber = 'Invalid Sri Lankan phone number.'
+    }
+    if (!form.email?.trim()) e.email = 'Email address is required.'
+
     return e
   }
 
@@ -87,7 +105,7 @@ function BranchModal({ initial, onSave, onClose, saving, apiError }) {
     >
       <form onSubmit={handleSubmit}>
         <div className="modal-body">
-          {apiError && (
+          {apiError && typeof apiError === 'string' && (
             <div className="error-banner">
               <div className="error-banner-content">
                 <AlertCircleIcon />
@@ -129,73 +147,78 @@ function BranchModal({ initial, onSave, onClose, saving, apiError }) {
           </div>
 
           <div className="form-group">
-            <label>Address / Location</label>
+            <label>Address / Location <span className="required">*</span></label>
             <input
               type="text"
-              className="form-control"
+              className={`form-control ${errors.location || errors.address ? 'error' : ''}`}
               value={form.location}
               onChange={e => set('location', e.target.value)}
               placeholder="Full address"
-              maxLength={500}
+              maxLength={200}
               disabled={saving}
             />
+            {(errors.location || errors.address) && <span className="form-error">{errors.location || errors.address}</span>}
           </div>
 
           <div className="form-row">
             {/* City */}
             <div className="form-group">
-              <label>City</label>
+              <label>City <span className="required">*</span></label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${errors.city ? 'error' : ''}`}
                 value={form.city}
                 onChange={e => set('city', e.target.value)}
                 placeholder="e.g. Colombo"
                 maxLength={100}
                 disabled={saving}
               />
+              {errors.city && <span className="form-error">{errors.city}</span>}
             </div>
             {/* Phone Number */}
             <div className="form-group">
-              <label>Phone Number</label>
+              <label>Phone Number <span className="required">*</span></label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${errors.phoneNumber ? 'error' : ''}`}
                 value={form.phoneNumber}
                 onChange={e => set('phoneNumber', e.target.value)}
-                placeholder="e.g. +94 11 234 5678"
+                placeholder="e.g. 0771234567"
                 maxLength={50}
                 disabled={saving}
               />
+              {errors.phoneNumber && <span className="form-error">{errors.phoneNumber}</span>}
             </div>
           </div>
 
           <div className="form-row">
             {/* Email */}
             <div className="form-group">
-              <label>Email Address</label>
+              <label>Email Address <span className="required">*</span></label>
               <input
                 type="email"
-                className="form-control"
+                className={`form-control ${errors.email ? 'error' : ''}`}
                 value={form.email}
                 onChange={e => set('email', e.target.value)}
                 placeholder="branch@stockpilot.com"
                 maxLength={200}
                 disabled={saving}
               />
+              {errors.email && <span className="form-error">{errors.email}</span>}
             </div>
             {/* Manager Name */}
             <div className="form-group">
-              <label>Manager Name</label>
+              <label>Manager Name <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${errors.managerName ? 'error' : ''}`}
                 value={form.managerName}
                 onChange={e => set('managerName', e.target.value)}
                 placeholder="e.g. Kamal Perera"
                 maxLength={200}
                 disabled={saving}
               />
+              {errors.managerName && <span className="form-error">{errors.managerName}</span>}
             </div>
           </div>
 
@@ -218,7 +241,12 @@ function BranchModal({ initial, onSave, onClose, saving, apiError }) {
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Branch'}
+            {saving ? (
+              <>
+                <RefreshIcon style={{ animation: 'spin 0.7s linear infinite', width: 14, height: 14, marginRight: 6 }} />
+                Saving…
+              </>
+            ) : isEdit ? 'Save Changes' : 'Create Branch'}
           </button>
         </div>
       </form>
@@ -279,7 +307,10 @@ export default function BranchesPage() {
       setModal(null)
       load()
     } catch (err) {
-      setModalError(err.response?.data?.message ?? err.response?.data?.detail ?? 'Failed to save branch.')
+      setModalError(err.displayMessage ?? 'Failed to save branch.')
+      if (err.fieldErrors) {
+        setModal(m => ({ ...m, formErrors: err.fieldErrors }))
+      }
     } finally {
       setSaving(false)
     }
@@ -463,6 +494,8 @@ export default function BranchesPage() {
           onClose={() => { setModal(null); setModalError(null) }}
           saving={saving}
           apiError={modalError}
+          apiFieldErrors={modal.formErrors}
+          key={modal.mode + (modal.data?.id || 'new')}
         />
       )}
     </div>

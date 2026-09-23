@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import api from '../../api/axiosClient';
+import { FormInput } from '../../components/ui/FormControls';
+import ErrorState from '../../components/ui/ErrorState';
+import { CheckCircleIcon, RefreshIcon } from '../../components/ui/Icons';
 
 export default function ChangePasswordPage() {
     const [formData, setFormData] = useState({
@@ -7,103 +10,153 @@ export default function ChangePasswordPage() {
         newPassword: '',
         confirmPassword: ''
     });
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false
+    });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFieldErrors({ ...fieldErrors, [e.target.name]: undefined });
+    };
+
+    const toggleShowPassword = (field) => {
+        setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
+        setError(null);
+        setFieldErrors({});
         setSuccess('');
 
         if (formData.newPassword !== formData.confirmPassword) {
-            setError("New password and confirm password do not match.");
+            setFieldErrors({ confirmPassword: "New password and confirm password do not match." });
             setLoading(false);
             return;
         }
 
         try {
-            await api.post('/auth/change-password', {
+            await api.post('/api/auth/change-password', {
                 currentPassword: formData.currentPassword,
                 newPassword: formData.newPassword
             });
             setSuccess('Password changed successfully!');
             setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to change password.');
+            setError(err.displayMessage || 'Failed to change password.');
+            if (err.fieldErrors) {
+                setFieldErrors(err.fieldErrors);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="max-w-md mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h1>
+        <div className="page-container">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">Change Password</h1>
+                    <p className="page-subtitle">Update your account password</p>
+                </div>
+            </div>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
-                    {error}
+                <div style={{ marginBottom: '24px' }}>
+                    <ErrorState error={error} inline />
                 </div>
             )}
 
             {success && (
-                <div className="bg-green-50 text-green-600 p-4 rounded-md mb-6">
-                    {success}
+                <div className="success-banner" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', background: 'var(--color-success-light)', color: 'var(--color-success-dark)', borderRadius: '8px' }}>
+                    <CheckCircleIcon style={{ width: 20, height: 20 }} />
+                    <span>{success}</span>
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow rounded-lg p-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Current Password</label>
-                    <input
-                        type="password"
+            <div className="card" style={{ maxWidth: '400px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <FormInput
+                        label="Current Password"
+                        type={showPasswords.current ? 'text' : 'password'}
                         name="currentPassword"
                         value={formData.currentPassword}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        error={fieldErrors.currentPassword}
                         required
+                        disabled={loading}
+                        suffix={
+                            <span
+                                style={{ cursor: 'pointer', fontSize: '12px' }}
+                                onClick={() => toggleShowPassword('current')}
+                            >
+                                {showPasswords.current ? 'Hide' : 'Show'}
+                            </span>
+                        }
                     />
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">New Password</label>
-                    <input
-                        type="password"
+                    <FormInput
+                        label="New Password"
+                        type={showPasswords.new ? 'text' : 'password'}
                         name="newPassword"
                         value={formData.newPassword}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        error={fieldErrors.newPassword}
                         required
+                        disabled={loading}
+                        suffix={
+                            <span
+                                style={{ cursor: 'pointer', fontSize: '12px' }}
+                                onClick={() => toggleShowPassword('new')}
+                            >
+                                {showPasswords.new ? 'Hide' : 'Show'}
+                            </span>
+                        }
                     />
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
-                    <input
-                        type="password"
+                    <FormInput
+                        label="Confirm New Password"
+                        type={showPasswords.confirm ? 'text' : 'password'}
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        error={fieldErrors.confirmPassword}
                         required
-                    />
-                </div>
-
-                <div className="flex justify-end">
-                    <button
-                        type="submit"
                         disabled={loading}
-                        className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        {loading ? 'Changing Password...' : 'Change Password'}
-                    </button>
-                </div>
-            </form>
+                        suffix={
+                            <span
+                                style={{ cursor: 'pointer', fontSize: '12px' }}
+                                onClick={() => toggleShowPassword('confirm')}
+                            >
+                                {showPasswords.confirm ? 'Hide' : 'Show'}
+                            </span>
+                        }
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            style={{ width: '100%', justifyContent: 'center' }}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <RefreshIcon style={{ animation: 'spin 0.7s linear infinite', width: 14, height: 14, marginRight: 6 }} />
+                                    Changing Password...
+                                </>
+                            ) : 'Change Password'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

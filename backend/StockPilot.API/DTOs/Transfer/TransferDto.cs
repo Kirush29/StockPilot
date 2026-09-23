@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace StockPilot.API.DTOs.Transfer;
 
 public class TransferItemDto
@@ -39,16 +41,25 @@ public class TransferDto
 
 public class CreateTransferItemDto
 {
+    [Required(ErrorMessage = "Product is required.")]
     public Guid ProductId { get; set; }
     public Guid? BatchId { get; set; }
+
+    [Range(0.0001, double.MaxValue, ErrorMessage = "Requested quantity must be greater than zero.")]
     public decimal RequestedQuantity { get; set; }
 }
 
 public class CreateTransferDto
 {
+    [Required(ErrorMessage = "Source branch is required.")]
     public Guid SourceBranchId { get; set; }
+
+    [Required(ErrorMessage = "Destination branch is required.")]
     public Guid DestinationBranchId { get; set; }
     public string? Notes { get; set; }
+
+    [Required]
+    [MinLength(1, ErrorMessage = "At least one item is required for the transfer.")]
     public List<CreateTransferItemDto> Items { get; set; } = [];
 }
 
@@ -60,11 +71,14 @@ public class ApproveTransferDto
 public class ApproveTransferItemDto
 {
     public Guid StockTransferItemId { get; set; }
+
+    [Range(0, double.MaxValue, ErrorMessage = "Approved quantity cannot be negative.")]
     public decimal ApprovedQuantity { get; set; }
 }
 
 public class RejectTransferDto
 {
+    [Required(ErrorMessage = "Rejection reason is required.")]
     public string RejectionReason { get; set; } = string.Empty;
 }
 
