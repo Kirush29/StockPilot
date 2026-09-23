@@ -20,4 +20,5 @@ public class Branch
     public ICollection<StockMovement> StockMovements { get; set; } = [];
     public ICollection<StockTransfer> OutboundTransfers { get; set; } = [];
     public ICollection<StockTransfer> InboundTransfers { get; set; } = [];
+    public ICollection<User> Users { get; set; } = [];
 }

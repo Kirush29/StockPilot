@@ -18,14 +18,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
-        // ── User (stub) ──────────────────────────────────────────────────────
+        // ── User ───────────────────────────────────────────────────────────────
         mb.Entity<User>(e =>
         {
             e.HasKey(u => u.UserId);
+            e.Property(u => u.Username).IsRequired().HasMaxLength(100);
+            e.HasIndex(u => u.Username).IsUnique();
+            e.Property(u => u.PasswordHash).IsRequired();
             e.Property(u => u.FullName).IsRequired().HasMaxLength(200);
             e.Property(u => u.Email).IsRequired().HasMaxLength(200);
             e.HasIndex(u => u.Email).IsUnique();
             e.Property(u => u.Role).IsRequired().HasMaxLength(50);
+            e.Property(u => u.PhoneNumber).HasMaxLength(50);
+            e.Property(u => u.ProfileImageUrl).HasMaxLength(1000);
+            e.Property(u => u.Address).HasMaxLength(1000);
+
+            e.HasOne(u => u.Branch)
+             .WithMany(b => b.Users)
+             .HasForeignKey(u => u.BranchId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Branch ───────────────────────────────────────────────────────────
