@@ -12,6 +12,13 @@ public class QuotationConfiguration : IEntityTypeConfiguration<Quotation>
 
         builder.HasKey(q => q.Id);
 
+        builder.Property(q => q.QuotationReference)
+            .IsRequired()
+            .HasMaxLength(50);
+        
+        builder.HasIndex(q => q.QuotationReference)
+            .IsUnique();
+
         builder.Property(q => q.SupplierId)
             .IsRequired();
 

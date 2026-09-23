@@ -10,4 +10,5 @@ public interface IQuotationRepository
     Task UpdateAsync(Quotation quotation);
     Task<IReadOnlyList<Quotation>> GetByProductIdAsync(Guid productId);
     Task<IReadOnlyList<Quotation>> GetBySupplierIdAsync(Guid supplierId);
+    Task<int> GetNextReferenceSequenceAsync();
 }

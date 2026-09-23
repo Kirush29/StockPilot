@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StockPilot.Infrastructure.Data;
@@ -11,9 +12,11 @@ using StockPilot.Infrastructure.Data;
 namespace StockPilot.Infrastructure.Migrations
 {
     [DbContext(typeof(StockPilotDbContext))]
-    partial class StockPilotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923102021_AddQuotationReference")]
+    partial class AddQuotationReference
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

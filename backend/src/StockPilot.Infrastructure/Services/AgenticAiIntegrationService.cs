@@ -27,7 +27,7 @@ public class AgenticAiIntegrationService : IAgenticAiIntegrationService
     {
         var inputPayload = new
         {
-            mode = "ai",
+            mode = _settings.AgentMode,
             productId = productId.ToString(),
             candidates = candidates
         };

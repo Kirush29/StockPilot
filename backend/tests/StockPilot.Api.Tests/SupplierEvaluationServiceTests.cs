@@ -53,7 +53,7 @@ public class SupplierEvaluationServiceTests
 
         var product = new Product { Id = productId, Name = "Laptop", SKU = "LAP-001" };
         var supplierId = Guid.NewGuid();
-        var supplier = new Supplier { Id = supplierId, IsActive = true };
+        var supplier = new Supplier { Id = supplierId, IsActive = true, Rating = 4.5m };
         var quotations = new List<Quotation> 
         { 
             new Quotation { 
@@ -66,12 +66,10 @@ public class SupplierEvaluationServiceTests
                 ValidUntil = DateTime.UtcNow.AddDays(1)
             } 
         };
-        var ratings = new List<SupplierRating> { new SupplierRating { Rating = 4.5m } };
 
         _productRepositoryMock.Setup(r => r.GetByIdAsync(productId)).ReturnsAsync(product);
         _quotationRepositoryMock.Setup(r => r.GetByProductIdAsync(productId)).ReturnsAsync(quotations);
         _supplierRepositoryMock.Setup(r => r.GetByIdAsync(supplierId)).ReturnsAsync(supplier);
-        _supplierRepositoryMock.Setup(r => r.GetRatingsAsync(supplierId)).ReturnsAsync(ratings);
 
         var response = await _service.EvaluateQuotationsAsync(productId);
         var result = response.AllEvaluations;
@@ -271,8 +269,8 @@ public class SupplierEvaluationServiceTests
         var product = new Product { Id = productId, Name = "Laptop", SKU = "LAP-001" };
         var supplierId1 = Guid.NewGuid();
         var supplierId2 = Guid.NewGuid();
-        var supplier1 = new Supplier { Id = supplierId1, IsActive = true };
-        var supplier2 = new Supplier { Id = supplierId2, IsActive = true };
+        var supplier1 = new Supplier { Id = supplierId1, IsActive = true, Rating = 4.5m };
+        var supplier2 = new Supplier { Id = supplierId2, IsActive = true, Rating = 5.0m };
 
         var quotation1 = new Quotation { Id = Guid.NewGuid(), ProductId = productId, SupplierId = supplierId1, UnitPrice = 10m, DeliveryDays = 5, Status = QuotationStatus.Pending, ValidUntil = DateTime.UtcNow.AddDays(1) };
         var quotation2 = new Quotation { Id = Guid.NewGuid(), ProductId = productId, SupplierId = supplierId2, UnitPrice = 20m, DeliveryDays = 2, Status = QuotationStatus.Pending, ValidUntil = DateTime.UtcNow.AddDays(1) };
@@ -288,9 +286,6 @@ public class SupplierEvaluationServiceTests
         _quotationRepositoryMock.Setup(r => r.GetByProductIdAsync(productId)).ReturnsAsync(new List<Quotation> { quotation1, quotation2 });
         _supplierRepositoryMock.Setup(r => r.GetByIdAsync(supplierId1)).ReturnsAsync(supplier1);
         _supplierRepositoryMock.Setup(r => r.GetByIdAsync(supplierId2)).ReturnsAsync(supplier2);
-        
-        _supplierRepositoryMock.Setup(r => r.GetRatingsAsync(supplierId1)).ReturnsAsync(new List<SupplierRating> { new SupplierRating { Rating = 4.5m } });
-        _supplierRepositoryMock.Setup(r => r.GetRatingsAsync(supplierId2)).ReturnsAsync(new List<SupplierRating> { new SupplierRating { Rating = 5.0m } });
 
         var response = await _service.EvaluateQuotationsAsync(productId);
         var result = response.AllEvaluations;

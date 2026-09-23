@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StockPilot.Infrastructure.Data;
@@ -11,9 +12,11 @@ using StockPilot.Infrastructure.Data;
 namespace StockPilot.Infrastructure.Migrations
 {
     [DbContext(typeof(StockPilotDbContext))]
-    partial class StockPilotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923080752_AddProductsTable")]
+    partial class AddProductsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,8 +24,6 @@ namespace StockPilot.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.HasSequence<int>("QuotationReferenceSequence");
 
             modelBuilder.Entity("StockPilot.Domain.Entities.Product", b =>
                 {
@@ -87,11 +88,6 @@ namespace StockPilot.Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<string>("QuotationReference")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -111,9 +107,6 @@ namespace StockPilot.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("QuotationReference")
-                        .IsUnique();
 
                     b.HasIndex("SupplierId");
 

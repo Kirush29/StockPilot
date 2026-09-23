@@ -23,8 +23,8 @@ public class SupplierEvaluationControllerTests
     {
         var productId = Guid.NewGuid();
         var request = new EvaluateQuotationsRequest { ProductId = productId };
-        var resultDto = new SupplierEvaluationResultDto(Guid.NewGuid(), Guid.NewGuid(), 10m, 5, 4.5m, "Pending", true, "Quotation is eligible.", 100m, 100m, 100m, 100m);
-        var candidateDto = new SupplierEvaluationCandidateDto(resultDto.SupplierId, resultDto.QuotationId, 10m, 5, 4.5m, 100m, 100m, 100m, 100m);
+        var resultDto = new SupplierEvaluationResultDto(Guid.NewGuid(), Guid.NewGuid(), "QT-2026-00001", 10m, 5, 4.5m, "Pending", true, "Quotation is eligible.", 100m, 100m, 100m, 100m);
+        var candidateDto = new SupplierEvaluationCandidateDto(resultDto.SupplierId, resultDto.QuotationId, "QT-2026-00001", 10m, 5, 4.5m, 100m, 100m, 100m, 100m);
         var responseDto = new SupplierEvaluationResponseDto(
             new List<SupplierEvaluationResultDto> { resultDto },
             new List<SupplierEvaluationCandidateDto> { candidateDto },

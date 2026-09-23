@@ -66,8 +66,14 @@ public class SupplierService : ISupplierService
 
         await _supplierRepository.AddRatingAsync(rating);
 
-        // DO NOT update Supplier.Rating, per constraint: "Do NOT introduce rating aggregation or modify Supplier.Rating unless the existing architecture already requires it."
+        var allRatings = await _supplierRepository.GetRatingsAsync(supplierId);
+        if (allRatings != null && allRatings.Any())
+        {
+            existingSupplier.Rating = allRatings.Average(r => r.Rating);
+            await _supplierRepository.UpdateAsync(existingSupplier);
+        }
 
+        rating.Supplier = null!;
         return rating;
     }
 

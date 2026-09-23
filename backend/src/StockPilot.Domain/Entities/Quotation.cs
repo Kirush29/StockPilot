@@ -3,6 +3,7 @@ namespace StockPilot.Domain.Entities;
 public class Quotation
 {
     public Guid Id { get; set; }
+    public string QuotationReference { get; set; } = string.Empty;
     public Guid SupplierId { get; set; }
     public Guid ProductId { get; set; }
     public decimal UnitPrice { get; set; }
@@ -13,5 +14,5 @@ public class Quotation
     public DateTime ValidUntil { get; set; }
     public DateTime SubmittedAt { get; set; }
 
-    public Supplier Supplier { get; set; } = null!;
+    public Supplier? Supplier { get; set; }
 }

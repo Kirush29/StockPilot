@@ -17,6 +17,9 @@ public class StockPilotDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasSequence<int>("QuotationReferenceSequence")
+            .StartsAt(1)
+            .IncrementsBy(1);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StockPilotDbContext).Assembly);
     }
 }

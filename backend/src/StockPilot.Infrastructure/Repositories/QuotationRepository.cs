@@ -54,4 +54,18 @@ public class QuotationRepository : IQuotationRepository
             .Where(q => q.SupplierId == supplierId)
             .ToListAsync();
     }
+
+    public async Task<int> GetNextReferenceSequenceAsync()
+    {
+        var connection = _dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT nextval('\"QuotationReferenceSequence\"')";
+        var result = await command.ExecuteScalarAsync();
+        return Convert.ToInt32(result);
+    }
 }

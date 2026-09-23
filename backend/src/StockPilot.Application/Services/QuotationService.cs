@@ -43,6 +43,10 @@ public class QuotationService : IQuotationService
             throw new KeyNotFoundException("Product not found.");
         }
 
+        var seq = await _quotationRepository.GetNextReferenceSequenceAsync();
+        var year = DateTime.UtcNow.Year;
+        quotation.QuotationReference = $"QT-{year}-{seq:D5}";
+
         await _quotationRepository.AddAsync(quotation);
         return quotation;
     }

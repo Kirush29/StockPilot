@@ -52,8 +52,7 @@ public class SupplierEvaluationService : ISupplierEvaluationService
                 throw new KeyNotFoundException("Supplier not found.");
             }
 
-            var ratings = await _supplierRepository.GetRatingsAsync(supplier.Id);
-            decimal? averageRating = ratings.Any() ? ratings.Average(r => r.Rating) : null;
+            decimal? averageRating = supplier.Rating > 0 ? supplier.Rating : null;
 
             bool isEligible;
             string eligibilityReason;
@@ -82,6 +81,7 @@ public class SupplierEvaluationService : ISupplierEvaluationService
             results.Add(new SupplierEvaluationResultDto(
                 supplier.Id,
                 quotation.Id,
+                quotation.QuotationReference,
                 quotation.UnitPrice,
                 quotation.DeliveryDays,
                 averageRating,
@@ -129,6 +129,7 @@ public class SupplierEvaluationService : ISupplierEvaluationService
                 .Select(r => new SupplierEvaluationCandidateDto(
                     r.SupplierId,
                     r.QuotationId,
+                    r.QuotationReference,
                     r.UnitPrice,
                     r.DeliveryDays,
                     r.SupplierRating,

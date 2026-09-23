@@ -99,6 +99,7 @@ public class QuotationsController : ControllerBase
         var quotations = await _quotationService.GetByProductIdAsync(productId);
         var result = quotations.Select(q => new QuotationComparisonDto(
             q.Id,
+            q.QuotationReference,
             q.SupplierId,
             q.ProductId,
             q.UnitPrice,
@@ -117,6 +118,7 @@ public record UpdateQuotationStatusRequest(string Status);
 
 public record QuotationComparisonDto(
     Guid Id,
+    string QuotationReference,
     Guid SupplierId,
     Guid ProductId,
     decimal UnitPrice,
