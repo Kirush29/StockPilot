@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supplierEvaluationService, type SupplierEvaluationResponseDto, type SupplierEvaluationCandidateDto } from '../services/supplierEvaluationService';
 import { quotationService, type QuotationStatus } from '../services/quotationService';
+import { productService, type Product } from '../services/productService';
+import { supplierService, type Supplier } from '../services/supplierService';
 
 export default function Evaluation() {
   const [productId, setProductId] = useState('');
@@ -8,6 +10,25 @@ export default function Evaluation() {
   const [error, setError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<SupplierEvaluationResponseDto | null>(null);
   const [hasEvaluated, setHasEvaluated] = useState(false);
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [prods, supps] = await Promise.all([
+          productService.getAllProducts(),
+          supplierService.getAllSuppliers()
+        ]);
+        setProducts(prods);
+        setSuppliers(supps);
+      } catch (err) {
+        console.error("Failed to fetch initial data", err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const [actionCandidate, setActionCandidate] = useState<{ candidate: SupplierEvaluationCandidateDto; action: QuotationStatus } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -60,7 +81,16 @@ export default function Evaluation() {
 
   const formatNumber = (num: number | null | undefined) => {
     if (num === null || num === undefined) return '-';
-    return Number(num).toFixed(2);
+    return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace(/([A-Z])/g, ' $1').trim();
+  };
+
+  const getSupplierDisplay = (supplierId: string) => {
+    const s = suppliers.find(sup => sup.id === supplierId);
+    return s ? `${s.name} (${s.supplierCode})` : supplierId.substring(0, 8) + '...';
   };
 
   return (
@@ -74,14 +104,17 @@ export default function Evaluation() {
 
       <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
         <form onSubmit={handleEvaluateSubmit} className="flex gap-2 items-center">
-          <input
-            type="text"
+          <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            placeholder="Enter Product ID to evaluate..."
             className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
             disabled={loading}
-          />
+          >
+            <option value="">Select a product to evaluate...</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={!productId.trim() || loading}
@@ -118,7 +151,7 @@ export default function Evaluation() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg border">
                 <p className="text-sm text-gray-500 font-medium mb-1">Decision Status</p>
-                <p className="text-lg font-bold text-gray-900">{evaluation.decisionStatus}</p>
+                <p className="text-lg font-bold text-gray-900">{formatStatus(evaluation.decisionStatus)}</p>
               </div>
               <div className={`p-4 rounded-lg border ${evaluation.humanApprovalRequired ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
                 <p className="text-sm font-medium mb-1 opacity-75">Human Approval Required</p>
@@ -147,15 +180,15 @@ export default function Evaluation() {
                 <table className="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
-                      <th className="p-4 border-b font-medium">Supplier ID</th>
-                      <th className="p-4 border-b font-medium">Quotation ID</th>
-                      <th className="p-4 border-b font-medium">Unit Price</th>
-                      <th className="p-4 border-b font-medium">Del. Days</th>
-                      <th className="p-4 border-b font-medium">Rating</th>
-                      <th className="p-4 border-b font-medium text-right bg-blue-50">Price Sc.</th>
-                      <th className="p-4 border-b font-medium text-right bg-blue-50">Del. Sc.</th>
-                      <th className="p-4 border-b font-medium text-right bg-blue-50">Rating Sc.</th>
-                      <th className="p-4 border-b font-bold text-right bg-blue-100">Overall</th>
+                      <th className="p-4 border-b font-medium text-center">Supplier</th>
+                      <th className="p-4 border-b font-medium text-center">Quotation</th>
+                      <th className="p-4 border-b font-medium text-center">Unit Price</th>
+                      <th className="p-4 border-b font-medium text-center">Del. Days</th>
+                      <th className="p-4 border-b font-medium text-center">Rating</th>
+                      <th className="p-4 border-b font-medium text-center bg-blue-50">Price Sc.</th>
+                      <th className="p-4 border-b font-medium text-center bg-blue-50">Del. Sc.</th>
+                      <th className="p-4 border-b font-medium text-center bg-blue-50">Rating Sc.</th>
+                      <th className="p-4 border-b font-bold text-center bg-blue-100">Overall</th>
                       {evaluation.humanApprovalRequired && (
                         <th className="p-4 border-b font-medium text-center bg-gray-50">Actions (Human Decision)</th>
                       )}
@@ -164,18 +197,30 @@ export default function Evaluation() {
                   <tbody className="divide-y divide-gray-200 text-sm">
                     {evaluation.eligibleCandidates.map((candidate) => (
                       <tr key={candidate.quotationId} className="hover:bg-gray-50 transition-colors">
-                        <td className="p-4"><span className="font-mono text-xs text-gray-500" title={candidate.supplierId}>{candidate.supplierId.substring(0, 8)}...</span></td>
-                        <td className="p-4"><span className="font-mono text-xs text-gray-500" title={candidate.quotationId}>{candidate.quotationId.substring(0, 8)}...</span></td>
-                        <td className="p-4">${formatNumber(candidate.unitPrice)}</td>
-                        <td className="p-4">{candidate.deliveryDays}</td>
-                        <td className="p-4">{formatNumber(candidate.supplierRating)}</td>
+                        <td className="p-4 text-left" title={candidate.supplierId}>
+                          {(() => {
+                            const s = suppliers.find(sup => sup.id === candidate.supplierId);
+                            return s ? (
+                              <div className="leading-tight">
+                                <div className="font-medium text-gray-900 whitespace-nowrap">{s.name}</div>
+                                <div className="text-gray-500 text-xs whitespace-nowrap">({s.supplierCode})</div>
+                              </div>
+                            ) : (
+                              <div className="font-medium text-gray-900 whitespace-nowrap">{candidate.supplierId.substring(0, 8)}...</div>
+                            );
+                          })()}
+                        </td>
+                        <td className="p-4 text-left"><span className="text-gray-900 font-medium">{candidate.quotationReference}</span></td>
+                        <td className="p-4 text-right">Rs. {formatNumber(candidate.unitPrice)}</td>
+                        <td className="p-4 text-center">{candidate.deliveryDays}</td>
+                        <td className="p-4 text-center">{formatNumber(candidate.supplierRating)}</td>
                         <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.priceScore)}</td>
                         <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.deliveryScore)}</td>
                         <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.ratingScore)}</td>
                         <td className="p-4 text-right bg-blue-100/50 font-bold text-blue-900">{formatNumber(candidate.overallScore)}</td>
                         {evaluation.humanApprovalRequired && (
                           <td className="p-4 bg-gray-50/50 text-center">
-                            <div className="flex gap-2 justify-center">
+                            <div className="flex items-center justify-center gap-3">
                               <button
                                 onClick={() => setActionCandidate({ candidate, action: 'Accepted' })}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
@@ -205,54 +250,66 @@ export default function Evaluation() {
               <h3 className="text-lg font-semibold text-gray-800">All Evaluations</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
+              <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
-                    <th className="p-4 border-b font-medium">Supplier ID</th>
-                    <th className="p-4 border-b font-medium">Quotation ID</th>
-                    <th className="p-4 border-b font-medium">Unit Price</th>
-                    <th className="p-4 border-b font-medium">Del. Days</th>
-                    <th className="p-4 border-b font-medium">Rating</th>
-                    <th className="p-4 border-b font-medium">Status</th>
-                    <th className="p-4 border-b font-medium">Eligible</th>
-                    <th className="p-4 border-b font-medium max-w-xs">Reason</th>
-                    <th className="p-4 border-b font-medium text-right">Price Sc.</th>
-                    <th className="p-4 border-b font-medium text-right">Del. Sc.</th>
-                    <th className="p-4 border-b font-medium text-right">Rating Sc.</th>
-                    <th className="p-4 border-b font-bold text-right">Overall</th>
+                    <th className="p-4 border-b font-medium text-center">Supplier</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Quotation</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Unit Price</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Del. Days</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Rating</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Status</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Eligible</th>
+                    <th className="p-4 border-b font-medium text-center">Reason</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Price Sc.</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Del. Sc.</th>
+                    <th className="p-4 border-b font-medium text-center whitespace-nowrap">Rating Sc.</th>
+                    <th className="p-4 border-b font-bold text-center whitespace-nowrap">Overall</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-sm">
                   {evaluation.allEvaluations.map((evalRow) => (
                     <tr key={evalRow.quotationId} className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4"><span className="font-mono text-xs text-gray-500" title={evalRow.supplierId}>{evalRow.supplierId.substring(0, 8)}...</span></td>
-                      <td className="p-4"><span className="font-mono text-xs text-gray-500" title={evalRow.quotationId}>{evalRow.quotationId.substring(0, 8)}...</span></td>
-                      <td className="p-4">${formatNumber(evalRow.unitPrice)}</td>
-                      <td className="p-4">{evalRow.deliveryDays}</td>
-                      <td className="p-4">{formatNumber(evalRow.supplierRating)}</td>
-                      <td className="p-4">
+                      <td className="p-4 text-left" title={evalRow.supplierId}>
+                        {(() => {
+                          const s = suppliers.find(sup => sup.id === evalRow.supplierId);
+                          return s ? (
+                            <div className="leading-tight">
+                              <div className="font-medium text-gray-900 whitespace-nowrap">{s.name}</div>
+                              <div className="text-gray-500 text-xs whitespace-nowrap">({s.supplierCode})</div>
+                            </div>
+                          ) : (
+                            <div className="font-medium text-gray-900 whitespace-nowrap">{evalRow.supplierId.substring(0, 8)}...</div>
+                          );
+                        })()}
+                      </td>
+                      <td className="p-4 text-left whitespace-nowrap"><span className="text-gray-900 font-medium">{evalRow.quotationReference}</span></td>
+                      <td className="p-4 text-right whitespace-nowrap">Rs. {formatNumber(evalRow.unitPrice)}</td>
+                      <td className="p-4 text-center whitespace-nowrap">{evalRow.deliveryDays}</td>
+                      <td className="p-4 text-center whitespace-nowrap">{formatNumber(evalRow.supplierRating)}</td>
+                      <td className="p-4 text-center whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           evalRow.status === 'Accepted' ? 'bg-green-100 text-green-800' :
                           evalRow.status === 'Rejected' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {evalRow.status}
+                          {formatStatus(evalRow.status)}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           evalRow.eligibility ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {evalRow.eligibility ? 'Yes' : 'No'}
                         </span>
                       </td>
-                      <td className="p-4 text-gray-600 max-w-xs truncate" title={evalRow.eligibilityReason}>
+                      <td className="p-4 text-left text-gray-600" title={evalRow.eligibilityReason}>
                         {evalRow.eligibilityReason}
                       </td>
-                      <td className="p-4 text-right">{formatNumber(evalRow.priceScore)}</td>
-                      <td className="p-4 text-right">{formatNumber(evalRow.deliveryScore)}</td>
-                      <td className="p-4 text-right">{formatNumber(evalRow.ratingScore)}</td>
-                      <td className="p-4 text-right font-medium">{formatNumber(evalRow.overallScore)}</td>
+                      <td className="p-4 text-right whitespace-nowrap">{formatNumber(evalRow.priceScore)}</td>
+                      <td className="p-4 text-right whitespace-nowrap">{formatNumber(evalRow.deliveryScore)}</td>
+                      <td className="p-4 text-right whitespace-nowrap">{formatNumber(evalRow.ratingScore)}</td>
+                      <td className="p-4 text-right font-medium whitespace-nowrap">{formatNumber(evalRow.overallScore)}</td>
                     </tr>
                   ))}
                   {evaluation.allEvaluations.length === 0 && (
@@ -290,9 +347,9 @@ export default function Evaluation() {
                 Are you sure you want to <strong>{actionCandidate.action === 'Accepted' ? 'Approve' : 'Reject'}</strong> the candidate quotation?
               </p>
               
-              <div className="bg-gray-50 p-3 rounded border text-sm text-gray-700 mb-6 font-mono">
-                <div><span className="font-semibold">Supplier ID:</span> {actionCandidate.candidate.supplierId}</div>
-                <div className="mt-1"><span className="font-semibold">Quotation ID:</span> {actionCandidate.candidate.quotationId}</div>
+              <div className="bg-gray-50 p-3 rounded border text-sm text-gray-700 mb-6">
+                <div><span className="font-semibold">Supplier:</span> {getSupplierDisplay(actionCandidate.candidate.supplierId)}</div>
+                <div className="mt-1"><span className="font-semibold">Quotation:</span> {actionCandidate.candidate.quotationReference}</div>
               </div>
               
               <div className="flex justify-end gap-2">

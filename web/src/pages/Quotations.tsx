@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { type Quotation, type QuotationStatus, quotationService, type SaveQuotationRequest } from '../services/quotationService';
+import { supplierService, type Supplier } from '../services/supplierService';
+import { productService, type Product } from '../services/productService';
 
 export default function Quotations() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,10 +52,18 @@ export default function Quotations() {
       try {
         setLoading(true);
         setError(null);
-        const data = await quotationService.getAllQuotations();
-        if (isMounted) setQuotations(data);
+        const [quotationsData, suppliersData, productsData] = await Promise.all([
+          quotationService.getAllQuotations(),
+          supplierService.getAllSuppliers(),
+          productService.getAllProducts()
+        ]);
+        if (isMounted) {
+          setQuotations(quotationsData);
+          setSuppliers(suppliersData);
+          setProducts(productsData);
+        }
       } catch (err: any) {
-        if (isMounted) setError(err.message || 'Failed to load quotations.');
+        if (isMounted) setError(err.message || 'Failed to load data.');
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -96,7 +108,7 @@ export default function Quotations() {
     setIsFormOpen(true);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -184,6 +196,9 @@ export default function Quotations() {
     }
   };
 
+  const minUnitPrice = hasCompared && quotations.length > 0 ? Math.min(...quotations.map(q => q.unitPrice)) : null;
+  const minDeliveryDays = hasCompared && quotations.length > 0 ? Math.min(...quotations.map(q => q.deliveryDays)) : null;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -198,14 +213,22 @@ export default function Quotations() {
 
       <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
         <form onSubmit={handleCompareSubmit} className="flex gap-2 items-center">
-          <input
-            type="text"
+          <select
             value={compareProductId}
             onChange={(e) => setCompareProductId(e.target.value)}
-            placeholder="Compare quotations by Product ID..."
             className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
             disabled={isComparing || loading}
-          />
+          >
+            <option value="">Compare quotations by Product...</option>
+            {products.length === 0 && (
+              <option value="" disabled>No products available</option>
+            )}
+            {products.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.sku})
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={!compareProductId.trim() || isComparing || loading}
@@ -248,29 +271,45 @@ export default function Quotations() {
               
               <form id="quotation-form" onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier ID</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                  <select
                     name="supplierId"
                     value={formData.supplierId}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    placeholder="Supplier ID"
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select supplier</option>
+                    {suppliers.filter(s => s.isActive).length === 0 && (
+                      <option value="" disabled>No active suppliers available</option>
+                    )}
+                    {suppliers.filter(s => s.isActive).map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.supplierCode})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                  <select
                     name="productId"
                     value={formData.productId}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    placeholder="Product ID"
                     disabled={isSubmitting}
-                  />
+                  >
+                    <option value="">Select product</option>
+                    {products.length === 0 && (
+                      <option value="" disabled>No products available</option>
+                    )}
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -421,50 +460,67 @@ export default function Quotations() {
       {!(loading || isComparing) && !error && quotations.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
+            <table className="w-full text-center border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs tracking-wider">
-                  <th className="p-4 font-semibold">Supplier ID</th>
-                  <th className="p-4 font-semibold">Product ID</th>
-                  <th className="p-4 font-semibold text-right">Unit Price</th>
-                  <th className="p-4 font-semibold text-right">Quantity</th>
-                  <th className="p-4 font-semibold text-right">Delivery Days</th>
-                  <th className="p-4 font-semibold">Status</th>
-                  <th className="p-4 font-semibold">Valid Until</th>
-                  <th className="p-4 font-semibold">Submitted At</th>
-                  <th className="p-4 font-semibold text-right">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs tracking-wider font-semibold">
+                  <th className="py-3 px-2 whitespace-nowrap">Quotation</th>
+                  <th className="py-3 px-2">Supplier</th>
+                  <th className="py-3 px-2">Product</th>
+                  <th className="py-3 px-2 whitespace-nowrap">Unit Price</th>
+                  <th className="py-3 px-2">Quantity</th>
+                  <th className="py-3 px-2 leading-tight">Delivery Days</th>
+                  <th className="py-3 px-2">Status</th>
+                  <th className="py-3 px-2 leading-tight">Valid Until</th>
+                  <th className="py-3 px-2 leading-tight">Submitted At</th>
+                  <th className="py-3 px-1 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {quotations.map((quotation) => (
+                {quotations.map((quotation) => {
+                  const s = suppliers.find(sup => sup.id === quotation.supplierId);
+                  const p = products.find(prod => prod.id === quotation.productId);
+                  return (
                   <tr key={quotation.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 text-sm text-gray-900 truncate max-w-[150px]" title={quotation.supplierId}>
-                      {quotation.supplierId}
+                    <td className="py-3 px-2 text-[13px] text-gray-900 font-medium whitespace-nowrap">
+                      {quotation.quotationReference}
                     </td>
-                    <td className="p-4 text-sm text-gray-700 truncate max-w-[150px]" title={quotation.productId}>
-                      {quotation.productId}
+                    <td className="py-3 px-2 text-[13px] text-gray-900 leading-tight" title={s ? s.name : quotation.supplierId}>
+                      {s ? `${s.name} (${s.supplierCode})` : quotation.supplierId}
                     </td>
-                    <td className="p-4 text-sm text-gray-900 font-medium text-right">
-                      ${quotation.unitPrice.toFixed(2)}
+                    <td className="py-3 px-2 text-[13px] text-gray-700 leading-tight" title={p ? p.name : quotation.productId}>
+                      {p ? `${p.name} (${p.sku})` : quotation.productId}
                     </td>
-                    <td className="p-4 text-sm text-gray-700 text-right">
+                    <td className="py-3 px-2 text-[13px] text-gray-900 font-medium whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>Rs. {quotation.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        {hasCompared && minUnitPrice !== null && quotation.unitPrice === minUnitPrice && (
+                          <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-semibold shadow-sm">Lowest</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-[13px] text-gray-700 whitespace-nowrap">
                       {quotation.quantity}
                     </td>
-                    <td className="p-4 text-sm text-gray-700 text-right">
-                      {quotation.deliveryDays}
+                    <td className="py-3 px-2 text-[13px] text-gray-700 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>{quotation.deliveryDays}</span>
+                        {hasCompared && minDeliveryDays !== null && quotation.deliveryDays === minDeliveryDays && (
+                          <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-semibold shadow-sm">Fastest</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="p-4 text-sm">
+                    <td className="py-3 px-2 text-[13px] whitespace-nowrap">
                       {getStatusBadge(quotation.status)}
                     </td>
-                    <td className="p-4 text-sm text-gray-600">
+                    <td className="py-3 px-2 text-[13px] text-gray-600 whitespace-nowrap">
                       {new Date(quotation.validUntil).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-sm text-gray-600">
+                    <td className="py-3 px-2 text-[13px] text-gray-600 whitespace-nowrap">
                       {new Date(quotation.submittedAt).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-sm text-right">
+                    <td className="py-3 px-1 text-[13px] whitespace-nowrap">
                       {quotation.status === 'Pending' ? (
-                        <div className="flex justify-end gap-2 flex-wrap">
+                        <div className="flex justify-center gap-1 flex-nowrap">
                           <button
                             onClick={() => openStatusConfirm(quotation, 'Accepted')}
                             className="text-green-600 hover:text-green-800 font-medium transition-colors text-xs border border-green-200 hover:border-green-400 rounded px-3 py-1 bg-green-50 hover:bg-green-100"
@@ -483,7 +539,8 @@ export default function Quotations() {
                       )}
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

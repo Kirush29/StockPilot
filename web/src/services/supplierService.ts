@@ -44,7 +44,10 @@ export interface CreateSupplierRatingRequest {
 const ENDPOINT = '/Suppliers';
 
 export const supplierService = {
-  getAllSuppliers: () => apiClient.get<Supplier[]>(ENDPOINT),
+  getAllSuppliers: async () => {
+    const data = await apiClient.get<Supplier[]>(ENDPOINT);
+    return data.sort((a, b) => a.supplierCode.localeCompare(b.supplierCode));
+  },
   
   getSupplierById: (id: string) => apiClient.get<Supplier>(`${ENDPOINT}/${id}`),
   
@@ -57,8 +60,10 @@ export const supplierService = {
   deactivateSupplier: (id: string) => 
     apiClient.delete<void>(`${ENDPOINT}/${id}`),
     
-  searchSuppliers: (keyword: string) => 
-    apiClient.get<Supplier[]>(`${ENDPOINT}/search?keyword=${encodeURIComponent(keyword)}`),
+  searchSuppliers: async (keyword: string) => {
+    const data = await apiClient.get<Supplier[]>(`${ENDPOINT}/search?keyword=${encodeURIComponent(keyword)}`);
+    return data.sort((a, b) => a.supplierCode.localeCompare(b.supplierCode));
+  },
     
   addSupplierRating: (supplierId: string, data: CreateSupplierRatingRequest) => 
     apiClient.post<SupplierRating>(`${ENDPOINT}/${supplierId}/ratings`, data),

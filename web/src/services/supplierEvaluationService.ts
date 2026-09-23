@@ -7,6 +7,7 @@ export interface EvaluateQuotationsRequest {
 export interface SupplierEvaluationResultDto {
   supplierId: string;
   quotationId: string;
+  quotationReference: string;
   unitPrice: number;
   deliveryDays: number;
   supplierRating: number | null;
@@ -22,6 +23,7 @@ export interface SupplierEvaluationResultDto {
 export interface SupplierEvaluationCandidateDto {
   supplierId: string;
   quotationId: string;
+  quotationReference: string;
   unitPrice: number;
   deliveryDays: number;
   supplierRating: number | null;

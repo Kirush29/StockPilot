@@ -4,6 +4,7 @@ export type QuotationStatus = 'Pending' | 'Accepted' | 'Rejected';
 
 export interface Quotation {
   id: string;
+  quotationReference: string;
   supplierId: string;
   productId: string;
   unitPrice: number;
