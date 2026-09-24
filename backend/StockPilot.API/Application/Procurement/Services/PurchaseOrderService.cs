@@ -4,6 +4,7 @@ using StockPilot.Procurement.Application.Dtos.Common;
 using StockPilot.Procurement.Application.Dtos.Orders;
 using StockPilot.Procurement.Application.Exceptions;
 using StockPilot.Procurement.Application.Repositories;
+using StockPilot.Procurement.Domain.Common;
 using StockPilot.Procurement.Domain.Entities;
 using StockPilot.Procurement.Domain.Enums;
 
@@ -123,6 +124,13 @@ public class PurchaseOrderService(
         if (!allowedTargets.Contains(request.Status))
         {
             throw new InvalidStateTransitionException(nameof(PurchaseOrder), order.Status.ToString(), request.Status.ToString());
+        }
+
+        // StoreEmployee may record receiving only; cancelling stays with ProcurementManager/BusinessOwner.
+        var canManage = currentUser.IsInRole(ProcurementRoles.ProcurementManager) || currentUser.IsInRole(ProcurementRoles.BusinessOwner);
+        if (!canManage && request.Status == PurchaseOrderStatus.Cancelled)
+        {
+            throw new ProcurementForbiddenException("Only a Procurement Manager or Business Owner can cancel a purchase order.");
         }
 
         var now = DateTimeOffset.UtcNow;

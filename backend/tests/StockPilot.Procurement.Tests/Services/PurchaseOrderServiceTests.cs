@@ -171,4 +171,26 @@ public class PurchaseOrderServiceTests
 
         await act.Should().ThrowAsync<InvalidStateTransitionException>();
     }
+
+    [Fact]
+    public async Task UpdateStatusAsync_StoreEmployeeReceives_Succeeds()
+    {
+        var order = await SeedOrderedOrderAsync();
+        var service = BuildService(Guid.NewGuid(), ProcurementRoles.StoreEmployee);
+
+        var result = await service.UpdateStatusAsync(order.Id, new UpdateOrderStatusRequest(PurchaseOrderStatus.PartiallyReceived, "3 of 10 boxes arrived."), CancellationToken.None);
+
+        result.Status.Should().Be(PurchaseOrderStatus.PartiallyReceived);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_StoreEmployeeCancels_ThrowsForbidden()
+    {
+        var order = await SeedOrderedOrderAsync();
+        var service = BuildService(Guid.NewGuid(), ProcurementRoles.StoreEmployee);
+
+        var act = () => service.UpdateStatusAsync(order.Id, new UpdateOrderStatusRequest(PurchaseOrderStatus.Cancelled, "Trying to cancel."), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ProcurementForbiddenException>();
+    }
 }

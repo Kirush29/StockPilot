@@ -16,4 +16,14 @@ public static class ProcurementRoles
 
     /// <summary>Roles allowed to decide on proposals, manage purchase orders and budgets.</summary>
     public const string ManageProcurement = $"{ProcurementManager},{BusinessOwner}";
+
+    /// <summary>Roles allowed to view purchase orders, including store-level delivery tracking.</summary>
+    public const string ViewOrders = $"{StoreEmployee},{BranchManager},{ProcurementManager},{BusinessOwner}";
+
+    /// <summary>
+    /// Roles allowed to update purchase order status. StoreEmployee is additionally restricted
+    /// server-side (see <c>PurchaseOrderService</c>) to the receiving transitions only — they
+    /// cannot cancel an order.
+    /// </summary>
+    public const string UpdateOrderStatus = $"{StoreEmployee},{ProcurementManager},{BusinessOwner}";
 }

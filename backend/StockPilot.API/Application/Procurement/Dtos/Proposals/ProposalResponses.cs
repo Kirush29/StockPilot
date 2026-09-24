@@ -6,6 +6,7 @@ public record ProposalSummaryResponse(
     Guid Id,
     Guid BranchId,
     Guid SupplierId,
+    Guid CreatedByUserId,
     ProposalStatus Status,
     decimal TotalEstimatedCost,
     bool CreatedByAgent,

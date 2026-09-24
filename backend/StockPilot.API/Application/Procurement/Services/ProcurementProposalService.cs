@@ -302,6 +302,7 @@ public class ProcurementProposalService(
         proposal.Id,
         proposal.BranchId,
         proposal.SupplierId,
+        proposal.CreatedByUserId,
         proposal.Status,
         proposal.TotalEstimatedCost,
         proposal.CreatedByAgent,

@@ -11,7 +11,7 @@ using StockPilot.Procurement.Domain.Enums;
 namespace StockPilot.API.Controllers;
 
 [Route("api/procurement/orders")]
-[Authorize(Roles = ProcurementRoles.RaiseOrView)]
+[Authorize(Roles = ProcurementRoles.ViewOrders)]
 [Produces("application/json")]
 public class OrdersController(
     IPurchaseOrderService orderService,
@@ -40,9 +40,11 @@ public class OrdersController(
     /// <summary>
     /// Move a purchase order to PartiallyReceived, Received or Cancelled. Cancelling releases the
     /// committed budget; a full Received notifies the Inventory module to increase stock.
+    /// StoreEmployee may only record receiving (PartiallyReceived/Received) — cancelling stays
+    /// restricted to ProcurementManager/BusinessOwner, enforced in <see cref="IPurchaseOrderService"/>.
     /// </summary>
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = ProcurementRoles.ManageProcurement)]
+    [Authorize(Roles = ProcurementRoles.UpdateOrderStatus)]
     [ProducesResponseType(typeof(PurchaseOrderDetailResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
