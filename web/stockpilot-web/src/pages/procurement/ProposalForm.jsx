@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { proposalsApi } from '../../api/procurementApi'
-import { productsApi } from '../../api/inventoryApi'
+import { productsApi, branchesApi } from '../../api/inventoryApi'
 import LineItemBuilder from '../../components/procurement/LineItemBuilder'
 import ErrorState from '../../components/ui/ErrorState'
+import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
 import { AlertCircleIcon } from '../../components/ui/Icons'
 import '../../styles/inventory.css'
 import '../../styles/procurement.css'
@@ -20,6 +21,7 @@ export default function ProposalForm({ initial }) {
   const navigate = useNavigate()
 
   const [products, setProducts] = useState([])
+  const [branches, setBranches] = useState([])
   const [productsError, setProductsError] = useState(null)
 
   const [branchId, setBranchId] = useState(initial?.branchId ?? '')
@@ -36,18 +38,22 @@ export default function ProposalForm({ initial }) {
   const [apiError, setApiError] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const loadProducts = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const res = await productsApi.getAll()
-      setProducts(res.data?.data ?? [])
+      const [prodRes, brRes] = await Promise.all([
+        productsApi.getAll(),
+        branchesApi.getAll().catch(() => ({ data: [] }))
+      ])
+      setProducts(prodRes.data?.data ?? prodRes.data ?? [])
+      setBranches(brRes.data?.data ?? brRes.data ?? [])
     } catch {
-      setProductsError('Could not load the product catalog. Line items need it for the product picker — please retry.')
+      setProductsError('Could not load required catalogs (Products or Branches). Please refresh and try again.')
     }
   }, [])
 
   useEffect(() => {
-    loadProducts()
-  }, [loadProducts])
+    loadData()
+  }, [loadData])
 
   const validate = () => {
     const e = {}
@@ -117,6 +123,9 @@ export default function ProposalForm({ initial }) {
         setApiError('You do not have permission to save this proposal.')
       } else if (status === 409) {
         setApiError(err.response?.data?.detail ?? 'This proposal can no longer be edited in its current status.')
+      } else if (status === 400 && err.response?.data?.errors) {
+        setErrors(err.response.data.errors)
+        setApiError('Please fix the validation errors below.')
       } else {
         const problem = err.response?.data
         const fieldErrors = problem?.errors
@@ -138,7 +147,7 @@ export default function ProposalForm({ initial }) {
         </div>
       </div>
 
-      {productsError && <ErrorState error={productsError} onRetry={loadProducts} inline />}
+      {productsError && <ErrorState error={productsError} onRetry={loadData} inline />}
       {apiError && (
         <div className="error-banner" role="alert">
           <div className="error-banner-content">
@@ -151,49 +160,50 @@ export default function ProposalForm({ initial }) {
       <div className="detail-card">
         <h3>Proposal Details</h3>
         <div className="form-row">
-          <div className="form-group">
-            <label>Branch ID <span className="required">*</span></label>
-            <input
-              type="text"
-              className={`form-control ${errors.branchId ? 'error' : ''}`}
+          <div style={{ flex: 1 }}>
+            <SearchableDropdown
+              label={<span>Branch <span className="required">*</span></span>}
+              required
+              options={branches}
               value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              placeholder="e.g. 11111111-1111-1111-1111-111111111111"
+              onChange={setBranchId}
+              error={errors.branchId || (errors.BranchId ? errors.BranchId[0] : null)}
+              placeholder="— Select a branch —"
+              getOptionValue={(opt) => opt.id}
+              renderOption={(opt) => `${opt.name} (${opt.code})`}
               disabled={saving || isEdit}
             />
-            {errors.branchId && <span className="form-error">{errors.branchId}</span>}
-            {isEdit && <span className="form-hint">Branch cannot be changed after a proposal is created.</span>}
+            {isEdit && <span className="form-hint" style={{ display: 'block', marginTop: '4px' }}>Branch cannot be changed after a proposal is created.</span>}
           </div>
 
-          <div className="form-group">
-            <label>Supplier ID <span className="required">*</span></label>
-            <input
+          <div style={{ flex: 1 }}>
+            <FormInput
+              label={<span>Supplier ID <span className="required">*</span></span>}
+              required
               type="text"
-              className={`form-control ${errors.supplierId ? 'error' : ''}`}
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
               placeholder="e.g. 22222222-2222-2222-2222-222222222222"
               disabled={saving}
+              error={errors.supplierId || (errors.SupplierId ? errors.SupplierId[0] : null)}
             />
-            {errors.supplierId && <span className="form-error">{errors.supplierId}</span>}
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Quotation ID <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
-          <input
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FormInput
+            label={<span>Quotation ID <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></span>}
             type="text"
-            className={`form-control ${errors.quotationId ? 'error' : ''}`}
             value={quotationId}
             onChange={(e) => setQuotationId(e.target.value)}
             placeholder="Link to a supplier quotation, if one exists"
             disabled={saving}
+            error={errors.quotationId || (errors.QuotationId ? errors.QuotationId[0] : null)}
           />
-          {errors.quotationId && <span className="form-error">{errors.quotationId}</span>}
         </div>
 
-        <div className="form-group">
-          <label>Justification</label>
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <label className="form-label">Justification</label>
           <textarea
             className="form-control"
             rows={3}

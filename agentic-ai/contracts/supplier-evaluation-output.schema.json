@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supplier Evaluation Agent Output Contract",
+  "type": "object",
+  "properties": {
+    "decisionStatus": { "type": "string" },
+    "selectedSupplierId": { "type": ["string", "null"], "format": "uuid" },
+    "selectedQuotationId": { "type": ["string", "null"], "format": "uuid" },
+    "reasonSummary": { "type": "string" },
+    "humanApprovalRequired": { "type": "boolean", "const": true }
+  },
+  "required": [
+    "decisionStatus",
+    "reasonSummary",
+    "humanApprovalRequired"
+  ]
+}

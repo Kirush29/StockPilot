@@ -13,10 +13,11 @@ import {
   RefreshIcon,
   EditIcon,
   CloseIcon,
-  AlertCircleIcon,
   ClockIcon,
   BatchesIcon,
 } from '../../../components/ui/Icons'
+import { FormInput } from '../../../components/ui/FormControls'
+import { formatCurrency } from '../../../utils/currencyFormatter'
 import '../../../styles/inventory.css'
 
 const BATCH_STATUSES = ['Active', 'Expired', 'Damaged', 'Depleted']
@@ -64,7 +65,7 @@ function getExpiryNotice(expiryDateStr, isExpired) {
 }
 
 // ── Add / Edit Batch Modal ──────────────────────────────────────────────────
-function BatchModal({ batch, products, onClose, onSaved }) {
+function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }) {
   const isEdit = !!batch
   const [form, setForm] = useState(() =>
     isEdit
@@ -81,13 +82,12 @@ function BatchModal({ batch, products, onClose, onSaved }) {
         }
       : { ...EMPTY_BATCH_FORM, status: 'Active' }
   )
-  const [errors, setErrors]   = useState({})
+  const [localErrors, setLocalErrors]   = useState({})
   const [saving, setSaving]   = useState(false)
-  const [apiError, setApiError] = useState(null)
 
   const set = (f, v) => {
     setForm(p => ({ ...p, [f]: v }))
-    setErrors(e => ({ ...e, [f]: undefined }))
+    setLocalErrors(e => ({ ...e, [f]: undefined }))
   }
 
   function validate() {
@@ -110,11 +110,10 @@ function BatchModal({ batch, products, onClose, onSaved }) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
-      setErrors(errs)
+      setLocalErrors(errs)
       return
     }
     setSaving(true)
-    setApiError(null)
     try {
       const payload = {
         productId: form.productId,
@@ -127,6 +126,7 @@ function BatchModal({ batch, products, onClose, onSaved }) {
         receivedDate: form.receivedDate || null,
       }
 
+      let resultMsg = ''
       if (isEdit) {
         await batchesApi.update(batch.batchId, {
           quantity: payload.quantity,
@@ -135,17 +135,14 @@ function BatchModal({ batch, products, onClose, onSaved }) {
           expiryDate: payload.expiryDate,
           status: form.status,
         })
+        resultMsg = 'Batch updated successfully.'
       } else {
         await batchesApi.create(payload)
+        resultMsg = 'Batch created successfully.'
       }
-      onSaved(isEdit ? 'Batch updated successfully.' : 'Batch created successfully.')
+      onSaved(resultMsg)
     } catch (err) {
-      const status = err.response?.status
-      if (status === 401 || status === 403) {
-        setApiError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
-      } else {
-        setApiError(err.response?.data?.message ?? 'Failed to save batch.')
-      }
+      onSaved(null, err)
     } finally {
       setSaving(false)
     }
@@ -159,15 +156,8 @@ function BatchModal({ batch, products, onClose, onSaved }) {
       maxWidth="600px"
     >
       <form onSubmit={handleSubmit}>
-        <div className="modal-body">
-          {apiError && (
-            <div className="error-banner">
-              <div className="error-banner-content">
-                <AlertCircleIcon />
-                <span>{apiError}</span>
-              </div>
-            </div>
-          )}
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {apiError && <ErrorState error={apiError} inline />}
 
           {!isEdit && (
             <>
@@ -175,7 +165,7 @@ function BatchModal({ batch, products, onClose, onSaved }) {
               <div className="form-group">
                 <label>Product <span className="required">*</span></label>
                 <select
-                  className={`form-control ${errors.productId ? 'error' : ''}`}
+                  className={`form-control ${localErrors.productId || fieldErrors?.productId ? 'error' : ''}`}
                   value={form.productId}
                   onChange={e => set('productId', e.target.value)}
                   disabled={saving}
@@ -185,120 +175,108 @@ function BatchModal({ batch, products, onClose, onSaved }) {
                     <option key={p.productId} value={p.productId}>{p.name} ({p.sku})</option>
                   ))}
                 </select>
-                {errors.productId && <span className="form-error">{errors.productId}</span>}
+                {(localErrors.productId || fieldErrors?.productId) && <span className="form-error">{localErrors.productId || fieldErrors?.productId}</span>}
               </div>
 
               {/* Branch & Batch Number */}
               <div className="form-row">
-                <div className="form-group">
-                  <label>Branch ID / UUID <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    className={`form-control ${errors.branchId ? 'error' : ''}`}
-                    placeholder="Enter or paste branch UUID…"
-                    value={form.branchId}
-                    onChange={e => set('branchId', e.target.value)}
-                    disabled={saving}
-                  />
-                  {errors.branchId && <span className="form-error">{errors.branchId}</span>}
-                </div>
+                <FormInput
+                  label="Branch ID / UUID"
+                  value={form.branchId}
+                  onChange={e => set('branchId', e.target.value)}
+                  error={localErrors.branchId || fieldErrors?.branchId}
+                  placeholder="Enter or paste branch UUID…"
+                  disabled={saving}
+                  required
+                />
 
-                <div className="form-group">
-                  <label>Batch / Lot # <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    className={`form-control ${errors.batchNumber ? 'error' : ''}`}
-                    placeholder="e.g. LOT-2026-001"
-                    value={form.batchNumber}
-                    onChange={e => set('batchNumber', e.target.value)}
-                    disabled={saving}
-                  />
-                  {errors.batchNumber && <span className="form-error">{errors.batchNumber}</span>}
-                </div>
+                <FormInput
+                  label="Batch / Lot #"
+                  value={form.batchNumber}
+                  onChange={e => set('batchNumber', e.target.value)}
+                  error={localErrors.batchNumber || fieldErrors?.batchNumber}
+                  placeholder="e.g. LOT-2026-001"
+                  disabled={saving}
+                  required
+                />
               </div>
             </>
           )}
 
           {/* Quantity & Unit Cost */}
           <div className="form-row">
-            <div className="form-group">
-              <label>Quantity <span className="required">*</span></label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className={`form-control ${errors.quantity ? 'error' : ''}`}
-                value={form.quantity}
-                onChange={e => set('quantity', e.target.value)}
-                placeholder="0"
-                disabled={saving}
-              />
-              {errors.quantity && <span className="form-error">{errors.quantity}</span>}
-            </div>
+            <FormInput
+              label="Quantity"
+              type="number"
+              min="0"
+              step="any"
+              value={form.quantity}
+              onChange={e => set('quantity', e.target.value)}
+              error={localErrors.quantity || fieldErrors?.quantity}
+              placeholder="0"
+              disabled={saving}
+              required
+            />
 
-            <div className="form-group">
-              <label>Unit Cost ($)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-control"
-                value={form.unitCost}
-                onChange={e => set('unitCost', e.target.value)}
-                placeholder="0.00"
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Unit Cost (Rs.)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.unitCost}
+              onChange={e => set('unitCost', e.target.value)}
+              error={localErrors.unitCost || fieldErrors?.unitCost}
+              placeholder="0.00"
+              disabled={saving}
+              optionalText
+            />
           </div>
 
           {/* Dates */}
           <div className="form-row">
-            <div className="form-group">
-              <label>Mfg Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={form.manufacturingDate}
-                onChange={e => set('manufacturingDate', e.target.value)}
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Mfg Date"
+              type="date"
+              value={form.manufacturingDate}
+              onChange={e => set('manufacturingDate', e.target.value)}
+              error={localErrors.manufacturingDate || fieldErrors?.manufacturingDate}
+              disabled={saving}
+              optionalText
+            />
 
-            <div className="form-group">
-              <label>Expiry Date <span className="required">*</span></label>
-              <input
-                type="date"
-                className={`form-control ${errors.expiryDate ? 'error' : ''}`}
-                value={form.expiryDate}
-                onChange={e => set('expiryDate', e.target.value)}
-                disabled={saving}
-              />
-              {errors.expiryDate && <span className="form-error">{errors.expiryDate}</span>}
-            </div>
+            <FormInput
+              label="Expiry Date"
+              type="date"
+              value={form.expiryDate}
+              onChange={e => set('expiryDate', e.target.value)}
+              error={localErrors.expiryDate || fieldErrors?.expiryDate}
+              disabled={saving}
+              required
+            />
           </div>
 
           {!isEdit ? (
-            <div className="form-group">
-              <label>Received Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={form.receivedDate}
-                onChange={e => set('receivedDate', e.target.value)}
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Received Date"
+              type="date"
+              value={form.receivedDate}
+              onChange={e => set('receivedDate', e.target.value)}
+              error={localErrors.receivedDate || fieldErrors?.receivedDate}
+              disabled={saving}
+              optionalText
+            />
           ) : (
             <div className="form-group">
               <label>Batch Status</label>
               <select
-                className="form-control"
+                className={`form-control ${fieldErrors?.status ? 'error' : ''}`}
                 value={form.status}
                 onChange={e => set('status', e.target.value)}
                 disabled={saving}
               >
                 {BATCH_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+              {fieldErrors?.status && <span className="form-error">{fieldErrors.status}</span>}
             </div>
           )}
         </div>
@@ -326,6 +304,8 @@ export default function BatchesPage() {
   const [filter, setFilter]         = useState('all') // all | expiring | expired
   const [search, setSearch]         = useState('')
   const [modal, setModal]           = useState(null)  // null | { batch? }
+  const [modalError, setModalError] = useState(null)
+  const [modalFieldErrors, setModalFieldErrors] = useState({})
 
   const fetchBatches = useCallback(async () => {
     setLoading(true)
@@ -361,10 +341,19 @@ export default function BatchesPage() {
     setTimeout(() => setSuccessMsg(null), 4000)
   }
 
-  const handleSaved = (msg) => {
-    setModal(null)
-    showToast(msg || 'Batch saved successfully.')
-    fetchBatches()
+  const handleSaved = (msg, err) => {
+    if (err) {
+      setModalError(err.displayMessage || 'Failed to save batch.')
+      if (err.fieldErrors) {
+        setModalFieldErrors(err.fieldErrors)
+      }
+    } else {
+      setModalError(null)
+      setModalFieldErrors({})
+      setModal(null)
+      showToast(msg || 'Batch saved successfully.')
+      fetchBatches()
+    }
   }
 
   // Real KPI calculations from batches
@@ -618,7 +607,7 @@ export default function BatchesPage() {
                         <strong>{Number(b.quantity).toLocaleString()}</strong>
                       </td>
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-muted)' }}>
-                        ${Number(b.unitCost || 0).toFixed(2)}
+                        {formatCurrency(b.unitCost)}
                       </td>
                       <td style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                         {formatDate(b.manufacturingDate)}
@@ -656,8 +645,10 @@ export default function BatchesPage() {
         <BatchModal
           batch={modal.batch ?? null}
           products={products}
-          onClose={() => setModal(null)}
+          onClose={() => { setModal(null); setModalError(null); setModalFieldErrors({}); }}
           onSaved={handleSaved}
+          apiError={modalError}
+          fieldErrors={modalFieldErrors}
         />
       )}
     </div>

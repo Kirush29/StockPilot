@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { optimizationApi, branchesApi } from '../../api/inventoryApi'
 import Badge from './Badge'
 import { CardSkeleton } from './Skeleton'
@@ -52,7 +51,7 @@ export default function AiInsightsWidget() {
     setGenerating(true)
     setError(null)
     try {
-      const res = await optimizationApi.generate(selectedBranch)
+      const res = await optimizationApi.analyze(selectedBranch)
       setRecommendations(res.data?.data ?? [])
     } catch (err) {
       setError(err.response?.data?.message ?? 'Failed to generate insights.')
@@ -61,27 +60,18 @@ export default function AiInsightsWidget() {
     }
   }
 
-  const navigate = useNavigate()
-
   const handleAction = async (rec, action) => {
     try {
-      if (action === 'Approve' && rec.recommendationType === 'Transfer') {
-        // Navigate to Transfers page and pass state to pre-fill modal
-        navigate('/inventory/transfers', {
-          state: {
-            prefill: {
-              productId: rec.productId,
-              sourceBranchId: rec.reasoning.includes('from') ? null : null, // Would parse from reasoning if needed, but keeping simple
-              destinationBranchId: rec.branchId,
-              quantity: rec.suggestedQuantity,
-              reason: `AI Recommendation: ${rec.reasoning}`
-            }
-          }
-        })
+      if (action === 'Approve') {
+        const res = await optimizationApi.approve(rec.recommendationId)
+        const updatedRec = res.data?.data || res.data
+        setRecommendations(prev => prev.map(r => r.recommendationId === rec.recommendationId ? updatedRec : r))
+      } else if (action === 'Reject') {
+        const reason = window.prompt("Reason for rejection:")
+        if (!reason) return // Cancelled
+        await optimizationApi.reject(rec.recommendationId, reason)
+        setRecommendations(prev => prev.filter(r => r.recommendationId !== rec.recommendationId))
       }
-      
-      await optimizationApi.action(rec.recommendationId, action)
-      setRecommendations(prev => prev.filter(r => r.recommendationId !== rec.recommendationId))
     } catch (err) {
       alert('Failed to apply action: ' + (err.response?.data?.message ?? err.message))
     }
@@ -155,11 +145,21 @@ export default function AiInsightsWidget() {
               {recommendations.map(rec => (
                 <tr key={rec.recommendationId}>
                   <td>
-                    <Badge variant={rec.recommendationType === 'Transfer' ? 'info' : 'warning'}>
-                      {rec.recommendationType}
-                    </Badge>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <Badge variant={rec.recommendationType === 'Transfer' ? 'info' : 'warning'}>
+                        {rec.recommendationType}
+                      </Badge>
+                      <Badge variant={rec.priority === 'Critical' ? 'danger' : 'secondary'}>
+                        {rec.priority || 'High'}
+                      </Badge>
+                    </div>
                   </td>
-                  <td><strong>{rec.product?.name ?? 'Unknown'}</strong></td>
+                  <td>
+                    <strong>{rec.product?.name ?? 'Unknown'}</strong>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      Issue: {rec.issueType || 'LowStock'}
+                    </div>
+                  </td>
                   <td>
                     <div style={{ marginBottom: 4 }}>
                       <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
@@ -174,22 +174,29 @@ export default function AiInsightsWidget() {
                     </p>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-success btn-sm"
-                        onClick={() => handleAction(rec, 'Approve')}
-                      >
-                        Approve
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-danger-outline btn-sm"
-                        onClick={() => handleAction(rec, 'Reject')}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
+                    {rec.status === 'TransferCreated' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Transfer Created</span>
+                        <a href="/inventory/transfers" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>View Transfers →</a>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <button
+                          type="button"
+                          className="btn btn-success btn-sm"
+                          onClick={() => handleAction(rec, 'Approve')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger-outline btn-sm"
+                          onClick={() => handleAction(rec, 'Reject')}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

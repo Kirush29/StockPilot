@@ -15,7 +15,7 @@ public class BatchService(AppDbContext db) : IBatchService
 
     public async Task<BatchDto> GetByIdAsync(Guid id)
     {
-        var batch = await BuildQuery().FirstOrDefaultAsync(b => b.BatchId == id)
+        var batch = await BuildQuery(b => b.BatchId == id).FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Batch {id} not found.");
         return batch;
     }
@@ -23,20 +23,18 @@ public class BatchService(AppDbContext db) : IBatchService
     public async Task<List<BatchDto>> GetExpiringAsync(int days = ExpiringSoonDays)
     {
         var cutoff = DateTime.UtcNow.AddDays(days);
-        return await BuildQuery()
-            .Where(b => b.ExpiryDate != null && b.ExpiryDate <= cutoff && b.Status == nameof(BatchStatus.Active))
+        return await BuildQuery(b => b.ExpiryDate != null && b.ExpiryDate <= cutoff && b.Status == BatchStatus.Active)
             .ToListAsync();
     }
 
     public async Task<List<BatchDto>> GetExpiredAsync() =>
-        await BuildQuery().Where(b => b.Status == nameof(BatchStatus.Expired)).ToListAsync();
+        await BuildQuery(b => b.Status == BatchStatus.Expired).ToListAsync();
 
     public async Task<List<BatchDto>> GetExpiringBatchesAsync(Guid branchId, int days)
     {
         var cutoff = DateTime.UtcNow.AddDays(days);
-        return await BuildQuery()
-            .Where(b => b.BranchId == branchId && b.ExpiryDate != null
-                && b.ExpiryDate <= cutoff && b.Status == nameof(BatchStatus.Active))
+        return await BuildQuery(b => b.BranchId == branchId && b.ExpiryDate != null
+                && b.ExpiryDate <= cutoff && b.Status == BatchStatus.Active)
             .ToListAsync();
     }
 
@@ -154,14 +152,22 @@ public class BatchService(AppDbContext db) : IBatchService
         return await GetByIdAsync(id);
     }
 
-    private IQueryable<BatchDto> BuildQuery()
+    private IQueryable<BatchDto> BuildQuery(System.Linq.Expressions.Expression<Func<Batch, bool>>? predicate = null)
     {
         var now = DateTime.UtcNow;
         var cutoff = now.AddDays(ExpiringSoonDays);
-        return db.Batches
+
+        var query = db.Batches
             .Include(b => b.Product)
             .Include(b => b.Branch)
-            .Select(b => new BatchDto
+            .AsQueryable();
+
+        if (predicate != null)
+        {
+            query = query.Where(predicate);
+        }
+
+        return query.Select(b => new BatchDto
             {
                 BatchId = b.BatchId,
                 ProductId = b.ProductId,

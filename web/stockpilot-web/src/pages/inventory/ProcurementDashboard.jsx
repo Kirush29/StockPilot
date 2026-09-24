@@ -21,9 +21,9 @@ export default function ProcurementDashboard() {
     setError(null)
     try {
       const [allRes, lowRes, expiringRes] = await Promise.all([
-        inventoryApi.getAll(),
-        inventoryApi.getLowStock(),
-        batchesApi.getExpiring(60).catch(() => ({ data: { data: [] } })),
+        inventoryApi.getAll().catch(err => { console.error(err); return { data: { data: [] } }; }),
+        inventoryApi.getLowStock().catch(err => { console.error(err); return { data: { data: [] } }; }),
+        batchesApi.getExpiring(60).catch(err => { console.error(err); return { data: { data: [] } }; }),
       ])
       setAllItems(allRes.data?.data ?? [])
       setLowStock(lowRes.data?.data ?? [])

@@ -1,6 +1,7 @@
 // Sidebar.jsx — Polished SaaS Sidebar Navigation
 import React from 'react'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import { useProcurement } from '../../context/ProcurementContext'
 import {
   DashboardIcon,
@@ -26,7 +27,13 @@ const inventoryLinks = [
 ]
 
 export default function Sidebar({ isOpen = false, onClose }) {
+  const { user } = useAuth()
   const { canAccessProcurement, canDecideOrManage } = useProcurement()
+
+  const linksToRender = [
+    ...inventoryLinks,
+    ...(user?.role === 'BusinessOwner' ? [{ to: '/inventory/branches', label: 'Branches', icon: DashboardIcon }] : [])
+  ]
 
   const procurementLinks = [
     { to: '/procurement/proposals', label: 'Proposals',        icon: ProductsIcon },
@@ -73,7 +80,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
           <div className="sidebar-section">
             <p className="sidebar-section-label">Inventory Management</p>
             <ul className="sidebar-nav">
-              {inventoryLinks.map(({ to, label, icon: Icon }) => (
+              {linksToRender.map(({ to, label, icon: Icon }) => (
                 <li key={to}>
                   <NavLink
                     to={to}

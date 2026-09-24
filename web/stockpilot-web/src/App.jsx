@@ -11,6 +11,7 @@ import StockLevelsPage from './pages/inventory/stock/StockLevelsPage'
 import BatchesPage from './pages/inventory/batches/BatchesPage'
 import StockMovementsPage from './pages/inventory/StockMovementsPage'
 import TransfersPage from './pages/inventory/TransfersPage'
+import BranchesPage from './pages/inventory/branches/BranchesPage'
 import ProposalsListPage from './pages/procurement/ProposalsListPage'
 import ProposalDetailPage from './pages/procurement/ProposalDetailPage'
 import NewProposalPage from './pages/procurement/NewProposalPage'
@@ -18,6 +19,8 @@ import EditProposalPage from './pages/procurement/EditProposalPage'
 import ApprovalQueuePage from './pages/procurement/ApprovalQueuePage'
 import PurchaseOrdersPage from './pages/procurement/PurchaseOrdersPage'
 import BudgetDashboardPage from './pages/procurement/BudgetDashboardPage'
+import ProfilePage from './pages/auth/ProfilePage'
+import ChangePasswordPage from './pages/auth/ChangePasswordPage'
 
 // Role gate constants
 const RAISE_OR_VIEW_ROLES = ['BranchManager', 'ProcurementManager', 'BusinessOwner']
@@ -36,6 +39,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route index element={<Navigate to="/inventory" replace />} />
+
+                {/* Auth Profile */}
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/change-password" element={<ChangePasswordPage />} />
 
                 {/* Inventory Management */}
                 <Route path="/inventory"            element={<RoleBasedDashboard />} />
@@ -63,6 +70,13 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/procurement/approvals" element={<ApprovalQueuePage />} />
                   <Route path="/procurement/budgets"   element={<BudgetDashboardPage />} />
+                </Route>
+              </Route>
+
+              {/* System Admin / BusinessOwner only */}
+              <Route element={<ProtectedRoute roles={['BusinessOwner']} redirectTo="/inventory" />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/inventory/branches" element={<BranchesPage />} />
                 </Route>
               </Route>
             </Route>

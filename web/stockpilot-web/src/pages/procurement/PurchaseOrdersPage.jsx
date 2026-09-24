@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
 import { TableSkeleton } from '../../components/ui/Skeleton'
+import { FormInput } from '../../components/ui/FormControls'
 import { RefreshIcon, AlertCircleIcon, TransfersIcon } from '../../components/ui/Icons'
 import {
   PurchaseOrderStatus,
@@ -36,9 +37,14 @@ function StatusModal({ order, targetStatus, onConfirm, onClose, saving, apiError
             Cancelling releases this order's committed spend back to the branch budget.
           </p>
         )}
-        <div className="form-group">
-          <label>Notes <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(optional)</span></label>
-          <textarea className="form-control" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={saving} />
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FormInput
+            label={<span>Notes <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></span>}
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            disabled={saving}
+          />
         </div>
       </div>
       <div className="modal-footer">

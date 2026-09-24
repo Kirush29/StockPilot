@@ -66,12 +66,19 @@ export const transfersApi = {
 
 // ── Branches ──────────────────────────────────────────────────────────────────
 export const branchesApi = {
-  getAll: () => apiClient.get('/api/branches'),
+  getAll:       ()           => apiClient.get('/api/branches'),
+  getById:      (id)         => apiClient.get(`/api/branches/${id}`),
+  create:       (data)       => apiClient.post('/api/branches', data),
+  update:       (id, data)   => apiClient.put(`/api/branches/${id}`, data),
+  toggleStatus: (id, active) => apiClient.patch(`/api/branches/${id}/status`, { isActive: active }),
 }
 
 // ── AI Optimization ───────────────────────────────────────────────────────────
 export const optimizationApi = {
-  getRecommendations: (branchId) => apiClient.get(`/api/optimization/${branchId}/recommendations`),
-  generate: (branchId) => apiClient.post(`/api/optimization/${branchId}/generate`),
-  action: (id, action) => apiClient.post(`/api/optimization/recommendations/${id}/action`, null, { params: { action } }),
+  getRecommendations: (branchId) => apiClient.get('/api/optimization/recommendations', { params: { branchId } }),
+  getRecommendation: (id) => apiClient.get(`/api/optimization/recommendations/${id}`),
+  analyze: (branchId) => apiClient.post('/api/optimization/analyze', { branchId }),
+  approve: (id) => apiClient.post(`/api/optimization/recommendations/${id}/approve`),
+  reject: (id, reason) => apiClient.post(`/api/optimization/recommendations/${id}/reject`, { reason }),
+  verify: (id) => apiClient.post(`/api/optimization/recommendations/${id}/verify`),
 }

@@ -1,6 +1,7 @@
 // StockMovementsPage.jsx — Polished SaaS Inventory Audit & Movements Log
 import React, { useState, useEffect, useCallback } from 'react'
-import { movementsApi, productsApi, inventoryApi } from '../../api/inventoryApi'
+import { movementsApi, productsApi, inventoryApi, branchesApi } from '../../api/inventoryApi'
+import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
@@ -150,6 +151,10 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
       onSuccess(response.data?.message ?? 'Stock adjustment recorded successfully.')
       onClose()
     } catch (err) {
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        setErrors(err.response.data.errors);
+        return;
+      }
       const status = err.response?.status
       if (status === 401 || status === 403) {
         setApiError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
@@ -180,49 +185,39 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
           )}
 
           {/* Product */}
-          <div className="form-group">
-            <label>Product <span className="required">*</span></label>
-            <select
-              className={`form-control ${errors.productId ? 'error' : ''}`}
-              value={form.productId}
-              onChange={e => set('productId', e.target.value)}
-              disabled={submitting}
-            >
-              <option value="">Select a product…</option>
-              {products.map(p => (
-                <option key={p.productId} value={p.productId}>
-                  {p.name} ({p.sku})
-                </option>
-              ))}
-            </select>
-            {errors.productId && <span className="form-error">{errors.productId}</span>}
-          </div>
+          <SearchableDropdown
+            label="Product"
+            required
+            options={products}
+            value={form.productId}
+            onChange={(val) => set('productId', val)}
+            error={errors.productId || (errors.ProductId ? errors.ProductId[0] : null)}
+            placeholder="Select a product…"
+            disabled={submitting}
+            getOptionValue={(opt) => opt.productId}
+            renderOption={(opt) => `${opt.name} (${opt.sku})`}
+          />
 
           {/* Branch */}
-          <div className="form-group">
-            <label>Branch <span className="required">*</span></label>
-            <select
-              className={`form-control ${errors.branchId ? 'error' : ''}`}
-              value={form.branchId}
-              onChange={e => set('branchId', e.target.value)}
-              disabled={submitting}
-            >
-              <option value="">Select a branch…</option>
-              {branches.map(b => (
-                <option key={b.branchId} value={b.branchId}>
-                  {b.branchName}
-                </option>
-              ))}
-            </select>
-            {errors.branchId && <span className="form-error">{errors.branchId}</span>}
-          </div>
+          <SearchableDropdown
+            label="Branch"
+            required
+            options={branches}
+            value={form.branchId}
+            onChange={(val) => set('branchId', val)}
+            error={errors.branchId || (errors.BranchId ? errors.BranchId[0] : null)}
+            placeholder="Select a branch…"
+            disabled={submitting}
+            getOptionValue={(opt) => opt.id || opt.branchId}
+            renderOption={(opt) => opt.name || opt.branchName}
+          />
 
           {/* Movement Type & Quantity */}
           <div className="form-row">
-            <div className="form-group">
+            <div className="form-group" style={{ flex: 1 }}>
               <label>Movement Type <span className="required">*</span></label>
               <select
-                className={`form-control ${errors.movementType ? 'error' : ''}`}
+                className={`form-control ${(errors.movementType || errors.MovementType) ? 'error' : ''}`}
                 value={form.movementType}
                 onChange={e => set('movementType', e.target.value)}
                 disabled={submitting}
@@ -231,49 +226,48 @@ function AdjustmentModal({ products, branches, onClose, onSuccess }) {
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
-              {errors.movementType && <span className="form-error">{errors.movementType}</span>}
+              {(errors.movementType || errors.MovementType) && <span className="form-error">{errors.movementType || errors.MovementType[0]}</span>}
             </div>
 
-            <div className="form-group">
-              <label>Quantity <span className="required">*</span></label>
-              <input
+            <div style={{ flex: 1 }}>
+              <FormInput
+                label="Quantity"
+                required
                 type="number"
                 min="0.0001"
                 step="any"
-                className={`form-control ${errors.quantity ? 'error' : ''}`}
                 placeholder="e.g. 5"
                 value={form.quantity}
                 onChange={e => set('quantity', e.target.value)}
+                error={errors.quantity || (errors.Quantity ? errors.Quantity[0] : null)}
                 disabled={submitting}
               />
-              {errors.quantity && <span className="form-error">{errors.quantity}</span>}
             </div>
           </div>
 
           {/* Reference */}
-          <div className="form-group">
-            <label>Reference #</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="e.g. AUDIT-2026-09 or PO-1234"
-              value={form.reference}
-              onChange={e => set('reference', e.target.value)}
-              disabled={submitting}
-            />
-          </div>
+          <FormInput
+            label="Reference #"
+            optionalText
+            placeholder="e.g. AUDIT-2026-09 or PO-1234"
+            value={form.reference}
+            onChange={e => set('reference', e.target.value)}
+            error={errors.reference || (errors.Reference ? errors.Reference[0] : null)}
+            disabled={submitting}
+          />
 
           {/* Notes */}
           <div className="form-group">
-            <label>Notes / Reason</label>
+            <label>Notes / Reason <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></label>
             <textarea
-              className="form-control"
+              className={`form-control ${(errors.notes || errors.Notes) ? 'error' : ''}`}
               placeholder="Provide context or explanation for this stock adjustment…"
               rows={3}
               value={form.notes}
               onChange={e => set('notes', e.target.value)}
               disabled={submitting}
             />
+            {(errors.notes || errors.Notes) && <span className="form-error">{errors.notes || errors.Notes[0]}</span>}
           </div>
         </div>
 
@@ -325,10 +319,10 @@ export default function StockMovementsPage() {
       setMovements(list)
 
       setBranches(prev => {
-        const branchMap = new Map(prev.map(b => [b.branchId, b]))
+        const branchMap = new Map(prev.map(b => [b.id || b.branchId, b]))
         list.forEach(m => {
           if (m.branchId && m.branchName && !branchMap.has(m.branchId)) {
-            branchMap.set(m.branchId, { branchId: m.branchId, branchName: m.branchName })
+            branchMap.set(m.branchId, { branchId: m.branchId, branchName: m.branchName, name: m.branchName, id: m.branchId })
           }
         })
         return Array.from(branchMap.values())
@@ -350,18 +344,12 @@ export default function StockMovementsPage() {
       .then(res => setProducts(res.data?.data ?? []))
       .catch(() => {})
 
-    inventoryApi.getAll()
+    branchesApi.getAll()
       .then(res => {
-        const items = res.data?.data ?? []
-        const branchMap = new Map()
-        items.forEach(i => {
-          if (i.branchId && i.branchName && !branchMap.has(i.branchId)) {
-            branchMap.set(i.branchId, { branchId: i.branchId, branchName: i.branchName })
-          }
-        })
+        const branchList = res.data?.data ?? res.data ?? []
         setBranches(prev => {
-          const merged = new Map(prev.map(b => [b.branchId, b]))
-          branchMap.forEach((v, k) => merged.set(k, v))
+          const merged = new Map(prev.map(b => [b.id || b.branchId, b]))
+          branchList.forEach(b => merged.set(b.id, b))
           return Array.from(merged.values())
         })
       })
@@ -494,7 +482,7 @@ export default function StockMovementsPage() {
           >
             <option value="">All Branches</option>
             {branches.map(b => (
-              <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
+              <option key={b.id || b.branchId} value={b.id || b.branchId}>{b.name || b.branchName}</option>
             ))}
           </select>
 

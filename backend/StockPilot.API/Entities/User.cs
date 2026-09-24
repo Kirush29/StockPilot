@@ -1,16 +1,22 @@
 namespace StockPilot.API.Entities;
 
-// AUTH-INTEGRATION-POINT
-// This is a minimal stub so Inventory Management can reference PerformedBy/RequestedBy FKs.
-// The Authentication component owner must replace this with the full User/Role/Identity implementation.
-// Do NOT add password hashing, JWT issuing, or role management here.
 public class User
 {
     public Guid UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string ProfileImageUrl { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty; // e.g. "BusinessOwner","ProcurementManager","BranchManager","StoreEmployee"
+
+    public Guid? BranchId { get; set; }
+    public Branch? Branch { get; set; }
+
     public bool IsActive { get; set; } = true;
+    public bool MustChangePassword { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

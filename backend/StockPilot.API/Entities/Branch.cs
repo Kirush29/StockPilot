@@ -10,6 +10,10 @@ public class Branch
     public string BranchCode { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Email { get; set; }
+    public string? ManagerName { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -20,4 +24,5 @@ public class Branch
     public ICollection<StockMovement> StockMovements { get; set; } = [];
     public ICollection<StockTransfer> OutboundTransfers { get; set; } = [];
     public ICollection<StockTransfer> InboundTransfers { get; set; } = [];
+    public ICollection<User> Users { get; set; } = [];
 }

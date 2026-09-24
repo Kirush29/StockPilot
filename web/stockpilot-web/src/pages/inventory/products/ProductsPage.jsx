@@ -13,9 +13,10 @@ import {
   EditIcon,
   TrashIcon,
   CloseIcon,
-  AlertCircleIcon,
   ProductsIcon,
 } from '../../../components/ui/Icons'
+import { FormInput } from '../../../components/ui/FormControls'
+import { formatCurrency } from '../../../utils/currencyFormatter'
 import '../../../styles/inventory.css'
 
 const EMPTY_FORM = {
@@ -33,7 +34,7 @@ const EMPTY_FORM = {
 }
 
 // ── Add / Edit Product Modal ────────────────────────────────────────────────
-function ProductModal({ initial, categories, onSave, onClose, saving, apiError }) {
+function ProductModal({ initial, categories, onSave, onClose, saving, apiError, fieldErrors }) {
   const isEdit = !!initial
   const [form, setForm] = useState(() =>
     initial
@@ -52,11 +53,11 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
         }
       : EMPTY_FORM
   )
-  const [errors, setErrors] = useState({})
+  const [localErrors, setLocalErrors] = useState({})
 
   const set = (field, value) => {
     setForm(f => ({ ...f, [field]: value }))
-    setErrors(e => ({ ...e, [field]: undefined }))
+    setLocalErrors(e => ({ ...e, [field]: undefined }))
   }
 
   const validate = () => {
@@ -84,7 +85,7 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
     ev.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
-      setErrors(errs)
+      setLocalErrors(errs)
       return
     }
     onSave({
@@ -110,52 +111,44 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
       maxWidth="620px"
     >
       <form onSubmit={handleSubmit}>
-        <div className="modal-body">
-          {apiError && <div className="error-banner"><div className="error-banner-content"><AlertCircleIcon /><span>{apiError}</span></div></div>}
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {apiError && <ErrorState error={apiError} inline />}
 
           {/* Product Name */}
-          <div className="form-group">
-            <label>Product Name <span className="required">*</span></label>
-            <input
-              type="text"
-              className={`form-control ${errors.name ? 'error' : ''}`}
-              value={form.name}
-              onChange={e => set('name', e.target.value)}
-              placeholder="e.g. Wireless Barcode Scanner"
-              maxLength={300}
-              disabled={saving}
-            />
-            {errors.name && <span className="form-error">{errors.name}</span>}
-          </div>
+          <FormInput
+            label="Product Name"
+            value={form.name}
+            onChange={e => set('name', e.target.value)}
+            error={localErrors.name || fieldErrors?.name}
+            placeholder="e.g. Wireless Barcode Scanner"
+            maxLength={300}
+            disabled={saving}
+            required
+          />
 
           {/* SKU & Barcode */}
           <div className="form-row">
-            <div className="form-group">
-              <label>SKU <span className="required">*</span></label>
-              <input
-                type="text"
-                className={`form-control ${errors.sku ? 'error' : ''}`}
-                value={form.sku}
-                onChange={e => set('sku', e.target.value)}
-                placeholder="e.g. SCAN-WL-01"
-                maxLength={100}
-                disabled={saving}
-              />
-              {errors.sku && <span className="form-error">{errors.sku}</span>}
-            </div>
+            <FormInput
+              label="SKU"
+              value={form.sku}
+              onChange={e => set('sku', e.target.value)}
+              error={localErrors.sku || fieldErrors?.sku}
+              placeholder="e.g. SCAN-WL-01"
+              maxLength={100}
+              disabled={saving}
+              required
+            />
 
-            <div className="form-group">
-              <label>Barcode / UPC</label>
-              <input
-                type="text"
-                className="form-control"
-                value={form.barcode}
-                onChange={e => set('barcode', e.target.value)}
-                placeholder="e.g. 012345678905"
-                maxLength={100}
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Barcode / UPC"
+              value={form.barcode}
+              onChange={e => set('barcode', e.target.value)}
+              error={localErrors.barcode || fieldErrors?.barcode}
+              placeholder="e.g. 012345678905"
+              maxLength={100}
+              disabled={saving}
+              optionalText
+            />
           </div>
 
           {/* Category & Unit */}
@@ -163,7 +156,7 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
             <div className="form-group">
               <label>Category <span className="required">*</span></label>
               <select
-                className={`form-control ${errors.categoryId ? 'error' : ''}`}
+                className={`form-control ${localErrors.categoryId || fieldErrors?.categoryId ? 'error' : ''}`}
                 value={form.categoryId}
                 onChange={e => set('categoryId', e.target.value)}
                 disabled={saving}
@@ -173,100 +166,87 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError }
                   <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
                 ))}
               </select>
-              {errors.categoryId && <span className="form-error">{errors.categoryId}</span>}
+              {(localErrors.categoryId || fieldErrors?.categoryId) && <span className="form-error">{localErrors.categoryId || fieldErrors?.categoryId}</span>}
             </div>
 
-            <div className="form-group">
-              <label>Unit of Measure <span className="required">*</span></label>
-              <input
-                type="text"
-                className={`form-control ${errors.unit ? 'error' : ''}`}
-                value={form.unit}
-                onChange={e => set('unit', e.target.value)}
-                placeholder="e.g. pcs, box, kg"
-                maxLength={50}
-                disabled={saving}
-              />
-              {errors.unit && <span className="form-error">{errors.unit}</span>}
-            </div>
+            <FormInput
+              label="Unit of Measure"
+              value={form.unit}
+              onChange={e => set('unit', e.target.value)}
+              error={localErrors.unit || fieldErrors?.unit}
+              placeholder="e.g. pcs, box, kg"
+              maxLength={50}
+              disabled={saving}
+              required
+            />
           </div>
 
           {/* Cost Price & Selling Price */}
           <div className="form-row">
-            <div className="form-group">
-              <label>Cost Price ($) <span className="required">*</span></label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className={`form-control ${errors.costPrice ? 'error' : ''}`}
-                value={form.costPrice}
-                onChange={e => set('costPrice', e.target.value)}
-                placeholder="0.00"
-                disabled={saving}
-              />
-              {errors.costPrice && <span className="form-error">{errors.costPrice}</span>}
-            </div>
+            <FormInput
+              label="Cost Price (Rs.)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.costPrice}
+              onChange={e => set('costPrice', e.target.value)}
+              error={localErrors.costPrice || fieldErrors?.costPrice}
+              placeholder="0.00"
+              disabled={saving}
+              required
+            />
 
-            <div className="form-group">
-              <label>Selling Price ($) <span className="required">*</span></label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className={`form-control ${errors.sellingPrice ? 'error' : ''}`}
-                value={form.sellingPrice}
-                onChange={e => set('sellingPrice', e.target.value)}
-                placeholder="0.00"
-                disabled={saving}
-              />
-              {errors.sellingPrice && <span className="form-error">{errors.sellingPrice}</span>}
-            </div>
+            <FormInput
+              label="Selling Price (Rs.)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.sellingPrice}
+              onChange={e => set('sellingPrice', e.target.value)}
+              error={localErrors.sellingPrice || fieldErrors?.sellingPrice}
+              placeholder="0.00"
+              disabled={saving}
+              required
+            />
           </div>
 
           {/* Stock Levels Thresholds */}
           <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-            <div className="form-group">
-              <label>Min Stock</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className="form-control"
-                value={form.minimumStockLevel}
-                onChange={e => set('minimumStockLevel', e.target.value)}
-                placeholder="0"
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Min Stock"
+              type="number"
+              min="0"
+              step="1"
+              value={form.minimumStockLevel}
+              onChange={e => set('minimumStockLevel', e.target.value)}
+              error={localErrors.minimumStockLevel || fieldErrors?.minimumStockLevel}
+              placeholder="0"
+              disabled={saving}
+            />
 
-            <div className="form-group">
-              <label>Reorder Level</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className="form-control"
-                value={form.reorderLevel}
-                onChange={e => set('reorderLevel', e.target.value)}
-                placeholder="0"
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Reorder Level"
+              type="number"
+              min="0"
+              step="1"
+              value={form.reorderLevel}
+              onChange={e => set('reorderLevel', e.target.value)}
+              error={localErrors.reorderLevel || fieldErrors?.reorderLevel}
+              placeholder="0"
+              disabled={saving}
+            />
 
-            <div className="form-group">
-              <label>Max Stock</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className="form-control"
-                value={form.maximumStockLevel}
-                onChange={e => set('maximumStockLevel', e.target.value)}
-                placeholder="0"
-                disabled={saving}
-              />
-            </div>
+            <FormInput
+              label="Max Stock"
+              type="number"
+              min="0"
+              step="1"
+              value={form.maximumStockLevel}
+              onChange={e => set('maximumStockLevel', e.target.value)}
+              error={localErrors.maximumStockLevel || fieldErrors?.maximumStockLevel}
+              placeholder="0"
+              disabled={saving}
+            />
           </div>
 
           {/* Active Checkbox */}
@@ -342,6 +322,7 @@ export default function ProductsPage() {
   const [modal, setModal]               = useState(null)
   const [saving, setSaving]             = useState(false)
   const [modalError, setModalError]     = useState(null)
+  const [modalFieldErrors, setModalFieldErrors] = useState({})
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -377,6 +358,7 @@ export default function ProductsPage() {
   const handleSaveProduct = async (payload) => {
     setSaving(true)
     setModalError(null)
+    setModalFieldErrors({})
     try {
       if (modal?.mode === 'edit') {
         await productsApi.update(modal.data.productId, payload)
@@ -388,11 +370,9 @@ export default function ProductsPage() {
       setModal(null)
       loadData()
     } catch (err) {
-      const status = err.response?.status
-      if (status === 401 || status === 403) {
-        setModalError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
-      } else {
-        setModalError(err.response?.data?.message ?? 'Failed to save product.')
+      setModalError(err.displayMessage || 'Failed to save product.')
+      if (err.fieldErrors) {
+        setModalFieldErrors(err.fieldErrors)
       }
     } finally {
       setSaving(false)
@@ -599,10 +579,10 @@ export default function ProductsPage() {
                       {p.unit}
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      ${Number(p.costPrice).toFixed(2)}
+                      {formatCurrency(p.costPrice)}
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      <strong>${Number(p.sellingPrice).toFixed(2)}</strong>
+                      <strong>{formatCurrency(p.sellingPrice)}</strong>
                     </td>
                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {p.reorderLevel}
@@ -650,9 +630,10 @@ export default function ProductsPage() {
           initial={modal.mode === 'edit' ? modal.data : null}
           categories={categories}
           onSave={handleSaveProduct}
-          onClose={() => { setModal(null); setModalError(null) }}
+          onClose={() => { setModal(null); setModalError(null); setModalFieldErrors({}) }}
           saving={saving}
           apiError={modalError}
+          fieldErrors={modalFieldErrors}
         />
       )}
 

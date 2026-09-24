@@ -57,6 +57,7 @@ builder.Services.AddScoped<IBatchService, BatchService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
 builder.Services.AddScoped<IInventoryOptimizationService, InventoryOptimizationService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // ── AI & Semantic Kernel ──────────────────────────────────────────────────────
 var openAiKey = builder.Configuration["OpenAI:ApiKey"];
@@ -146,27 +147,47 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<StockPilot.API.Entities.User>();
+
     var devAccounts = new[]
     {
-        new { Email = "business@stockpilot.local", Role = "BusinessOwner", Name = "StockPilot Business Owner" },
-        new { Email = "procurement@stockpilot.local", Role = "ProcurementManager", Name = "StockPilot Procurement" },
-        new { Email = "branch@stockpilot.local", Role = "BranchManager", Name = "StockPilot Branch Mgr" },
-        new { Email = "employee@stockpilot.local", Role = "StoreEmployee", Name = "StockPilot Employee" }
+        new { Email = "business@stockpilot.local", Role = "BusinessOwner", Name = "StockPilot Business Owner", Username = "business" },
+        new { Email = "procurement@stockpilot.local", Role = "ProcurementManager", Name = "StockPilot Procurement", Username = "procurement" },
+        new { Email = "branch@stockpilot.local", Role = "BranchManager", Name = "StockPilot Branch Mgr", Username = "branch" },
+        new { Email = "employee@stockpilot.local", Role = "StoreEmployee", Name = "StockPilot Employee", Username = "employee" }
     };
+
+    var colomboBranchId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    var kandyBranchId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    if (!db.Branches.Any(b => b.BranchId == colomboBranchId))
+    {
+        db.Branches.Add(new StockPilot.API.Entities.Branch { BranchId = colomboBranchId, BranchCode = "COL-01", Name = "Colombo Central Branch" });
+    }
+    if (!db.Branches.Any(b => b.BranchId == kandyBranchId))
+    {
+        db.Branches.Add(new StockPilot.API.Entities.Branch { BranchId = kandyBranchId, BranchCode = "KAN-01", Name = "Kandy City Branch" });
+    }
+    db.SaveChanges();
 
     foreach (var account in devAccounts)
     {
         if (!db.Users.Any(u => u.Email == account.Email))
         {
-            db.Users.Add(new StockPilot.API.Entities.User
+            var user = new StockPilot.API.Entities.User
             {
                 UserId = Guid.NewGuid(),
+                Username = account.Username,
                 Email = account.Email,
                 FullName = account.Name,
                 Role = account.Role,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            });
+                CreatedAt = DateTime.UtcNow,
+                BranchId = (account.Role == "BranchManager" || account.Role == "StoreEmployee") ? kandyBranchId : null
+            };
+
+            user.PasswordHash = hasher.HashPassword(user, "DevPassword123!");
+            db.Users.Add(user);
         }
     }
     db.SaveChanges();
@@ -182,7 +203,8 @@ app.MapGet("/api/health", () => Results.Ok(new
     status = "Healthy",
     service = "StockPilot.Api",
     timestamp = DateTime.UtcNow,
-    component = "Sales & Demand and Inventory Integration Ready"
+    component = "Sales & Demand and Inventory Integration Ready",
+    databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
 }));
 
 app.MapControllers();
@@ -191,8 +213,17 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<StockPilot.Infrastructure.Persistence.StockPilotDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    if (useInMemory)
+        await dbContext.Database.EnsureCreatedAsync();
+    else
+        await dbContext.Database.MigrateAsync();
     await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(dbContext);
+
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (useInMemory)
+        await appDb.Database.EnsureCreatedAsync();
+    else
+        await appDb.Database.MigrateAsync();
 
     var procurementDb = scope.ServiceProvider.GetRequiredService<ProcurementDbContext>();
     if (useInMemory)

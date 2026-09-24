@@ -18,14 +18,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
-        // ── User (stub) ──────────────────────────────────────────────────────
+        // ── User ───────────────────────────────────────────────────────────────
         mb.Entity<User>(e =>
         {
             e.HasKey(u => u.UserId);
+            e.Property(u => u.Username).IsRequired().HasMaxLength(100);
+            e.HasIndex(u => u.Username).IsUnique();
+            e.Property(u => u.PasswordHash).IsRequired();
             e.Property(u => u.FullName).IsRequired().HasMaxLength(200);
             e.Property(u => u.Email).IsRequired().HasMaxLength(200);
             e.HasIndex(u => u.Email).IsUnique();
             e.Property(u => u.Role).IsRequired().HasMaxLength(50);
+            e.Property(u => u.PhoneNumber).HasMaxLength(50);
+            e.Property(u => u.ProfileImageUrl).HasMaxLength(1000);
+            e.Property(u => u.Address).HasMaxLength(1000);
+
+            e.HasOne(u => u.Branch)
+             .WithMany(b => b.Users)
+             .HasForeignKey(u => u.BranchId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ── Branch ───────────────────────────────────────────────────────────
@@ -36,6 +47,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(b => b.BranchCode).IsUnique();
             e.Property(b => b.Name).IsRequired().HasMaxLength(200);
             e.Property(b => b.Address).HasMaxLength(500);
+            e.Property(b => b.City).HasMaxLength(100);
+            e.Property(b => b.PhoneNumber).HasMaxLength(50);
+            e.Property(b => b.Email).HasMaxLength(200);
+            e.Property(b => b.ManagerName).HasMaxLength(200);
         });
 
         // ── Category ─────────────────────────────────────────────────────────
@@ -56,8 +71,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(p => p.Barcode).IsUnique().HasFilter("\"Barcode\" IS NOT NULL");
             e.Property(p => p.Name).IsRequired().HasMaxLength(300);
             e.Property(p => p.Unit).IsRequired().HasMaxLength(50);
-            e.Property(p => p.CostPrice).HasPrecision(18, 4);
-            e.Property(p => p.SellingPrice).HasPrecision(18, 4);
+            e.Property(p => p.CostPrice).HasPrecision(18, 2);
+            e.Property(p => p.SellingPrice).HasPrecision(18, 2);
             e.Property(p => p.MinimumStockLevel).HasPrecision(18, 4);
             e.Property(p => p.ReorderLevel).HasPrecision(18, 4);
             e.Property(p => p.MaximumStockLevel).HasPrecision(18, 4);
@@ -108,7 +123,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(b => new { b.BatchNumber, b.BranchId }).IsUnique();
             e.HasIndex(b => b.ExpiryDate);
             e.Property(b => b.Quantity).HasPrecision(18, 4);
-            e.Property(b => b.UnitCost).HasPrecision(18, 4);
+            e.Property(b => b.UnitCost).HasPrecision(18, 2);
             e.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Batch_Quantity", "\"Quantity\" >= 0");
@@ -224,20 +239,48 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         mb.Entity<AiRecommendation>(e =>
         {
             e.HasKey(a => a.RecommendationId);
-            e.Property(a => a.RecommendationType).IsRequired().HasMaxLength(50);
+            e.Property(a => a.RecommendationType).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.IssueType).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.Priority).HasConversion<string>().IsRequired().HasMaxLength(50);
+            e.Property(a => a.Status).HasConversion<string>().IsRequired().HasMaxLength(50);
             e.Property(a => a.Reasoning).HasMaxLength(2000);
+            e.Property(a => a.RejectionReason).HasMaxLength(1000);
             e.Property(a => a.SuggestedQuantity).HasPrecision(18, 4);
             e.Property(a => a.ConfidenceScore).HasPrecision(4, 3);
-            e.Property(a => a.Status).HasMaxLength(50);
             
-            e.HasOne(a => a.Branch)
+            e.HasIndex(a => new { a.DestinationBranchId, a.Status });
+            e.HasIndex(a => new { a.ProductId, a.Status });
+            e.HasIndex(a => a.IssueType);
+            e.HasIndex(a => a.CreatedAt);
+            
+            e.HasOne(a => a.DestinationBranch)
              .WithMany()
-             .HasForeignKey(a => a.BranchId)
+             .HasForeignKey(a => a.DestinationBranchId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.SourceBranch)
+             .WithMany()
+             .HasForeignKey(a => a.SourceBranchId)
              .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(a => a.Product)
              .WithMany()
              .HasForeignKey(a => a.ProductId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.Batch)
+             .WithMany()
+             .HasForeignKey(a => a.BatchId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(a => a.CreatedTransfer)
+             .WithMany()
+             .HasForeignKey(a => a.CreatedTransferId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(a => a.ReviewedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.ReviewedBy)
              .OnDelete(DeleteBehavior.Restrict);
         });
     }
