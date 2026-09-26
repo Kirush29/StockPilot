@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.9.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.29" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
@@ -22,6 +23,13 @@
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.80.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Procurement Coordinator Agent validates against the contract files themselves, so they stay the single source of truth. -->
+    <EmbeddedResource Include="..\..\agentic-ai\contracts\procurement-coordinator\*.schema.json"
+                      LogicalName="ProcurementCoordinatorSchemas.%(Filename)%(Extension)"
+                      Link="AgenticContracts\ProcurementCoordinator\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

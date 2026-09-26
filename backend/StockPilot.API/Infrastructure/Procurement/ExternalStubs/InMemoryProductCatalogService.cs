@@ -14,7 +14,9 @@ public class InMemoryProductCatalogService : IProductCatalogService
     {
         [SeedIds.ProductPaper] = new ProductInfo(SeedIds.ProductPaper, "PPR-A4-80G", "Copy Paper A4 80gsm (Ream)", true),
         [SeedIds.ProductInk] = new ProductInfo(SeedIds.ProductInk, "INK-BLK-STD", "Printer Ink Cartridge (Black)", true),
-        [SeedIds.ProductChair] = new ProductInfo(SeedIds.ProductChair, "FUR-CHR-OFC", "Office Chair (Ergonomic)", true)
+        [SeedIds.ProductChair] = new ProductInfo(SeedIds.ProductChair, "FUR-CHR-OFC", "Office Chair (Ergonomic)", true),
+        [SeedIds.ProductToner] = new ProductInfo(SeedIds.ProductToner, "TNR-LSR-BLK", "Laser Printer Toner (Black)", true),
+        [SeedIds.ProductStapler] = new ProductInfo(SeedIds.ProductStapler, "STP-HD-01", "Heavy-Duty Stapler", true)
     };
 
     public Task<ProductInfo?> GetProductAsync(Guid productId, CancellationToken cancellationToken = default) =>

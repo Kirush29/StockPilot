@@ -78,6 +78,40 @@ public class BudgetService(
             utilizationPct);
     }
 
+    public async Task<BudgetAvailabilityResponse> CheckAvailabilityAsync(
+        Guid branchId, DateOnly periodStart, DateOnly periodEnd, decimal proposedAmount, CancellationToken cancellationToken = default)
+    {
+        if (periodEnd < periodStart)
+        {
+            throw new ProcurementValidationException("periodEnd", "periodEnd must not be before periodStart.");
+        }
+
+        if (proposedAmount <= 0m)
+        {
+            throw new ProcurementValidationException("proposedAmount", "proposedAmount must be greater than zero.");
+        }
+
+        var branchBudgets = await budgets.GetByBranchAsync(branchId, cancellationToken);
+        var budget = branchBudgets.FirstOrDefault(b => b.PeriodStart <= periodStart && periodEnd <= b.PeriodEnd);
+        if (budget is null)
+        {
+            return new BudgetAvailabilityResponse(
+                null, false, 0m, 0m, 0m, proposedAmount,
+                $"No budget for this branch covers {periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}.");
+        }
+
+        var remaining = budget.RemainingAmount;
+        var allowed = proposedAmount <= remaining;
+        return new BudgetAvailabilityResponse(
+            budget.Id,
+            allowed,
+            budget.AllocatedAmount,
+            budget.SpentAmount,
+            remaining,
+            proposedAmount,
+            allowed ? null : $"Proposed amount {proposedAmount:0.00} exceeds the remaining budget of {remaining:0.00}.");
+    }
+
     private static BudgetResponse ToResponse(Budget budget) => new(
         budget.Id,
         budget.BranchId,

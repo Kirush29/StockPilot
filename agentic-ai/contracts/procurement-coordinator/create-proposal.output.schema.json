@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CreateProposalToolOutput",
+  "description": "status is pinned to PendingApproval. A tool result reporting any other status (e.g. Approved) fails output validation and the workflow records a failure.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposalId", "status", "totalEstimatedCost"],
+  "properties": {
+    "proposalId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "status": { "const": "PendingApproval" },
+    "totalEstimatedCost": { "type": "number", "exclusiveMinimum": 0 }
+  }
+}

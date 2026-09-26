@@ -3,6 +3,7 @@ using StockPilot.Procurement.Application.Dtos.Orders;
 using StockPilot.Procurement.Application.Dtos.Proposals;
 using StockPilot.Procurement.Application.Repositories;
 using StockPilot.Procurement.Domain.Entities;
+using StockPilot.Procurement.Domain.Enums;
 
 namespace StockPilot.Procurement.Tests.TestHelpers;
 
@@ -42,6 +43,22 @@ public class InMemoryProposalRepository : IProposalRepository
     {
         Proposals.Add(proposal);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Orders consulted for Converted proposals; set it to share a purchase order repository's list.</summary>
+    public List<PurchaseOrder> Orders { get; set; } = [];
+
+    public Task<Guid?> FindOpenProposalForProductAsync(Guid branchId, Guid productId, CancellationToken cancellationToken = default)
+    {
+        var match = Proposals
+            .Where(p => p.BranchId == branchId && p.LineItems.Any(li => li.ProductId == productId))
+            .Where(p => p.Status is ProposalStatus.Draft or ProposalStatus.PendingApproval or ProposalStatus.RevisionRequested or ProposalStatus.Approved
+                || (p.Status == ProposalStatus.Converted && Orders.Any(o =>
+                    o.ProposalId == p.Id && o.Status is PurchaseOrderStatus.Ordered or PurchaseOrderStatus.PartiallyReceived)))
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefault();
+        return Task.FromResult(match);
     }
 }
 

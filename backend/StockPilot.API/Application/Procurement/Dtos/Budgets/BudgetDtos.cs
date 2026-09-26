@@ -22,3 +22,16 @@ public record BudgetUtilizationResponse(
     decimal SpentAmount,
     decimal RemainingAmount,
     double UtilizationPercentage);
+
+/// <summary>
+/// Whether <paramref name="ProposedAmount"/> fits the remaining budget of the single budget
+/// covering the whole requested period. <paramref name="BudgetId"/> is null when no budget covers it.
+/// </summary>
+public record BudgetAvailabilityResponse(
+    Guid? BudgetId,
+    bool Allowed,
+    decimal AllocatedAmount,
+    decimal SpentAmount,
+    decimal RemainingAmount,
+    decimal ProposedAmount,
+    string? Reason);

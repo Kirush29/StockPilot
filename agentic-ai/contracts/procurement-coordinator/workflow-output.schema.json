@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProcurementCoordinatorWorkflowOutput",
+  "description": "Result of one Procurement Coordinator Agent run. The agent stops at PendingApproval; approval is always a separate human action.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workflowId", "proposalId", "status", "budgetCheck", "businessRuleResults", "errors", "humanApprovalRequired"],
+  "properties": {
+    "workflowId": { "$ref": "#/$defs/uuid" },
+    "proposalId": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+    "status": { "enum": ["PendingApproval", "ChecksFailed", "InvalidInput", "Failed"] },
+    "budgetCheck": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allocated", "spent", "remaining", "passed"],
+          "properties": {
+            "allocated": { "type": "number" },
+            "spent": { "type": "number" },
+            "remaining": { "type": "number" },
+            "passed": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "businessRuleResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "passed", "details"],
+        "properties": {
+          "rule": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "humanApprovalRequired": { "const": true }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  }
+}

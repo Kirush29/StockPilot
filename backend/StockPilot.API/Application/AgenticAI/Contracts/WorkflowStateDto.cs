@@ -48,6 +48,18 @@ public class WorkflowPlanStepDto
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = "Pending";
+
+    [JsonPropertyName("startedAtUtc")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? StartedAtUtc { get; set; }
+
+    [JsonPropertyName("completedAtUtc")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? CompletedAtUtc { get; set; }
+
+    [JsonPropertyName("detail")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Detail { get; set; }
 }
 
 public class ToolExecutionDto
@@ -72,6 +84,11 @@ public class ToolExecutionDto
 
     [JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; set; }
+
+    /// <summary>Number of attempts made, including retries. Null for agents that don't retry.</summary>
+    [JsonPropertyName("attempts")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Attempts { get; set; }
 }
 
 public class ValidationResultDto

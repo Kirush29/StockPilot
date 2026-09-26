@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProcurementCoordinatorWorkflowInput",
+  "description": "Objective payload for POST /api/agent-workflows/procurement/start: a reorder signal from an upstream agent plus the supplier/quotation chosen by the Supplier Evaluation Agent. Overstock signals are deliberately not accepted because they never justify a purchase.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["triggerType", "productId", "branchId", "suggestedQuantity", "candidateSupplierId", "quotationId", "sourceAgent"],
+  "properties": {
+    "triggerType": { "enum": ["LowStock", "OutOfStock", "ReorderPointReached", "ForecastShortfall", "Manual"] },
+    "productId": { "$ref": "#/$defs/uuid" },
+    "branchId": { "$ref": "#/$defs/uuid" },
+    "suggestedQuantity": { "type": "integer", "minimum": 1, "maximum": 100000 },
+    "candidateSupplierId": { "$ref": "#/$defs/uuid" },
+    "quotationId": { "$ref": "#/$defs/uuid" },
+    "sourceAgent": { "enum": ["InventoryOptimizationAgent", "DemandForecastAgent", "SupplierEvaluationAgent", "Manual"] }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "not": { "const": "00000000-0000-0000-0000-000000000000" }
+    }
+  }
+}

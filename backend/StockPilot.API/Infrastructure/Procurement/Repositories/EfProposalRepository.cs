@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StockPilot.Procurement.Application.Dtos.Proposals;
 using StockPilot.Procurement.Application.Repositories;
 using StockPilot.Procurement.Domain.Entities;
+using StockPilot.Procurement.Domain.Enums;
 using StockPilot.Procurement.Infrastructure.Persistence;
 
 namespace StockPilot.Procurement.Infrastructure.Repositories;
@@ -62,6 +63,25 @@ public class EfProposalRepository(ProcurementDbContext context) : IProposalRepos
 
     public async Task AddAsync(ProcurementProposal proposal, CancellationToken cancellationToken = default) =>
         await context.Proposals.AddAsync(proposal, cancellationToken);
+
+    public async Task<Guid?> FindOpenProposalForProductAsync(Guid branchId, Guid productId, CancellationToken cancellationToken = default)
+    {
+        var match = await context.Proposals
+            .AsNoTracking()
+            .Where(p => p.BranchId == branchId && p.LineItems.Any(li => li.ProductId == productId))
+            .Where(p => p.Status == ProposalStatus.Draft
+                || p.Status == ProposalStatus.PendingApproval
+                || p.Status == ProposalStatus.RevisionRequested
+                || p.Status == ProposalStatus.Approved
+                || (p.Status == ProposalStatus.Converted && context.PurchaseOrders.Any(o =>
+                    o.ProposalId == p.Id
+                    && (o.Status == PurchaseOrderStatus.Ordered || o.Status == PurchaseOrderStatus.PartiallyReceived))))
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return match;
+    }
 
     private static (string Field, bool Descending) ParseSort(string sort)
     {
