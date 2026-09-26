@@ -17,6 +17,15 @@ public static class SeedIds
     public static readonly Guid ProductInk = new("44444444-4444-4444-4444-444444444442");
     public static readonly Guid ProductChair = new("44444444-4444-4444-4444-444444444443");
 
+    // Stub-only (no database rows): demo data for the Procurement Coordinator Agent. The toner has
+    // no open proposal, so a run for it can reach PendingApproval; the stapler quotation carries a
+    // prompt-injection note.
+    public static readonly Guid ProductToner = new("44444444-4444-4444-4444-444444444444");
+    public static readonly Guid ProductStapler = new("44444444-4444-4444-4444-444444444445");
+    public static readonly Guid QuotationToner = new("33333333-3333-3333-3333-333333333334");
+    public static readonly Guid QuotationStaplerWithInjectedNote = new("33333333-3333-3333-3333-333333333335");
+    public static readonly Guid SupplierBlocked = new("22222222-2222-2222-2222-222222222223");
+
     public static readonly Guid UserBranchManager = new("55555555-5555-5555-5555-555555555551");
     public static readonly Guid UserProcurementManager = new("55555555-5555-5555-5555-555555555552");
     public static readonly Guid UserBusinessOwner = new("55555555-5555-5555-5555-555555555553");

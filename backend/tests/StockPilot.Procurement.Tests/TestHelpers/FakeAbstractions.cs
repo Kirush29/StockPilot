@@ -36,9 +36,10 @@ public class FakeSupplierDirectoryService : ISupplierDirectoryService
         return this;
     }
 
-    public FakeSupplierDirectoryService WithQuotation(Guid id, Guid supplierId, DateTimeOffset expiresAt)
+    public FakeSupplierDirectoryService WithQuotation(
+        Guid id, Guid supplierId, DateTimeOffset expiresAt, Guid? productId = null, decimal? unitPrice = null, string? notes = null)
     {
-        _quotations[id] = new SupplierQuotationInfo(id, supplierId, expiresAt);
+        _quotations[id] = new SupplierQuotationInfo(id, supplierId, expiresAt, productId, unitPrice, notes);
         return this;
     }
 

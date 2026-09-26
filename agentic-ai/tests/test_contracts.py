@@ -20,14 +20,26 @@ def check_json_validity(filepath):
         return False
 
 contracts_dir = os.path.join(os.path.dirname(__file__), "..", "contracts")
+procurement_dir = os.path.join(contracts_dir, "procurement-coordinator")
 schemas = [
     os.path.join(contracts_dir, "supplier-evaluation-input.schema.json"),
     os.path.join(contracts_dir, "supplier-evaluation-output.schema.json")
-]
+] + sorted(os.path.join(procurement_dir, f) for f in os.listdir(procurement_dir) if f.endswith(".schema.json"))
 
 @pytest.mark.parametrize("filepath", schemas)
 def test_json_validity(filepath):
     assert check_json_validity(filepath) is True
+
+def test_procurement_output_requires_human_approval():
+    with open(os.path.join(procurement_dir, "workflow-output.schema.json")) as f:
+        schema = json.load(f)
+    assert "humanApprovalRequired" in schema["required"]
+    assert schema["properties"]["humanApprovalRequired"]["const"] is True
+
+def test_create_proposal_output_pins_pending_approval():
+    with open(os.path.join(procurement_dir, "create-proposal.output.schema.json")) as f:
+        schema = json.load(f)
+    assert schema["properties"]["status"] == {"const": "PendingApproval"}
 
 def main():
     contracts_dir = os.path.join(os.path.dirname(__file__), "..", "contracts")
