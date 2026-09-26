@@ -24,7 +24,7 @@ StockPilot is an integrated inventory and procurement management system built fo
 
 - `backend/` - ASP.NET Core solution/projects and tests
 - `web/` - React app
-- `mobile/` - Flutter app
+- `mobile-flutter/` - Flutter app
 - `agentic-ai/` - contracts, prompts/configuration, evaluation cases or internal service code
 - `docs/` - architecture, ADRs, database, API, testing evidence
 - `.github/` - CI and collaboration templates

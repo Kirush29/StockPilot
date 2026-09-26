@@ -23,4 +23,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\StockPilot.API\StockPilot.API.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -127,17 +127,17 @@ class _RecordPosSaleScreenState extends State<RecordPosSaleScreen> {
               ),
               child: Column(
                 children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.between, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     const Text('Subtotal:', style: TextStyle(color: Colors.grey)),
                     Text('\$${_subTotal.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)),
                   ]),
                   const SizedBox(height: 4),
-                  Row(mainAxisAlignment: MainAxisAlignment.between, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     const Text('Tax (8%):', style: TextStyle(color: Colors.grey)),
                     Text('\$${_tax.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)),
                   ]),
                   const Divider(color: Colors.white24),
-                  Row(mainAxisAlignment: MainAxisAlignment.between, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     const Text('Grand Total:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('\$${_total.toStringAsFixed(2)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 18)),
                   ]),

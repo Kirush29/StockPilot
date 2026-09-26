@@ -1,0 +1,274 @@
+/* procurement.css — styles specific to the Procurement module (line items, timeline, budget bars).
+   Shared primitives (buttons, forms, tables, badges, modals, cards) live in inventory.css and are
+   reused as-is for consistency; this file only adds what those don't already cover. */
+
+/* ── Line item builder ──────────────────────────────────────────────────────── */
+.line-item-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.line-item-header,
+.line-item-row {
+  display: grid;
+  grid-template-columns: 2.2fr 0.8fr 1fr 1fr auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.line-item-header {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 var(--space-1);
+}
+
+.line-item-row {
+  align-items: center;
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.line-item-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.line-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.line-item-grand-total {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.line-item-grand-total strong {
+  color: var(--color-text);
+  font-size: var(--font-size-md, 1rem);
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-warning-text);
+}
+
+/* ── Decision timeline ───────────────────────────────────────────────────────── */
+.decision-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.decision-timeline-item {
+  display: flex;
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+  position: relative;
+}
+
+.decision-timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.decision-timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: var(--slate-400);
+}
+
+.decision-timeline-dot.dot-success { background: var(--color-success); }
+.decision-timeline-dot.dot-danger  { background: var(--color-danger); }
+.decision-timeline-dot.dot-warning { background: var(--color-warning); }
+.decision-timeline-dot.dot-info    { background: var(--color-info); }
+
+.decision-timeline-content {
+  flex: 1;
+}
+
+.decision-timeline-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.decision-timeline-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.decision-timeline-comment {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.timeline-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Budget bar / simple chart ───────────────────────────────────────────────── */
+.budget-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.budget-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.budget-bar-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.budget-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-border-subtle);
+  overflow: hidden;
+}
+
+.budget-bar.compact .budget-bar-track {
+  height: 8px;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.budget-bar-fill-ok   { background: var(--color-success); }
+.budget-bar-fill-warn { background: var(--color-warning); }
+.budget-bar-fill-over { background: var(--color-danger); }
+
+.budget-bar-figures {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.budget-dashboard-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-5);
+}
+
+.budget-dashboard-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-3);
+}
+
+.budget-dashboard-card-head h3 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.budget-dashboard-card-head span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Detail page layout ──────────────────────────────────────────────────────── */
+.proposal-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .proposal-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .line-item-header,
+  .line-item-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.detail-card h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.detail-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.detail-kv dt {
+  color: var(--color-text-muted);
+}
+
+.detail-kv dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--color-surface-hover);
+}
