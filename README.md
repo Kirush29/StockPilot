@@ -76,3 +76,17 @@ Use small meaningful commits, e.g. `feat: add stock movement endpoint`, `test: c
 ## Never commit
 
 Secrets, API keys, connection-string passwords, real personal data, build folders, local IDE files, or fabricated test/evaluation evidence.
+
+## Production Configuration & Environment Variables
+
+| Variable | Description | Default / Example |
+|---|---|---|
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string | `Host=postgres;Port=5432;Database=stockpilotdb;Username=postgres;Password=...` |
+| `Jwt__SigningKey` | HMAC-SHA256 signing secret (**>= 32 chars**, required) | `StockPilotSuperSecretDevelopmentKeyForJWTValidation2026` |
+| `OpenAI__ApiKey` / `OPENAI_API_KEY` | OpenAI API key for backend Semantic Kernel & agentic-ai | Optional (fallback to deterministic) |
+| `GEMINI_API_KEY` | Google Gemini API key for agentic-ai & backend Semantic Kernel | Optional (fallback to deterministic) |
+| `AgenticAi__WorkingDirectory` | Directory where Python agentic-ai lives | `../../agentic-ai` (local dev) or `/app/agentic-ai` (Docker) |
+| `AgenticAi__PythonPath` | Executable path for Python 3 | `python` (Windows/dev) or `python3` (Docker/Linux) |
+| `AgenticAi__AgentMode` | Decision engine mode (`deterministic` or `ai`) | `deterministic` |
+| `Cors__AllowedOrigins` | Allowed CORS origins (semicolon or comma separated) | `http://localhost:5173;http://localhost:3000` |
+

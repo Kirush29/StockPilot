@@ -23,7 +23,11 @@ public static class StockPilotIdentity
     public static IServiceCollection AddStockPilotIdentity(this IServiceCollection services, IConfiguration configuration)
     {
         var jwtSection = configuration.GetSection("Jwt");
-        var signingKey = jwtSection["SigningKey"] ?? "StockPilotSuperSecretDevelopmentKeyForJWTValidation2026";
+        var signingKey = jwtSection["SigningKey"];
+        if (string.IsNullOrWhiteSpace(signingKey) || signingKey.Length < 32)
+        {
+            throw new InvalidOperationException("Configuration 'Jwt:SigningKey' must be set and be at least 32 characters long.");
+        }
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

@@ -134,6 +134,13 @@ else if (!string.IsNullOrEmpty(openAiKey))
     );
 }
 
+// ── Fail fast on missing/short JWT signing key ────────────────────────────────
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey) || jwtSigningKey.Length < 32)
+{
+    throw new InvalidOperationException("Configuration 'Jwt:SigningKey' must be set and be at least 32 characters long.");
+}
+
 // ── Identity: one JWT setup and one set of role policies for every module (Shared/Identity) ──
 builder.Services.AddStockPilotIdentity(builder.Configuration);
 

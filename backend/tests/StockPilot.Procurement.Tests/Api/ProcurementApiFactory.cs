@@ -38,6 +38,7 @@ public class ProcurementApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("UseInMemoryDatabase", "true");
+        builder.UseSetting("Jwt:SigningKey", SigningKey);
         builder.ConfigureTestServices(services =>
         {
             Replace<AppDbContext>(services, $"platform-{_suffix}");
