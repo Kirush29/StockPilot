@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using StockPilot.Application.Services;
@@ -6,6 +7,7 @@ using StockPilot.Domain.Entities;
 
 namespace StockPilot.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SuppliersController : ControllerBase
@@ -18,6 +20,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<Supplier>>> GetAll()
     {
         var suppliers = await _supplierService.GetAllAsync();
@@ -26,6 +29,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<Supplier>> GetById(Guid id)
     {
         var supplier = await _supplierService.GetByIdAsync(id);
@@ -39,6 +43,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<Supplier>> Create(Supplier supplier)
     {
         if (supplier.Id == Guid.Empty)
@@ -72,6 +77,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<IActionResult> Update(Guid id, Supplier supplier)
     {
         if (id != supplier.Id)
@@ -92,6 +98,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<IActionResult> Deactivate(Guid id)
     {
         var deactivated = await _supplierService.DeactivateAsync(id);
@@ -103,7 +110,9 @@ public class SuppliersController : ControllerBase
 
         return NoContent();
     }
+
     [HttpGet("search")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<Supplier>>> Search([FromQuery] string keyword)
     {
         var suppliers = await _supplierService.SearchAsync(keyword);
@@ -111,6 +120,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPost("{supplierId:guid}/ratings")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<SupplierRating>> CreateRating(Guid supplierId, [FromBody] CreateSupplierRatingRequest request)
     {
         var rating = new SupplierRating
@@ -134,6 +144,7 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpGet("{supplierId:guid}/ratings")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<SupplierRating>>> GetRatings(Guid supplierId)
     {
         try

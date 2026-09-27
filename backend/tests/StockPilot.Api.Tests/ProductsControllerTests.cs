@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Moq;
 using StockPilot.Api.Controllers;
 using StockPilot.Application.Services;
@@ -13,7 +13,7 @@ public class ProductsControllerTests
     public async Task GetAll_ShouldReturnOkWithProducts()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         var products = new List<Product> { new Product { Id = Guid.NewGuid() }, new Product { Id = Guid.NewGuid() } };
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(products);
@@ -29,7 +29,7 @@ public class ProductsControllerTests
     public async Task GetAll_ShouldReturnOkWithEmptyList_WhenNoProductsExist()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(new List<Product>());
 
@@ -44,7 +44,7 @@ public class ProductsControllerTests
     public async Task GetById_ShouldReturnOkWithProduct_WhenProductExists()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         var productId = Guid.NewGuid();
         var product = new Product { Id = productId };
@@ -61,7 +61,7 @@ public class ProductsControllerTests
     public async Task GetById_ShouldReturnNotFound_WhenProductDoesNotExist()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         serviceMock.Setup(s => s.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((Product?)null);
 
@@ -74,7 +74,7 @@ public class ProductsControllerTests
     public async Task Create_ShouldReturnCreatedProduct()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         var product = new Product { Id = Guid.NewGuid() };
         serviceMock.Setup(s => s.CreateAsync(It.IsAny<Product>())).ReturnsAsync(product);
@@ -90,10 +90,10 @@ public class ProductsControllerTests
     public async Task Create_ShouldGenerateIdAndTimestamps_WhenMissing()
     {
         var serviceMock = new Mock<IProductService>();
-        var controller = new ProductsController(serviceMock.Object);
+        var controller = new ProductsController(serviceMock.Object, null!);
 
         var product = new Product { Id = Guid.Empty };
-        
+
         Product capturedProduct = null!;
         serviceMock.Setup(s => s.CreateAsync(It.IsAny<Product>()))
             .Callback<Product>(p => capturedProduct = p)
