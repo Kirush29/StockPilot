@@ -35,7 +35,7 @@ def decide_supplier(product_id, candidates):
 
 import json
 import os
-from .llm_provider import get_openai_client
+from .llm_provider import get_openai_client, get_model_name
 
 def decide_supplier_ai(product_id, candidates):
     if not candidates:
@@ -48,6 +48,7 @@ def decide_supplier_ai(product_id, candidates):
         }
         
     client = get_openai_client()
+    model = get_model_name()
     
     # Integration: the package moved from agentic-ai/src to agentic-ai/agents/supplier_evaluation (one level deeper).
     schema_path = os.path.join(os.path.dirname(__file__), '../../contracts/supplier-evaluation-output.schema.json')
@@ -81,7 +82,7 @@ def decide_supplier_ai(product_id, candidates):
     ]
     
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=messages,
         temperature=0.0,
         response_format={

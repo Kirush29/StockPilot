@@ -1,4 +1,4 @@
-﻿using StockPilot.Shared.Identity;
+using StockPilot.Shared.Identity;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -105,12 +105,31 @@ else
     builder.Services.AddScoped<StockPilot.Application.Interfaces.IEmailNotificationService, StockPilot.Api.Services.SmtpEmailNotificationService>();
 
 // ── AI & Semantic Kernel ──────────────────────────────────────────────────────
-var openAiKey = builder.Configuration["OpenAI:ApiKey"];
-if (!string.IsNullOrEmpty(openAiKey))
+var geminiKey = builder.Configuration["Gemini:ApiKey"] 
+    ?? builder.Configuration["GEMINI_API_KEY"] 
+    ?? builder.Configuration["GOOGLE_API_KEY"]
+    ?? (string.Equals(builder.Configuration["AGENT_MODEL_PROVIDER"], "gemini", StringComparison.OrdinalIgnoreCase) ? builder.Configuration["AGENT_MODEL_API_KEY"] : null);
+
+var openAiKey = builder.Configuration["OpenAI:ApiKey"] 
+    ?? builder.Configuration["OPENAI_API_KEY"]
+    ?? (string.Equals(builder.Configuration["AGENT_MODEL_PROVIDER"], "openai", StringComparison.OrdinalIgnoreCase) ? builder.Configuration["AGENT_MODEL_API_KEY"] : null);
+
+if (!string.IsNullOrEmpty(geminiKey))
 {
+    var modelId = builder.Configuration["Gemini:ModelId"] ?? builder.Configuration["GEMINI_MODEL"] ?? "gemini-2.5-flash";
     var skBuilder = builder.Services.AddKernel();
     skBuilder.AddOpenAIChatCompletion(
-        modelId: "gpt-4o-mini",
+        modelId: modelId,
+        endpoint: new Uri("https://generativelanguage.googleapis.com/v1beta/openai/"),
+        apiKey: geminiKey
+    );
+}
+else if (!string.IsNullOrEmpty(openAiKey))
+{
+    var modelId = builder.Configuration["OpenAI:ModelId"] ?? builder.Configuration["OPENAI_MODEL"] ?? "gpt-4o-mini";
+    var skBuilder = builder.Services.AddKernel();
+    skBuilder.AddOpenAIChatCompletion(
+        modelId: modelId,
         apiKey: openAiKey
     );
 }

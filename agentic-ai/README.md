@@ -26,11 +26,21 @@ in process in the ASP.NET Core API, so they are not duplicated here:
 
 ## Supplier Evaluation Agent
 
-```
-pip install -r requirements.txt          # openai, python-dotenv (imported even in deterministic mode)
+```bash
+pip install -r requirements.txt          # openai, python-dotenv
+
+# Set your Gemini API key in agentic-ai/.env:
+# GEMINI_API_KEY=AIzaSy...
+
+# Run in deterministic mode:
 echo '{"mode":"deterministic","productId":"...","candidates":[...]}' | python -m agents.supplier_evaluation
-python -m pytest -q                      # needs pytest
+
+# Run in AI mode (uses Gemini / OpenAI):
+echo '{"mode":"ai","productId":"...","candidates":[...]}' | python -m agents.supplier_evaluation
+
+python -m pytest -q                      # runs all pytest tests
 ```
 
 The API runs it with `AgenticAi:EntryPoint = -m agents.supplier_evaluation` from this folder
 (`backend/StockPilot.Api/appsettings.json`). Input and output shapes: `contracts/supplier-evaluation-*.schema.json`.
+
