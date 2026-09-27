@@ -101,7 +101,7 @@ lib/
   core/                   API client, errors, secure storage, common widgets
 ```
 
-## Running the App
+## Running & Building the App
 
 1. Ensure the ASP.NET Core API is running:
    ```bash
@@ -113,3 +113,23 @@ lib/
    flutter pub get
    flutter run
    ```
+
+### Configuring API Base URL
+
+The mobile client reads its API endpoint via `--dart-define=API_BASE_URL`, defaulting to `http://10.0.2.2:5004` (Android Emulator loopback to host).
+
+To specify a custom backend URL:
+```bash
+# Local development against iOS simulator or LAN IP:
+flutter run --dart-define=API_BASE_URL=http://localhost:5004
+flutter run --dart-define=API_BASE_URL=http://192.168.1.100:5004
+
+# Production Android APK build:
+flutter build apk --release --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+
+# Production Android AppBundle build:
+flutter build appbundle --release --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+
+# Production iOS build:
+flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+```
