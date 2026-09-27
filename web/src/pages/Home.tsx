@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, UserCheck, FileText, Clock, AlertCircle, ArrowRight, Activity, TrendingUp, Package } from 'lucide-react';
 import { supplierService, type Supplier } from '../services/supplierService';
 import { quotationService, type Quotation } from '../services/quotationService';
 import { productService, type Product } from '../services/productService';
+import { formatCurrency } from '../utils/currencyFormatter';
+import { useAuth } from '../contexts/AuthContext';
+import BusinessOwnerDashboard from './dashboards/BusinessOwnerDashboard';
+import ProcurementDashboard from './dashboards/ProcurementDashboard';
+import BranchManagerDashboard from './dashboards/BranchManagerDashboard';
+import InventoryDashboard from './dashboards/InventoryDashboard';
 
 export default function Home() {
+  const { user } = useAuth();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -69,12 +76,28 @@ export default function Home() {
         <p className="text-gray-600 max-w-md mb-6">{error}</p>
         <button
           onClick={fetchData}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
         >
           Retry
         </button>
       </div>
     );
+  }
+
+  if (user?.role === 'BusinessOwner') {
+    return <BusinessOwnerDashboard />;
+  }
+
+  if (user?.role === 'ProcurementManager') {
+    return <ProcurementDashboard />;
+  }
+
+  if (user?.role === 'BranchManager') {
+    return <BranchManagerDashboard />;
+  }
+
+  if (user?.role === 'StoreEmployee') {
+    return <InventoryDashboard />;
   }
 
   return (
@@ -95,7 +118,7 @@ export default function Home() {
           </Link>
           <Link
             to="/quotations"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+            className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium text-sm"
           >
             <FileText className="w-4 h-4 mr-2" />
             Quotations
@@ -108,8 +131,8 @@ export default function Home() {
         <MetricCard
           title="Total Suppliers"
           value={suppliers.length}
-          icon={<Users className="w-6 h-6 text-blue-600" />}
-          bgColor="bg-blue-50"
+          icon={<Users className="w-6 h-6 text-black" />}
+          bgColor="bg-gray-50"
         />
         <MetricCard
           title="Active Suppliers"
@@ -120,7 +143,7 @@ export default function Home() {
         <MetricCard
           title="Total Quotations"
           value={quotations.length}
-          icon={<FileText className="w-6 h-6 text-purple-600" />}
+          icon={<FileText className="w-6 h-6 text-black" />}
           bgColor="bg-purple-50"
         />
         <MetricCard
@@ -139,7 +162,7 @@ export default function Home() {
               <Activity className="w-5 h-5 mr-2 text-gray-500" />
               Recent Quotations
             </h3>
-            <Link to="/quotations" className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+            <Link to="/quotations" className="text-sm text-black hover:text-gray-800 font-medium flex items-center">
               View All <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
@@ -165,7 +188,7 @@ export default function Home() {
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="text-sm font-semibold text-gray-900 mb-2">
-                          Rs. {quotation.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-gray-500 font-normal">x {quotation.quantity}</span>
+                          {formatCurrency(quotation.unitPrice)} <span className="text-xs text-gray-500 font-normal">x {quotation.quantity}</span>
                         </span>
                         <StatusBadge status={quotation.status} />
                       </div>
@@ -183,7 +206,7 @@ export default function Home() {
                 <p className="text-sm text-gray-400 mb-4">There are currently no quotations in the system.</p>
                 <Link
                   to="/quotations"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                  className="text-sm font-medium text-black hover:text-gray-800"
                 >
                   Manage Quotations
                 </Link>
@@ -204,14 +227,14 @@ export default function Home() {
             <div className="space-y-2">
               <QuickActionLink
                 to="/suppliers"
-                icon={<Users className="w-5 h-5 text-blue-600" />}
+                icon={<Users className="w-5 h-5 text-black" />}
                 title="Manage Suppliers"
                 description="View, add, or edit supplier details"
-                bgColor="bg-blue-50"
+                bgColor="bg-gray-50"
               />
               <QuickActionLink
                 to="/quotations"
-                icon={<FileText className="w-5 h-5 text-purple-600" />}
+                icon={<FileText className="w-5 h-5 text-black" />}
                 title="Manage Quotations"
                 description="Review and process quotes"
                 bgColor="bg-purple-50"
@@ -277,11 +300,11 @@ function QuickActionLink({ to, icon, title, description, bgColor }: { to: string
         {icon}
       </div>
       <div className="flex-1">
-        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{title}</h4>
+        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-black transition-colors">{title}</h4>
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
       <div className="flex items-center h-10">
-        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-black transition-colors" />
       </div>
     </Link>
   );

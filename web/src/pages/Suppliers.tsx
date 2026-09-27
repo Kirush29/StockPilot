@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { type Supplier, type SupplierRating, supplierService, type SaveSupplierRequest, type CreateSupplierRatingRequest } from '../services/supplierService';
 import { Search, Plus, Edit2, Trash2, Star, X, AlertCircle, Building2 } from 'lucide-react';
 
@@ -16,8 +16,9 @@ export default function Suppliers() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  
+
   // Deactivation states
   const [deactivatingSupplier, setDeactivatingSupplier] = useState<Supplier | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -107,6 +108,7 @@ export default function Suppliers() {
       address: ''
     });
     setFormError(null);
+    setFormErrors({});
     setIsFormOpen(true);
   };
 
@@ -120,6 +122,7 @@ export default function Suppliers() {
       address: supplier.address
     });
     setFormError(null);
+    setFormErrors({});
     setIsFormOpen(true);
   };
 
@@ -188,7 +191,7 @@ export default function Suppliers() {
 
     try {
       setIsSubmitting(true);
-      
+
       const payload: SaveSupplierRequest = {
         supplierCode: formData.supplierCode.trim(),
         name: formData.name.trim(),
@@ -205,13 +208,23 @@ export default function Suppliers() {
       } else {
         await supplierService.createSupplier(payload);
       }
-      
+
       setIsFormOpen(false);
       setSearchKeyword('');
       setHasSearched(false);
       await fetchSuppliers();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save supplier.');
+      if (err.data?.errors) {
+        const fieldErrors: Record<string, string> = {};
+        for (const [key, value] of Object.entries(err.data.errors)) {
+          const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
+          fieldErrors[lowerKey] = Array.isArray(value) ? value[0] as string : String(value);
+        }
+        setFormErrors(fieldErrors);
+        setFormError('Please correct the highlighted errors.');
+      } else {
+        setFormError(err.message || 'Failed to save supplier.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -219,10 +232,10 @@ export default function Suppliers() {
 
   const handleDeactivateSubmit = async () => {
     if (!deactivatingSupplier) return;
-    
+
     setDeactivateError(null);
     setIsDeactivating(true);
-    
+
     try {
       await supplierService.deactivateSupplier(deactivatingSupplier.id);
       setDeactivatingSupplier(null);
@@ -253,15 +266,15 @@ export default function Suppliers() {
         rating: parseFloat(ratingFormData.rating),
         comment: ratingFormData.comment.trim()
       };
-      
+
       await supplierService.addSupplierRating(ratingsOpenSupplier.id, payload);
-      
+
       setRatingFormData({ rating: '', comment: '' });
       await fetchRatings(ratingsOpenSupplier.id);
-      
+
       const updatedList = await supplierService.getAllSuppliers();
       setSuppliers(updatedList);
-      
+
     } catch (err: any) {
       setRatingFormError(err.message || 'Failed to add rating.');
     } finally {
@@ -281,7 +294,7 @@ export default function Suppliers() {
             Manage your vendor network and evaluate performance.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4 w-full sm:w-auto">
           {suppliers.length > 0 && !loading && !error && (
             <div className="hidden sm:flex flex-col items-end mr-4">
@@ -289,9 +302,9 @@ export default function Suppliers() {
               <span className="text-sm font-semibold text-slate-700">{suppliers.length} / {activeSuppliersCount}</span>
             </div>
           )}
-          <button 
+          <button
             onClick={openAddForm}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg shadow-sm text-sm font-medium transition-all focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2.5 rounded-lg shadow-sm text-sm font-medium transition-all focus:ring-2 focus:ring-black focus:ring-offset-2"
           >
             <Plus className="w-4 h-4" />
             Add Supplier
@@ -309,7 +322,7 @@ export default function Suppliers() {
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Search by name, code, or contact..."
-              className="w-full pl-9 pr-10 py-2.5 border-transparent bg-slate-50 hover:bg-slate-100 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg text-sm transition-all outline-none"
+              className="w-full pl-9 pr-10 py-2.5 border-transparent bg-slate-50 hover:bg-slate-100 focus:bg-white focus:border-black focus:ring-2 focus:ring-blue-100 rounded-lg text-sm transition-all outline-none"
               disabled={isSearching || loading}
             />
             {searchKeyword && (
@@ -388,7 +401,7 @@ export default function Suppliers() {
             {hasSearched ? 'No results found' : 'No suppliers yet'}
           </h3>
           <p className="text-sm text-slate-500 max-w-sm mb-6">
-            {hasSearched 
+            {hasSearched
               ? `We couldn't find any suppliers matching "${searchKeyword}". Try checking for typos or using different terms.`
               : 'Get started by adding your first vendor to the system to manage inventory sourcing and evaluations.'}
           </p>
@@ -466,7 +479,7 @@ export default function Suppliers() {
                         </button>
                         <button
                           onClick={() => openEditForm(supplier)}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-black hover:bg-gray-50 rounded-lg transition-colors"
                           aria-label="Edit Supplier"
                           title="Edit Supplier"
                         >
@@ -500,7 +513,7 @@ export default function Suppliers() {
               <h3 className="text-lg font-semibold text-slate-900">
                 {editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsFormOpen(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                 aria-label="Close modal"
@@ -508,7 +521,7 @@ export default function Suppliers() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto">
               {formError && (
                 <div className="mb-6 bg-rose-50 border border-rose-200 p-3 rounded-lg flex items-start gap-3">
@@ -516,77 +529,82 @@ export default function Suppliers() {
                   <p className="text-sm text-rose-700">{formError}</p>
                 </div>
               )}
-              
+
               <form id="supplier-form" onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Supplier Code</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="supplierCode"
                     value={formData.supplierCode}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`w-full px-3 py-2 bg-white border ${formErrors.supplierCode ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
                     placeholder="e.g. SUP-001"
                     disabled={isSubmitting}
                   />
+                  {formErrors.supplierCode && <p className="text-xs text-rose-600 mt-1">{formErrors.supplierCode}</p>}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Company Name</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`w-full px-3 py-2 bg-white border ${formErrors.name ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
                     placeholder="Acme Corp"
                     disabled={isSubmitting}
                   />
+                  {formErrors.name && <p className="text-xs text-rose-600 mt-1">{formErrors.name}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Contact Email</label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     name="contactEmail"
                     value={formData.contactEmail}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`w-full px-3 py-2 bg-white border ${formErrors.contactEmail ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
                     placeholder="contact@example.com"
                     disabled={isSubmitting}
                   />
+                  {formErrors.contactEmail && <p className="text-xs text-rose-600 mt-1">{formErrors.contactEmail}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Contact Phone</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="contactPhone"
                     value={formData.contactPhone}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`w-full px-3 py-2 bg-white border ${formErrors.contactPhone ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
                     placeholder="+1 (555) 000-0000"
                     disabled={isSubmitting}
                   />
+                  {formErrors.contactPhone && <p className="text-xs text-rose-600 mt-1">{formErrors.contactPhone}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Address</label>
-                  <textarea 
+                  <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                    className={`w-full px-3 py-2 bg-white border ${formErrors.address ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors resize-none`}
                     rows={3}
                     placeholder="Full Business Address"
                     disabled={isSubmitting}
                   />
+                  {formErrors.address && <p className="text-xs text-rose-600 mt-1">{formErrors.address}</p>}
                 </div>
               </form>
             </div>
-            
+
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 mt-auto">
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
                 className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
@@ -594,11 +612,11 @@ export default function Suppliers() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="submit"
                 form="supplier-form"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm"
+                className="px-6 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 shadow-sm"
               >
                 {isSubmitting ? 'Saving...' : 'Save Supplier'}
               </button>
@@ -622,13 +640,13 @@ export default function Suppliers() {
                 </div>
               )}
               <p className="text-slate-600 text-sm">
-                Are you sure you want to deactivate <span className="font-semibold text-slate-900">{deactivatingSupplier.name}</span> ({deactivatingSupplier.supplierCode})? 
+                Are you sure you want to deactivate <span className="font-semibold text-slate-900">{deactivatingSupplier.name}</span> ({deactivatingSupplier.supplierCode})?
                 This action will mark the supplier as inactive but will not permanently delete their data.
               </p>
             </div>
-            
+
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-              <button 
+              <button
                 type="button"
                 onClick={() => setDeactivatingSupplier(null)}
                 className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
@@ -636,7 +654,7 @@ export default function Suppliers() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleDeactivateSubmit}
                 disabled={isDeactivating}
@@ -658,7 +676,7 @@ export default function Suppliers() {
                 <h3 className="text-lg font-semibold text-slate-900">Supplier Ratings</h3>
                 <p className="text-sm text-slate-500">{ratingsOpenSupplier.name}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setRatingsOpenSupplier(null)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                 aria-label="Close modal"
@@ -681,7 +699,7 @@ export default function Suppliers() {
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="w-full sm:w-24">
                       <label className="block text-xs font-medium text-slate-700 mb-1.5">Score (1-5)</label>
-                      <input 
+                      <input
                         type="number"
                         step="0.1"
                         min="1"
@@ -689,18 +707,18 @@ export default function Suppliers() {
                         name="rating"
                         value={ratingFormData.rating}
                         onChange={handleRatingInputChange}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors"
                         placeholder="0.0"
                         disabled={ratingSubmitting}
                       />
                     </div>
                     <div className="flex-grow">
                       <label className="block text-xs font-medium text-slate-700 mb-1.5">Comment (Optional)</label>
-                      <textarea 
+                      <textarea
                         name="comment"
                         value={ratingFormData.comment}
                         onChange={handleRatingInputChange}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors resize-none"
                         rows={1}
                         placeholder="Briefly describe your experience..."
                         disabled={ratingSubmitting}
@@ -708,10 +726,10 @@ export default function Suppliers() {
                     </div>
                   </div>
                   <div className="self-end">
-                    <button 
+                    <button
                       type="submit"
                       disabled={ratingSubmitting}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-sm text-sm font-medium transition-colors disabled:opacity-50"
+                      className="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded-lg shadow-sm text-sm font-medium transition-colors disabled:opacity-50"
                     >
                       {ratingSubmitting ? 'Submitting...' : 'Submit Rating'}
                     </button>
