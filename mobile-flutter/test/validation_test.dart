@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('LKR Formatting works', () {
@@ -14,10 +14,10 @@ void main() {
   test('Password complexity validation works', () {
     bool isValidPassword(String password) {
       return password.length >= 8 &&
-             password.contains(RegExp(r'[A-Z]')) &&
-             password.contains(RegExp(r'[a-z]')) &&
-             password.contains(RegExp(r'[0-9]')) &&
-             password.contains(RegExp(r'[!@#\$&*~]'));
+          password.contains(RegExp(r'[A-Z]')) &&
+          password.contains(RegExp(r'[a-z]')) &&
+          password.contains(RegExp(r'[0-9]')) &&
+          password.contains(RegExp(r'[!@#\$&*~]'));
     }
 
     expect(isValidPassword('short'), false);

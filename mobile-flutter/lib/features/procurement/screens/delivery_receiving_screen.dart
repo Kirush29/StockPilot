@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/purchase_order.dart';
@@ -17,7 +17,11 @@ import '../services/procurement_api_service.dart';
 class DeliveryReceivingScreen extends ConsumerStatefulWidget {
   final PurchaseOrder order;
 
-  const DeliveryReceivingScreen({super.key, required this.order});
+  /// Optional so tests can supply a service backed by a fake HTTP client.
+  final ProcurementApiService? apiService;
+
+  const DeliveryReceivingScreen(
+      {super.key, required this.order, this.apiService});
 
   @override
   ConsumerState<DeliveryReceivingScreen> createState() =>
@@ -27,6 +31,7 @@ class DeliveryReceivingScreen extends ConsumerStatefulWidget {
 class _DeliveryReceivingScreenState
     extends ConsumerState<DeliveryReceivingScreen> {
   late ProcurementApiService _apiService;
+
   final _notesController = TextEditingController();
 
   bool _isLoading = true;
@@ -39,8 +44,13 @@ class _DeliveryReceivingScreenState
   @override
   void initState() {
     super.initState();
-    final apiClient = ref.read(apiClientProvider);
-    _apiService = ProcurementApiService(apiClient);
+    // Use injected service (for tests) or build one from the Riverpod ApiClient.
+    if (widget.apiService != null) {
+      _apiService = widget.apiService!;
+    } else {
+      final apiClient = ref.read(apiClientProvider);
+      _apiService = ProcurementApiService(apiClient);
+    }
     _loadDetail();
   }
 

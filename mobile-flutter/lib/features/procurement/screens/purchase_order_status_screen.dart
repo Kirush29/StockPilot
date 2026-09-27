@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -11,7 +11,10 @@ import 'delivery_receiving_screen.dart';
 /// does not currently expose branch on PurchaseOrder, so this cannot filter to "my branch"
 /// client-side; it shows everything the caller's role is allowed to view.
 class PurchaseOrderStatusScreen extends ConsumerStatefulWidget {
-  const PurchaseOrderStatusScreen({super.key});
+  /// Optional so tests can supply a service backed by a fake HTTP client.
+  final ProcurementApiService? apiService;
+
+  const PurchaseOrderStatusScreen({super.key, this.apiService});
 
   @override
   ConsumerState<PurchaseOrderStatusScreen> createState() =>
@@ -30,8 +33,13 @@ class _PurchaseOrderStatusScreenState
   @override
   void initState() {
     super.initState();
-    final apiClient = ref.read(apiClientProvider);
-    _apiService = ProcurementApiService(apiClient);
+    // Use injected service (for tests) or build one from the Riverpod ApiClient.
+    if (widget.apiService != null) {
+      _apiService = widget.apiService!;
+    } else {
+      final apiClient = ref.read(apiClientProvider);
+      _apiService = ProcurementApiService(apiClient);
+    }
     _load();
   }
 
@@ -190,50 +198,47 @@ class _PurchaseOrderStatusScreenState
               title: Text(order.orderNumber,
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
+              // Receive action sits in the subtitle, not the trailing widget:
+              // ListTile caps trailing at 56 px; badge + button stacked there
+              // overflowed and clipped the button (from main fix).
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
-                  style: const TextStyle(color: Colors.grey),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    if (canReceive)
+                      TextButton(
+                        onPressed: () async {
+                          final changed = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DeliveryReceivingScreen(
+                                  order: order, apiService: _apiService),
+                            ),
+                          );
+                          if (changed == true) _load();
+                        },
+                        child: const Text('Receive',
+                            style: TextStyle(color: Color(0xFF818CF8))),
+                      ),
+                  ],
                 ),
               ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6)),
-                    child: Text(order.status.label,
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                  if (canReceive) ...[
-                    const SizedBox(height: 8),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 0)),
-                      onPressed: () async {
-                        final changed = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  DeliveryReceivingScreen(order: order)),
-                        );
-                        if (changed == true) _load();
-                      },
-                      child: const Text('Receive',
-                          style: TextStyle(
-                              color: Color(0xFF818CF8), fontSize: 12)),
-                    ),
-                  ],
-                ],
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6)),
+                child: Text(order.status.label,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
               ),
             ),
           );

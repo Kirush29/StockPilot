@@ -1,4 +1,4 @@
-﻿import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
@@ -6,8 +6,6 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
-    // Restrict dep-scan to only the active app entry point,
-    // preventing Vite from also scanning the legacy web/stockpilot-web/index.html
     entries: ['index.html'],
   },
   server: {
@@ -22,5 +20,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     globals: true,
+    exclude: ['stockpilot-web/**', 'node_modules/**'],
   }
 })
