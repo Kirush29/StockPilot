@@ -255,14 +255,50 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/health", () => Results.Ok(new
+// ── Health Check Endpoints ────────────────────────────────────────────────────
+async Task<IResult> HealthCheckHandler(AppDbContext db)
 {
-    status = "Healthy",
-    service = "StockPilot.Api",
-    timestamp = DateTime.UtcNow,
-    component = "Sales & Demand and Inventory Integration Ready",
-    databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
-}));
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync();
+        if (!canConnect)
+        {
+            return Results.Json(new
+            {
+                status = "Unhealthy",
+                database = "Unreachable",
+                service = "StockPilot.Api",
+                timestamp = DateTime.UtcNow,
+                databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
+            }, statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        return Results.Ok(new
+        {
+            status = "Healthy",
+            database = "Connected",
+            service = "StockPilot.Api",
+            timestamp = DateTime.UtcNow,
+            component = "Sales & Demand and Inventory Integration Ready",
+            databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            status = "Unhealthy",
+            database = "Error",
+            error = ex.Message,
+            service = "StockPilot.Api",
+            timestamp = DateTime.UtcNow,
+            databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}
+
+app.MapGet("/health", (AppDbContext db) => HealthCheckHandler(db)).AllowAnonymous();
+app.MapGet("/api/health", (AppDbContext db) => HealthCheckHandler(db)).AllowAnonymous();
 
 app.MapControllers();
 
