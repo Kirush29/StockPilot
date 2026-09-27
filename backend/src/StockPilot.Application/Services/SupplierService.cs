@@ -1,4 +1,4 @@
-using StockPilot.Application.Interfaces;
+﻿using StockPilot.Application.Interfaces;
 using StockPilot.Domain.Entities;
 
 namespace StockPilot.Application.Services;

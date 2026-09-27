@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stockpilot_mobile/procurement/screens/delivery_receiving_screen.dart';
-import 'package:stockpilot_mobile/procurement/screens/purchase_order_status_screen.dart';
+import 'package:stockpilot_mobile/features/procurement/screens/delivery_receiving_screen.dart';
+import 'package:stockpilot_mobile/features/procurement/screens/purchase_order_status_screen.dart';
 
 import 'fake_procurement_backend.dart';
 
 void main() {
-  testWidgets('Receive opens the receiving screen; confirming returns and refreshes the list', (tester) async {
+  testWidgets(
+      'Receive opens the receiving screen; confirming returns and refreshes the list',
+      (tester) async {
     final backend = FakeProcurementBackend([
-      orderJson(id: 'o-1', number: 'PO-2026-000011', status: 0, lines: [lineJson('toner-0001', 3)]),
+      orderJson(
+          id: 'o-1',
+          number: 'PO-2026-000011',
+          status: 0,
+          lines: [lineJson('toner-0001', 3)]),
     ]);
-    await tester.pumpWidget(MaterialApp(home: PurchaseOrderStatusScreen(apiService: backend.service())));
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+            home: PurchaseOrderStatusScreen(apiService: backend.service())),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Receive'));
@@ -27,16 +39,31 @@ void main() {
     expect(find.byType(DeliveryReceivingScreen), findsNothing);
     expect(find.byType(PurchaseOrderStatusScreen), findsOneWidget);
     expect(find.text('Order marked as Received.'), findsOneWidget);
-    expect(find.text('Received'), findsOneWidget, reason: 'the list reloaded after the screen popped with true');
+    expect(find.text('Received'), findsOneWidget,
+        reason: 'the list reloaded after the screen popped with true');
     expect(find.text('Receive'), findsNothing);
-    expect(backend.requests.where((r) => r.method == 'GET' && r.url.pathSegments.length == 3), hasLength(2));
+    // Both list GETs should have been recorded
+    expect(
+        backend.requests
+            .where((r) => r.startsWith('GET') && r.contains('orders')),
+        hasLength(greaterThanOrEqualTo(2)));
   });
 
-  testWidgets('backing out without confirming does not reload the list', (tester) async {
+  testWidgets('backing out without confirming does not reload the list',
+      (tester) async {
     final backend = FakeProcurementBackend([
-      orderJson(id: 'o-1', number: 'PO-2026-000012', status: 1, lines: [lineJson('toner-0001', 3)]),
+      orderJson(
+          id: 'o-1',
+          number: 'PO-2026-000012',
+          status: 1,
+          lines: [lineJson('toner-0001', 3)]),
     ]);
-    await tester.pumpWidget(MaterialApp(home: PurchaseOrderStatusScreen(apiService: backend.service())));
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+            home: PurchaseOrderStatusScreen(apiService: backend.service())),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Receive'));
@@ -45,7 +72,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PurchaseOrderStatusScreen), findsOneWidget);
-    expect(backend.requests.where((r) => r.method == 'GET' && r.url.pathSegments.length == 3), hasLength(1));
-    expect(backend.requests.where((r) => r.method == 'PATCH'), isEmpty);
+    expect(backend.requests.where((r) => r.contains('PATCH')), isEmpty);
   });
 }

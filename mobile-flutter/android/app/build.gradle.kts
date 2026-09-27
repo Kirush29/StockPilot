@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -7,7 +7,6 @@ plugins {
 android {
     namespace = "com.stockpilot.stockpilot_mobile"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

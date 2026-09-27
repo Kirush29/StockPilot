@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { supplierEvaluationService, type SupplierEvaluationResponseDto, type SupplierEvaluationCandidateDto } from '../services/supplierEvaluationService';
 import { quotationService, type QuotationStatus } from '../services/quotationService';
 import { productService, type Product } from '../services/productService';
 import { supplierService, type Supplier } from '../services/supplierService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 export default function Evaluation() {
   const [productId, setProductId] = useState('');
@@ -60,17 +61,17 @@ export default function Evaluation() {
       setIsUpdatingStatus(true);
       setUpdateStatusError(null);
       await quotationService.updateQuotationStatus(actionCandidate.candidate.quotationId, actionCandidate.action);
-      
+
       // Update local evaluation state to show the new status in "All Evaluations"
       if (evaluation) {
-        const updatedEvaluations = evaluation.allEvaluations.map(e => 
-          e.quotationId === actionCandidate.candidate.quotationId 
-            ? { ...e, status: actionCandidate.action } 
+        const updatedEvaluations = evaluation.allEvaluations.map(e =>
+          e.quotationId === actionCandidate.candidate.quotationId
+            ? { ...e, status: actionCandidate.action }
             : e
         );
         setEvaluation({ ...evaluation, allEvaluations: updatedEvaluations });
       }
-      
+
       setActionCandidate(null);
     } catch (err: any) {
       setUpdateStatusError(err.message || 'Failed to update quotation status.');
@@ -107,7 +108,7 @@ export default function Evaluation() {
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-black focus:border-black outline-none"
             disabled={loading}
           >
             <option value="">Select a product to evaluate...</option>
@@ -118,7 +119,7 @@ export default function Evaluation() {
           <button
             type="submit"
             disabled={!productId.trim() || loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 min-w-[150px]"
+            className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 min-w-[150px]"
           >
             {loading ? 'Evaluating...' : 'Evaluate Supplier'}
           </button>
@@ -185,10 +186,10 @@ export default function Evaluation() {
                       <th className="p-4 border-b font-medium text-center">Unit Price</th>
                       <th className="p-4 border-b font-medium text-center">Del. Days</th>
                       <th className="p-4 border-b font-medium text-center">Rating</th>
-                      <th className="p-4 border-b font-medium text-center bg-blue-50">Price Sc.</th>
-                      <th className="p-4 border-b font-medium text-center bg-blue-50">Del. Sc.</th>
-                      <th className="p-4 border-b font-medium text-center bg-blue-50">Rating Sc.</th>
-                      <th className="p-4 border-b font-bold text-center bg-blue-100">Overall</th>
+                      <th className="p-4 border-b font-medium text-center bg-gray-50">Price Sc.</th>
+                      <th className="p-4 border-b font-medium text-center bg-gray-50">Del. Sc.</th>
+                      <th className="p-4 border-b font-medium text-center bg-gray-50">Rating Sc.</th>
+                      <th className="p-4 border-b font-bold text-center bg-gray-100">Overall</th>
                       {evaluation.humanApprovalRequired && (
                         <th className="p-4 border-b font-medium text-center bg-gray-50">Actions (Human Decision)</th>
                       )}
@@ -211,13 +212,13 @@ export default function Evaluation() {
                           })()}
                         </td>
                         <td className="p-4 text-left"><span className="text-gray-900 font-medium">{candidate.quotationReference}</span></td>
-                        <td className="p-4 text-right">Rs. {formatNumber(candidate.unitPrice)}</td>
+                        <td className="p-4 text-right">{formatCurrency(candidate.unitPrice)}</td>
                         <td className="p-4 text-center">{candidate.deliveryDays}</td>
                         <td className="p-4 text-center">{formatNumber(candidate.supplierRating)}</td>
-                        <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.priceScore)}</td>
-                        <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.deliveryScore)}</td>
-                        <td className="p-4 text-right bg-blue-50/30">{formatNumber(candidate.ratingScore)}</td>
-                        <td className="p-4 text-right bg-blue-100/50 font-bold text-blue-900">{formatNumber(candidate.overallScore)}</td>
+                        <td className="p-4 text-right bg-gray-50/30">{formatNumber(candidate.priceScore)}</td>
+                        <td className="p-4 text-right bg-gray-50/30">{formatNumber(candidate.deliveryScore)}</td>
+                        <td className="p-4 text-right bg-gray-50/30">{formatNumber(candidate.ratingScore)}</td>
+                        <td className="p-4 text-right bg-gray-100/50 font-bold text-blue-900">{formatNumber(candidate.overallScore)}</td>
                         {evaluation.humanApprovalRequired && (
                           <td className="p-4 bg-gray-50/50 text-center">
                             <div className="flex items-center justify-center gap-3">
@@ -284,7 +285,7 @@ export default function Evaluation() {
                         })()}
                       </td>
                       <td className="p-4 text-left whitespace-nowrap"><span className="text-gray-900 font-medium">{evalRow.quotationReference}</span></td>
-                      <td className="p-4 text-right whitespace-nowrap">Rs. {formatNumber(evalRow.unitPrice)}</td>
+                      <td className="p-4 text-right whitespace-nowrap">{formatCurrency(evalRow.unitPrice)}</td>
                       <td className="p-4 text-center whitespace-nowrap">{evalRow.deliveryDays}</td>
                       <td className="p-4 text-center whitespace-nowrap">{formatNumber(evalRow.supplierRating)}</td>
                       <td className="p-4 text-center whitespace-nowrap">
@@ -335,23 +336,23 @@ export default function Evaluation() {
                 Confirm Human Decision
               </h3>
             </div>
-            
+
             <div className="p-6">
               {updateStatusError && (
                 <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-sm text-red-700">
                   {updateStatusError}
                 </div>
               )}
-              
+
               <p className="text-gray-600 mb-4">
                 Are you sure you want to <strong>{actionCandidate.action === 'Accepted' ? 'Approve' : 'Reject'}</strong> the candidate quotation?
               </p>
-              
+
               <div className="bg-gray-50 p-3 rounded border text-sm text-gray-700 mb-6">
                 <div><span className="font-semibold">Supplier:</span> {getSupplierDisplay(actionCandidate.candidate.supplierId)}</div>
                 <div className="mt-1"><span className="font-semibold">Quotation:</span> {actionCandidate.candidate.quotationReference}</div>
               </div>
-              
+
               <div className="flex justify-end gap-2">
                 <button
                   type="button"

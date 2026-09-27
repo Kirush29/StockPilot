@@ -1,9 +1,11 @@
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockPilot.Application.Models;
 using StockPilot.Application.Services;
 
 namespace StockPilot.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SupplierEvaluationController : ControllerBase
@@ -16,6 +18,7 @@ public class SupplierEvaluationController : ControllerBase
     }
 
     [HttpPost("evaluate")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<SupplierEvaluationResponseDto>> Evaluate([FromBody] EvaluateQuotationsRequest request)
     {
         try

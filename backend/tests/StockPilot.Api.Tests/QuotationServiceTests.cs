@@ -1,4 +1,4 @@
-using Moq;
+﻿using Moq;
 using StockPilot.Application.Interfaces;
 using StockPilot.Application.Services;
 using StockPilot.Domain.Entities;
@@ -14,7 +14,8 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotations = new List<Quotation>
         {
@@ -59,7 +60,8 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotationId = Guid.NewGuid();
         var quotation = new Quotation
@@ -91,13 +93,14 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotation = new Quotation { SupplierId = Guid.NewGuid(), ProductId = Guid.NewGuid() };
-        
+
         supplierMock.Setup(s => s.GetByIdAsync(quotation.SupplierId)).ReturnsAsync(new Supplier());
         productMock.Setup(p => p.GetByIdAsync(quotation.ProductId)).ReturnsAsync(new Product());
-        
+
         var result = await service.CreateAsync(quotation);
 
         Assert.Same(quotation, result);
@@ -110,12 +113,13 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotation = new Quotation { SupplierId = Guid.NewGuid(), ProductId = Guid.NewGuid() };
-        
+
         supplierMock.Setup(s => s.GetByIdAsync(quotation.SupplierId)).ReturnsAsync((Supplier?)null);
-        
+
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateAsync(quotation));
         repositoryMock.Verify(r => r.AddAsync(It.IsAny<Quotation>()), Times.Never);
     }
@@ -126,13 +130,14 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotation = new Quotation { SupplierId = Guid.NewGuid(), ProductId = Guid.NewGuid() };
-        
+
         supplierMock.Setup(s => s.GetByIdAsync(quotation.SupplierId)).ReturnsAsync(new Supplier());
         productMock.Setup(p => p.GetByIdAsync(quotation.ProductId)).ReturnsAsync((Product?)null);
-        
+
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.CreateAsync(quotation));
         repositoryMock.Verify(r => r.AddAsync(It.IsAny<Quotation>()), Times.Never);
     }
@@ -142,13 +147,14 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotationId = Guid.NewGuid();
         var quotation = new Quotation { Id = quotationId, Status = QuotationStatus.Pending };
-        
+
         repositoryMock.Setup(r => r.GetByIdAsync(quotationId)).ReturnsAsync(quotation);
-        
+
         var result = await service.UpdateStatusAsync(quotationId, QuotationStatus.Accepted);
 
         Assert.True(result);
@@ -162,12 +168,13 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var quotationId = Guid.NewGuid();
-        
+
         repositoryMock.Setup(r => r.GetByIdAsync(quotationId)).ReturnsAsync((Quotation?)null);
-        
+
         var result = await service.UpdateStatusAsync(quotationId, QuotationStatus.Accepted);
 
         Assert.False(result);
@@ -180,13 +187,14 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var productId = Guid.NewGuid();
         var quotations = new List<Quotation> { new Quotation { ProductId = productId } };
-        
+
         repositoryMock.Setup(r => r.GetByProductIdAsync(productId)).ReturnsAsync(quotations);
-        
+
         var result = await service.GetByProductIdAsync(productId);
 
         Assert.Single(result);
@@ -199,13 +207,14 @@ public class QuotationServiceTests
         var repositoryMock = new Mock<IQuotationRepository>();
         var supplierMock = new Mock<ISupplierRepository>();
         var productMock = new Mock<IProductRepository>();
-        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object);
+        var emailMock = new Mock<IEmailNotificationService>();
+        var service = new QuotationService(repositoryMock.Object, supplierMock.Object, productMock.Object, emailMock.Object);
 
         var supplierId = Guid.NewGuid();
         var quotations = new List<Quotation> { new Quotation { SupplierId = supplierId } };
-        
+
         repositoryMock.Setup(r => r.GetBySupplierIdAsync(supplierId)).ReturnsAsync(quotations);
-        
+
         var result = await service.GetBySupplierIdAsync(supplierId);
 
         Assert.Single(result);

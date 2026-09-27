@@ -1,9 +1,11 @@
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StockPilot.Application.Services;
 using StockPilot.Domain.Entities;
 
 namespace StockPilot.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class QuotationsController : ControllerBase
@@ -16,6 +18,7 @@ public class QuotationsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<Quotation>> GetById(Guid id)
     {
         var quotation = await _quotationService.GetByIdAsync(id);
@@ -29,6 +32,7 @@ public class QuotationsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<Quotation>>> GetAll()
     {
         var quotations = await _quotationService.GetAllAsync();
@@ -37,6 +41,7 @@ public class QuotationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<Quotation>> Create(Quotation quotation)
     {
         if (quotation.Id == Guid.Empty)
@@ -61,7 +66,9 @@ public class QuotationsController : ControllerBase
             return NotFound(ex.Message);
         }
     }
+
     [HttpPut("{id:guid}/status")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateQuotationStatusRequest request)
     {
         var validStatuses = new[] { QuotationStatus.Pending, QuotationStatus.Accepted, QuotationStatus.Rejected };
@@ -79,7 +86,9 @@ public class QuotationsController : ControllerBase
 
         return Ok();
     }
+
     [HttpGet("product/{productId:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<Quotation>>> GetByProductId(Guid productId)
     {
         var quotations = await _quotationService.GetByProductIdAsync(productId);
@@ -87,6 +96,7 @@ public class QuotationsController : ControllerBase
     }
 
     [HttpGet("supplier/{supplierId:guid}")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<Quotation>>> GetBySupplierId(Guid supplierId)
     {
         var quotations = await _quotationService.GetBySupplierIdAsync(supplierId);
@@ -94,6 +104,7 @@ public class QuotationsController : ControllerBase
     }
 
     [HttpGet("compare")]
+    [Authorize(Policy = "ProcurementManage")]
     public async Task<ActionResult<IReadOnlyList<QuotationComparisonDto>>> CompareQuotations([FromQuery] Guid productId)
     {
         var quotations = await _quotationService.GetByProductIdAsync(productId);

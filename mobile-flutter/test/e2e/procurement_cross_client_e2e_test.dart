@@ -11,12 +11,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:stockpilot_mobile/procurement/models/agent_workflow.dart';
-import 'package:stockpilot_mobile/procurement/models/proposal_summary.dart';
-import 'package:stockpilot_mobile/procurement/services/procurement_api_service.dart';
-import 'package:stockpilot_mobile/shared/services/auth_api_service.dart';
+import 'package:stockpilot_mobile/core/api/api_client.dart';
+import 'package:stockpilot_mobile/features/auth/models/user_info.dart';
+import 'package:stockpilot_mobile/features/procurement/models/agent_workflow.dart';
+import 'package:stockpilot_mobile/features/procurement/models/proposal_summary.dart';
+import 'package:stockpilot_mobile/features/procurement/services/procurement_api_service.dart';
 
 const apiUrl = String.fromEnvironment('E2E_API_URL');
 const stage = String.fromEnvironment('E2E_STAGE', defaultValue: 'initiate');
@@ -30,23 +31,48 @@ const acmeSupplier = '22222222-2222-2222-2222-222222222222';
 const tonerProduct = '44444444-4444-4444-4444-444444444444';
 const tonerQuotation = '33333333-3333-3333-3333-333333333334';
 
+/// Builds an [ApiClient] with a fixed base URL and bearer token for E2E use
+/// (bypasses flutter_test's HttpClient stub by using Dio's native adapter).
+ApiClient _e2eApiClient(String baseUrl, String token) {
+  final client = ApiClient();
+  // Override the base URL and inject a static auth interceptor.
+  client.dio.options.baseUrl = baseUrl;
+  client.dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (opts, handler) {
+      opts.headers['Authorization'] = 'Bearer $token';
+      handler.next(opts);
+    },
+  ));
+  return client;
+}
+
 void main() {
-  final skip = apiUrl.isEmpty ? 'Set --dart-define=E2E_API_URL=... (see scripts/e2e/run-procurement-cross-client.sh).' : null;
+  final skip = apiUrl.isEmpty
+      ? 'Set --dart-define=E2E_API_URL=... (see scripts/e2e/run-procurement-cross-client.sh).'
+      : null;
 
   setUpAll(() {
-    // flutter_test replaces HttpClient with a stub that answers 400; this stage needs the real network.
-    HttpOverrides.global = null;
+    // Dio uses its own native adapter; no HttpOverrides needed.
   });
 
-  Future<(ProcurementApiService, String)> signIn() async {
-    final auth = await AuthApiService(baseUrl: apiUrl).login(branchManager, devPassword);
-    expect(auth.user.role, 'BranchManager');
-    final api = ProcurementApiService(baseUrl: apiUrl, authHeaders: () => {'Authorization': 'Bearer ${auth.accessToken}'});
-    return (api, auth.accessToken);
+  Future<(ProcurementApiService, String, UserInfo)> signIn() async {
+    final loginClient = Dio(BaseOptions(baseUrl: apiUrl));
+    final loginResponse = await loginClient.post(
+      '/api/auth/login',
+      data: {'username': branchManager, 'password': devPassword},
+    );
+    final body = loginResponse.data as Map<String, dynamic>;
+    final accessToken = body['accessToken'] as String;
+    final user = UserInfo.fromJson(body['user'] as Map<String, dynamic>);
+    expect(user.role, 'BranchManager');
+    final apiClient = _e2eApiClient(apiUrl, accessToken);
+    final api = ProcurementApiService(apiClient);
+    return (api, accessToken, user);
   }
 
-  test('initiate: Branch Manager asks the agent to reorder from the mobile app', () async {
-    final (api, _) = await signIn();
+  test('initiate: Branch Manager asks the agent to reorder from the mobile app',
+      () async {
+    final (api, _, _user) = await signIn();
 
     final result = await api.startReorderWorkflow(const ReorderWorkflowRequest(
       triggerType: 'LowStock',
@@ -64,38 +90,46 @@ void main() {
     expect(status.proposalStatus, 'PendingApproval');
     expect(status.approvalStatus, 'PendingApproval');
 
-    File(stateFile).writeAsStringSync(jsonEncode({'workflowId': result.workflowId, 'proposalId': result.proposalId}));
+    File(stateFile).writeAsStringSync(jsonEncode(
+        {'workflowId': result.workflowId, 'proposalId': result.proposalId}));
     // ignore: avoid_print
-    print('E2E initiate: workflow ${result.workflowId} created proposal ${result.proposalId} (PendingApproval)');
-  }, skip: skip ?? (stage == 'initiate' ? null : 'initiate stage not selected'));
+    print(
+        'E2E initiate: workflow ${result.workflowId} created proposal ${result.proposalId} (PendingApproval)');
+  },
+      skip:
+          skip ?? (stage == 'initiate' ? null : 'initiate stage not selected'));
 
   test('verify: the initiator sees the approval made in the web app', () async {
-    final state = jsonDecode(File(stateFile).readAsStringSync()) as Map<String, dynamic>;
-    final auth = await AuthApiService(baseUrl: apiUrl).login(branchManager, devPassword);
-    final api = ProcurementApiService(baseUrl: apiUrl, authHeaders: () => {'Authorization': 'Bearer ${auth.accessToken}'});
+    final state =
+        jsonDecode(File(stateFile).readAsStringSync()) as Map<String, dynamic>;
+    final (api, accessToken, user) = await signIn();
 
-    AgentWorkflowStatus? status;
+    AgentWorkflowStatus? wfStatus;
     final deadline = DateTime.now().add(const Duration(seconds: 30));
     while (DateTime.now().isBefore(deadline)) {
-      status = await api.getWorkflow(state['workflowId'] as String);
-      if (status.proposalStatus == 'Approved') break;
+      wfStatus = await api.getWorkflow(state['workflowId'] as String);
+      if (wfStatus.proposalStatus == 'Approved') break;
       await Future<void>.delayed(const Duration(seconds: 1));
     }
-    expect(status?.proposalStatus, 'Approved');
-    expect(status?.approvalStatus, 'Approved');
+    expect(wfStatus?.proposalStatus, 'Approved');
+    expect(wfStatus?.approvalStatus, 'Approved');
 
     // The exact query ProposalDecisionWatcher polls: my proposals, newest first.
-    final response = await http.get(
-      Uri.parse('$apiUrl/api/procurement/proposals?pageSize=50&sort=-updatedAt'),
-      headers: {'Authorization': 'Bearer ${auth.accessToken}'},
+    final proposalsClient = _e2eApiClient(apiUrl, accessToken);
+    final proposalsResponse = await proposalsClient.get(
+      '/api/procurement/proposals',
+      queryParameters: {'pageSize': '50', 'sort': '-updatedAt'},
     );
-    expect(response.statusCode, 200);
-    final mine = ((jsonDecode(response.body) as Map<String, dynamic>)['items'] as List<dynamic>)
+    final items =
+        (proposalsResponse as Map<String, dynamic>)['items'] as List<dynamic>;
+    final mine = items
         .map((i) => ProposalSummary.fromJson(i as Map<String, dynamic>))
-        .where((p) => p.createdByUserId == auth.user.userId);
+        .where((p) => p.createdByUserId == user.userId);
     final proposal = mine.singleWhere((p) => p.id == state['proposalId']);
     expect(proposal.status, ProposalStatus.approved);
     // ignore: avoid_print
-    print('E2E verify: initiator ${auth.user.userId} sees proposal ${proposal.id} as Approved');
+    print(
+        'E2E verify: initiator ${user.userId} sees proposal ${proposal.id} as Approved');
   }, skip: skip ?? (stage == 'verify' ? null : 'verify stage not selected'));
 }
+

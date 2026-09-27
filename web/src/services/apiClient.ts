@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+﻿const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class ApiError extends Error {
   public status: number;
@@ -15,28 +15,35 @@ export class ApiError extends Error {
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  // Ensure endpoint starts with a slash
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL}${normalizedEndpoint}`;
-  
+
   const headers = new Headers(options?.headers);
-  
-  // Automatically set Content-Type to JSON if a body is provided and not already set
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   if (options?.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError('Unable to connect to the StockPilot API.', 0, error);
+  }
 
   let data;
   const contentType = response.headers.get('content-type');
-  
-  // Safely parse response
-  if (response.status !== 204) { // 204 No Content
-    if (contentType && contentType.includes('application/json')) {
+
+  if (response.status !== 204) {
+    if (contentType && (contentType.includes('application/json') || contentType.includes('application/problem+json'))) {
       data = await response.json();
     } else {
       data = await response.text();
@@ -44,8 +51,30 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    const isLoginEndpoint = normalizedEndpoint.includes('/auth/login');
+    const isMeEndpoint = normalizedEndpoint.includes('/auth/me');
+
+    if (response.status === 401 && !isLoginEndpoint && !isMeEndpoint) {
+      window.dispatchEvent(new Event('auth:401'));
+    }
+
+    let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+    if (response.status === 401 && isLoginEndpoint) {
+      errorMessage = 'Invalid username/email or password';
+    } else if (response.status === 403) {
+      errorMessage = 'You do not have permission to perform this action.';
+    } else if (data && typeof data === 'object') {
+      if (data.detail) {
+        errorMessage = data.detail;
+      } else if (data.title) {
+        errorMessage = data.title;
+      } else if (data.message) {
+        errorMessage = data.message;
+      }
+    }
+
     throw new ApiError(
-      `API Error: ${response.status} ${response.statusText}`,
+      errorMessage,
       response.status,
       data
     );
@@ -76,4 +105,12 @@ export const apiClient = {
 
   delete: <T>(endpoint: string, options?: Omit<RequestInit, 'method'>) =>
     request<T>(endpoint, { ...options, method: 'DELETE' }),
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch: <T>(endpoint: string, body?: any, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
 };

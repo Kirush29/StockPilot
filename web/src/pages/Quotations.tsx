@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { type Quotation, type QuotationStatus, quotationService, type SaveQuotationRequest } from '../services/quotationService';
 import { supplierService, type Supplier } from '../services/supplierService';
 import { productService, type Product } from '../services/productService';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 export default function Quotations() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -14,6 +15,7 @@ export default function Quotations() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     supplierId: '',
     productId: '',
@@ -105,6 +107,7 @@ export default function Quotations() {
       validUntil: ''
     });
     setFormError(null);
+    setFormErrors({});
     setIsFormOpen(true);
   };
 
@@ -116,18 +119,18 @@ export default function Quotations() {
   const validateForm = () => {
     if (!formData.supplierId.trim()) return 'Supplier ID is required.';
     if (!formData.productId.trim()) return 'Product ID is required.';
-    
+
     const unitPrice = parseFloat(formData.unitPrice);
     if (isNaN(unitPrice) || unitPrice <= 0) return 'Unit Price must be greater than 0.';
-    
+
     const quantity = parseInt(formData.quantity, 10);
     if (isNaN(quantity) || quantity <= 0) return 'Quantity must be greater than 0.';
-    
+
     const deliveryDays = parseInt(formData.deliveryDays, 10);
     if (isNaN(deliveryDays) || deliveryDays < 0) return 'Delivery Days must be 0 or greater.';
-    
+
     if (!formData.validUntil.trim()) return 'Valid Until date is required.';
-    
+
     return null;
   };
 
@@ -153,11 +156,21 @@ export default function Quotations() {
       };
 
       await quotationService.createQuotation(payload);
-      
+
       setIsFormOpen(false);
       await fetchQuotations();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save quotation.');
+      if (err.data?.errors) {
+        const fieldErrors: Record<string, string> = {};
+        for (const [key, value] of Object.entries(err.data.errors)) {
+          const lowerKey = key.charAt(0).toLowerCase() + key.slice(1);
+          fieldErrors[lowerKey] = Array.isArray(value) ? value[0] as string : String(value);
+        }
+        setFormErrors(fieldErrors);
+        setFormError('Please correct the highlighted errors.');
+      } else {
+        setFormError(err.message || 'Failed to save quotation.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -172,7 +185,7 @@ export default function Quotations() {
     if (!actionQuotation) return;
     setUpdateStatusError(null);
     setIsUpdatingStatus(true);
-    
+
     try {
       await quotationService.updateQuotationStatus(actionQuotation.quotation.id, actionQuotation.action);
       setActionQuotation(null);
@@ -203,9 +216,9 @@ export default function Quotations() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Quotations</h2>
-        <button 
+        <button
           onClick={openAddForm}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors"
+          className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors"
         >
           Add Quotation
         </button>
@@ -216,7 +229,7 @@ export default function Quotations() {
           <select
             value={compareProductId}
             onChange={(e) => setCompareProductId(e.target.value)}
-            className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className="flex-grow border border-gray-300 rounded p-2 text-sm focus:ring-black focus:border-black outline-none"
             disabled={isComparing || loading}
           >
             <option value="">Compare quotations by Product...</option>
@@ -254,21 +267,21 @@ export default function Quotations() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-800">Add New Quotation</h3>
-              <button 
+              <button
                 onClick={() => setIsFormOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-4 overflow-y-auto">
               {formError && (
                 <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-sm text-red-700">
                   {formError}
                 </div>
               )}
-              
+
               <form id="quotation-form" onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
@@ -276,7 +289,7 @@ export default function Quotations() {
                     name="supplierId"
                     value={formData.supplierId}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className={`w-full border ${formErrors.supplierId ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                     disabled={isSubmitting}
                   >
                     <option value="">Select supplier</option>
@@ -289,15 +302,16 @@ export default function Quotations() {
                       </option>
                     ))}
                   </select>
+                  {formErrors.supplierId && <p className="text-xs text-red-600 mt-1">{formErrors.supplierId}</p>}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
                   <select
                     name="productId"
                     value={formData.productId}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    className={`w-full border ${formErrors.productId ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                     disabled={isSubmitting}
                   >
                     <option value="">Select product</option>
@@ -310,69 +324,74 @@ export default function Quotations() {
                       </option>
                     ))}
                   </select>
+                  {formErrors.productId && <p className="text-xs text-red-600 mt-1">{formErrors.productId}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
-                    <input 
+                    <input
                       type="number"
                       step="0.01"
                       min="0.01"
                       name="unitPrice"
                       value={formData.unitPrice}
                       onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className={`w-full border ${formErrors.unitPrice ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                       placeholder="0.00"
                       disabled={isSubmitting}
                     />
+                    {formErrors.unitPrice && <p className="text-xs text-red-600 mt-1">{formErrors.unitPrice}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input 
+                    <input
                       type="number"
                       min="1"
                       name="quantity"
                       value={formData.quantity}
                       onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className={`w-full border ${formErrors.quantity ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                       placeholder="0"
                       disabled={isSubmitting}
                     />
+                    {formErrors.quantity && <p className="text-xs text-red-600 mt-1">{formErrors.quantity}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Days</label>
-                    <input 
+                    <input
                       type="number"
                       min="0"
                       name="deliveryDays"
                       value={formData.deliveryDays}
                       onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className={`w-full border ${formErrors.deliveryDays ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                       placeholder="0"
                       disabled={isSubmitting}
                     />
+                    {formErrors.deliveryDays && <p className="text-xs text-red-600 mt-1">{formErrors.deliveryDays}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Valid Until</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       name="validUntil"
                       value={formData.validUntil}
                       onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className={`w-full border ${formErrors.validUntil ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-black focus:border-black'} rounded p-2 text-sm outline-none`}
                       disabled={isSubmitting}
                     />
+                    {formErrors.validUntil && <p className="text-xs text-red-600 mt-1">{formErrors.validUntil}</p>}
                   </div>
                 </div>
               </form>
             </div>
-            
+
             <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 mt-auto">
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-100 transition-colors"
@@ -380,11 +399,11 @@ export default function Quotations() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="submit"
                 form="quotation-form"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]"
+                className="px-4 py-2 bg-black text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]"
               >
                 {isSubmitting ? 'Saving...' : 'Save Quotation'}
               </button>
@@ -401,7 +420,7 @@ export default function Quotations() {
                 {actionQuotation.action === 'Accepted' ? 'Accept Quotation' : 'Reject Quotation'}
               </h3>
             </div>
-            
+
             <div className="p-4">
               {updateStatusError && (
                 <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 text-sm text-red-700">
@@ -412,9 +431,9 @@ export default function Quotations() {
                 Are you sure you want to <strong>{actionQuotation.action === 'Accepted' ? 'accept' : 'reject'}</strong> the quotation for Product ID <strong>{actionQuotation.quotation.productId}</strong> from Supplier ID <strong>{actionQuotation.quotation.supplierId}</strong>?
               </p>
             </div>
-            
+
             <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 mt-auto">
-              <button 
+              <button
                 type="button"
                 onClick={() => setActionQuotation(null)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-100 transition-colors"
@@ -422,13 +441,13 @@ export default function Quotations() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleStatusSubmit}
                 disabled={isUpdatingStatus}
                 className={`px-4 py-2 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px] ${
-                  actionQuotation.action === 'Accepted' 
-                    ? 'bg-green-600 hover:bg-green-700' 
+                  actionQuotation.action === 'Accepted'
+                    ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
@@ -492,7 +511,7 @@ export default function Quotations() {
                     </td>
                     <td className="py-3 px-2 text-[13px] text-gray-900 font-medium whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
-                        <span>Rs. {quotation.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span>{formatCurrency(quotation.unitPrice)}</span>
                         {hasCompared && minUnitPrice !== null && quotation.unitPrice === minUnitPrice && (
                           <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-semibold shadow-sm">Lowest</span>
                         )}
