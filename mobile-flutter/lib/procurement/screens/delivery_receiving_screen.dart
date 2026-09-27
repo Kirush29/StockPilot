@@ -17,14 +17,17 @@ import '../services/procurement_api_service.dart';
 class DeliveryReceivingScreen extends StatefulWidget {
   final PurchaseOrder order;
 
-  const DeliveryReceivingScreen({super.key, required this.order});
+  /// Optional so tests can supply a service backed by a fake HTTP client.
+  final ProcurementApiService? apiService;
+
+  const DeliveryReceivingScreen({super.key, required this.order, this.apiService});
 
   @override
   State<DeliveryReceivingScreen> createState() => _DeliveryReceivingScreenState();
 }
 
 class _DeliveryReceivingScreenState extends State<DeliveryReceivingScreen> {
-  final _apiService = ProcurementApiService();
+  late final ProcurementApiService _apiService = widget.apiService ?? ProcurementApiService();
   final _notesController = TextEditingController();
 
   bool _isLoading = true;

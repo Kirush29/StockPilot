@@ -13,13 +13,23 @@ class AuthResult {
 /// Calls the same POST /api/auth/login endpoint as web/stockpilot-web/src/api/authApi.js.
 class AuthApiService {
   // 10.0.2.2 points to host localhost from the Android Emulator; localhost for iOS/desktop.
-  static const String baseUrl = 'http://10.0.2.2:5004';
+  static const String defaultBaseUrl = 'http://10.0.2.2:5004';
 
+  final String baseUrl;
+  final http.Client _client;
+
+  AuthApiService({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        baseUrl = baseUrl ?? defaultBaseUrl;
+
+  /// [email] may also be a username: the backend's LoginRequestDto has a single Username field
+  /// and matches it against either. Sending the key "email" left Username empty, so every
+  /// mobile login was rejected with 401.
   Future<AuthResult> login(String email, String password) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({'username': email, 'password': password}),
     );
 
     if (response.statusCode != 200) {

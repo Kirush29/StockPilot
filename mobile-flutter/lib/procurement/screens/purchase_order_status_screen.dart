@@ -9,14 +9,17 @@ import 'delivery_receiving_screen.dart';
 /// does not currently expose branch on PurchaseOrder, so this cannot filter to "my branch"
 /// client-side; it shows everything the caller's role is allowed to view.
 class PurchaseOrderStatusScreen extends StatefulWidget {
-  const PurchaseOrderStatusScreen({super.key});
+  /// Optional so tests can supply a service backed by a fake HTTP client.
+  final ProcurementApiService? apiService;
+
+  const PurchaseOrderStatusScreen({super.key, this.apiService});
 
   @override
   State<PurchaseOrderStatusScreen> createState() => _PurchaseOrderStatusScreenState();
 }
 
 class _PurchaseOrderStatusScreenState extends State<PurchaseOrderStatusScreen> {
-  final _apiService = ProcurementApiService();
+  late final ProcurementApiService _apiService = widget.apiService ?? ProcurementApiService();
 
   bool _isLoading = true;
   List<PurchaseOrder> _orders = [];
@@ -168,37 +171,36 @@ class _PurchaseOrderStatusScreenState extends State<PurchaseOrderStatusScreen> {
             child: ListTile(
               contentPadding: const EdgeInsets.all(14),
               title: Text(order.orderNumber, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              // The Receive action sits in the subtitle, not under the badge: ListTile caps trailing
+              // at 56px, and badge + button stacked there overflowed and clipped the button.
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
-                  style: const TextStyle(color: Colors.grey),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    if (canReceive)
+                      TextButton(
+                        onPressed: () async {
+                          final changed = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(builder: (_) => DeliveryReceivingScreen(order: order, apiService: _apiService)),
+                          );
+                          if (changed == true) _load();
+                        },
+                        child: const Text('Receive', style: TextStyle(color: Color(0xFF818CF8))),
+                      ),
+                  ],
                 ),
               ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
-                    child: Text(order.status.label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                  if (canReceive) ...[
-                    const SizedBox(height: 8),
-                    TextButton(
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
-                      onPressed: () async {
-                        final changed = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(builder: (_) => DeliveryReceivingScreen(order: order)),
-                        );
-                        if (changed == true) _load();
-                      },
-                      child: const Text('Receive', style: TextStyle(color: Color(0xFF818CF8), fontSize: 12)),
-                    ),
-                  ],
-                ],
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+                child: Text(order.status.label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ),
           );
