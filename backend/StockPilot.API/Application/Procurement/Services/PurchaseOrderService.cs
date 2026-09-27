@@ -53,7 +53,6 @@ public class PurchaseOrderService(
             Id = Guid.NewGuid(),
             ProposalId = proposal.Id,
             SupplierId = proposal.SupplierId,
-            OrderNumber = await orders.GenerateOrderNumberAsync(now.Year, cancellationToken),
             Status = PurchaseOrderStatus.Ordered,
             TotalCost = proposal.TotalEstimatedCost,
             ExpectedDeliveryDate = null,
@@ -84,6 +83,9 @@ public class PurchaseOrderService(
         // Decision (convert) -> proposal status change -> budget update, committed atomically.
         await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
+            // Numbered inside the transaction: the repository holds the numbering lock until commit.
+            order.OrderNumber = await orders.GenerateOrderNumberAsync(now.Year, ct);
+
             budget.SpentAmount += order.TotalCost;
             budget.UpdatedAt = now;
 

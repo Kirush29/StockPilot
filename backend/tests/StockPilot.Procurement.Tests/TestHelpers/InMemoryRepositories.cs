@@ -83,8 +83,16 @@ public class InMemoryPurchaseOrderRepository : IPurchaseOrderRepository
         return Task.CompletedTask;
     }
 
-    public Task<string> GenerateOrderNumberAsync(int year, CancellationToken cancellationToken = default) =>
-        Task.FromResult($"PO-{year}-{(Orders.Count + 1):D6}");
+    public Task<string> GenerateOrderNumberAsync(int year, CancellationToken cancellationToken = default)
+    {
+        var prefix = $"PO-{year}-";
+        var highest = Orders
+            .Where(o => o.OrderNumber.StartsWith(prefix))
+            .Select(o => int.TryParse(o.OrderNumber[prefix.Length..], out var n) ? n : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return Task.FromResult($"{prefix}{highest + 1:D6}");
+    }
 }
 
 public class InMemoryBudgetRepository : IBudgetRepository

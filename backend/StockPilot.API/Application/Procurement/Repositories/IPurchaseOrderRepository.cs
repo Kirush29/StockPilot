@@ -12,6 +12,10 @@ public interface IPurchaseOrderRepository
 
     Task AddAsync(PurchaseOrder order, CancellationToken cancellationToken = default);
 
-    /// <summary>Next sequential order number for the given year, e.g. "PO-2026-000042".</summary>
+    /// <summary>
+    /// Next order number for the given year, e.g. "PO-2026-000042": one past the highest number
+    /// already used that year, so gaps never lead to a repeat. Call it inside the transaction that
+    /// inserts the order; the implementation serializes concurrent callers until that transaction ends.
+    /// </summary>
     Task<string> GenerateOrderNumberAsync(int year, CancellationToken cancellationToken = default);
 }

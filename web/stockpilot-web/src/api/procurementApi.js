@@ -27,3 +27,12 @@ export const budgetsApi = {
   create: (data) => apiClient.post('/api/procurement/budgets', data),
   getUtilization: (id) => apiClient.get(`/api/procurement/budgets/${id}/utilization`),
 }
+
+// ── Procurement Coordinator Agent workflows ──────────────────────────────────
+// The agent stops at PendingApproval; approve() is the human gate and delegates to the same
+// approval-limit policy as proposalsApi.decide().
+export const agentWorkflowsApi = {
+  start: (objective) => apiClient.post('/api/agent-workflows/procurement/start', objective),
+  get: (workflowId) => apiClient.get(`/api/agent-workflows/${workflowId}`),
+  approve: (workflowId, comment = null) => apiClient.post(`/api/agent-workflows/${workflowId}/approve`, { comment }),
+}

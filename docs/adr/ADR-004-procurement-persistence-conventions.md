@@ -62,6 +62,25 @@ queries; it was missing the CHECK constraint, so the column accepted any string.
   than one write. Calls to other modules (e.g. `IInventoryStockUpdater`) are kept outside the
   transaction so a slow/unavailable external dependency never holds a DB lock open.
 
+### Addendum (2026-09-27): concurrency and order numbering
+
+PostgreSQL integration tests showed two defects that transactions alone don't prevent:
+
+- **Concurrent writers.** Two requests that both read an Approved proposal could both convert it
+  (two purchase orders, budget charged twice), and two conversions for the same branch could
+  overwrite each other's `Budget.SpentAmount`. `ProcurementProposal` and `Budget` now use
+  PostgreSQL's `xmin` system column as an optimistic concurrency token (shadow property, Npgsql
+  only; the in-memory provider used for local dev has none). A writer working from a stale read
+  updates 0 rows; `EfUnitOfWork` turns the resulting `DbUpdateConcurrencyException` into
+  `ProcurementConflictException` (HTTP 409), and the whole transaction rolls back. The migration
+  `AddOptimisticConcurrencyTokens` changes the model only: `xmin` already exists on every row, so no
+  DDL runs.
+- **Order numbers.** `COUNT + 1` repeated an existing number after any gap and then failed every
+  later conversion that year. Numbers are now `MAX + 1` of the year's `PO-YYYY-NNNNNN` numbers,
+  generated inside the conversion transaction after `pg_advisory_xact_lock`, so concurrent
+  conversions (even in different branches, which share no rows) can't pick the same number.
+  Trade-off: conversions are serialized for the moment between numbering and commit.
+
 ## Consequences
 
 ### Positive
