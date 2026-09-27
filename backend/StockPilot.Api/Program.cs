@@ -1,7 +1,9 @@
 using StockPilot.Shared.Identity;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -227,6 +229,26 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ── Security Hardening: Rate Limiting & HSTS ──────────────────────────────────
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365);
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("login-policy", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 10;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+});
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
@@ -251,7 +273,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowStockPilotClients");
-app.UseHttpsRedirection();
+
+if (app.Environment.IsProduction())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

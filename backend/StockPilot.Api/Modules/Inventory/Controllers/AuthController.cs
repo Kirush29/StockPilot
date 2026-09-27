@@ -1,9 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StockPilot.Infrastructure.Data;
@@ -19,6 +20,7 @@ public class AuthController(StockPilotDbContext db, IConfiguration configuration
 {
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("login-policy")]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.EmailOrUsername) || string.IsNullOrWhiteSpace(request.Password))
