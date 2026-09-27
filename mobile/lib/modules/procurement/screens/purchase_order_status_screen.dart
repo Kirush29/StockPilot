@@ -1,0 +1,210 @@
+import '../../../core/widgets/common_widgets.dart';
+import '../../../shared/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/auth/providers/auth_provider.dart';
+
+import '../models/purchase_order.dart';
+import '../services/procurement_api_service.dart';
+import 'delivery_receiving_screen.dart';
+
+/// Read-only "where's my order" tracking list. Orders are scoped by whatever the backend's
+/// role-based authorization returns for the signed-in user (see OrdersController) — the API
+/// does not currently expose branch on PurchaseOrder, so this cannot filter to "my branch"
+/// client-side; it shows everything the caller's role is allowed to view.
+class PurchaseOrderStatusScreen extends ConsumerStatefulWidget {
+  /// Optional so tests can supply a service backed by a fake HTTP client.
+  final ProcurementApiService? apiService;
+
+  const PurchaseOrderStatusScreen({super.key, this.apiService});
+
+  @override
+  ConsumerState<PurchaseOrderStatusScreen> createState() =>
+      _PurchaseOrderStatusScreenState();
+}
+
+class _PurchaseOrderStatusScreenState
+    extends ConsumerState<PurchaseOrderStatusScreen> {
+  late ProcurementApiService _apiService;
+
+  bool _isLoading = true;
+  List<PurchaseOrder> _orders = [];
+  String? _errorMessage;
+  PurchaseOrderStatus? _statusFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use injected service (for tests) or build one from the Riverpod ApiClient.
+    if (widget.apiService != null) {
+      _apiService = widget.apiService!;
+    } else {
+      final apiClient = ref.read(apiClientProvider);
+      _apiService = ProcurementApiService(apiClient);
+    }
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final orders = await _apiService.getOrders(status: _statusFilter);
+      if (!mounted) return;
+      setState(() {
+        _orders = orders;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e is ProcurementApiException
+            ? e.message
+            : 'Could not load purchase orders.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Color _statusColor(PurchaseOrderStatus status) => switch (status) {
+        PurchaseOrderStatus.ordered => Colors.blueAccent,
+        PurchaseOrderStatus.partiallyReceived => AppTokens.warning,
+        PurchaseOrderStatus.received => AppTokens.success,
+        PurchaseOrderStatus.cancelled => Colors.redAccent,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Purchase Orders'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: DropdownButtonFormField<PurchaseOrderStatus?>(
+                initialValue: _statusFilter,
+                style: const TextStyle(color: AppTokens.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Filter by status',
+                  labelStyle: TextStyle(color: Colors.grey),
+                ),
+                items: <DropdownMenuItem<PurchaseOrderStatus?>>[
+                  const DropdownMenuItem<PurchaseOrderStatus?>(
+                      value: null, child: Text('All statuses')),
+                  ...PurchaseOrderStatus.values.map(
+                    (s) => DropdownMenuItem<PurchaseOrderStatus?>(
+                        value: s, child: Text(s.label)),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() => _statusFilter = value);
+                  _load();
+                },
+              ),
+            ),
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return ErrorStateView(message: _errorMessage!, onRetry: _load, retryLabel: 'Retry');
+    }
+
+    if (_orders.isEmpty) {
+      return EmptyStateView(
+        title: 'No Purchase Orders',
+        description: _statusFilter == null
+            ? 'Nothing has been ordered yet.'
+            : 'No orders with this status.',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _orders.length,
+        itemBuilder: (ctx, idx) {
+          final order = _orders[idx];
+          final color = _statusColor(order.status);
+          final canReceive = order.status == PurchaseOrderStatus.ordered ||
+              order.status == PurchaseOrderStatus.partiallyReceived;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: color.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.all(14),
+              title: Text(order.orderNumber,
+                  style: const TextStyle(
+                      color: AppTokens.textPrimary, fontWeight: FontWeight.bold)),
+              // Receive action sits in the subtitle, not the trailing widget:
+              // ListTile caps trailing at 56 px; badge + button stacked there
+              // overflowed and clipped the button (from main fix).
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    if (canReceive)
+                      TextButton(
+                        onPressed: () async {
+                          final changed = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DeliveryReceivingScreen(
+                                  order: order, apiService: _apiService),
+                            ),
+                          );
+                          if (changed == true) _load();
+                        },
+                        child: const Text('Receive',
+                            style: TextStyle(color: AppTokens.primary)),
+                      ),
+                  ],
+                ),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6)),
+                child: Text(order.status.label,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

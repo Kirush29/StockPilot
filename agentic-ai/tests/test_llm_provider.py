@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 import os
 
-from src.llm_provider import get_openai_client
+from agents.supplier_evaluation.llm_provider import get_openai_client
 
 class TestLLMProvider(unittest.TestCase):
     
@@ -13,7 +13,7 @@ class TestLLMProvider(unittest.TestCase):
         self.assertIn("OPENAI_API_KEY", str(context.exception))
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}, clear=True)
-    @patch('src.llm_provider.OpenAI')
+    @patch('agents.supplier_evaluation.llm_provider.OpenAI')
     def test_client_constructed_without_api_call(self, mock_openai):
         client = get_openai_client()
         

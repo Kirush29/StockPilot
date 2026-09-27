@@ -81,6 +81,26 @@ PostgreSQL integration tests showed two defects that transactions alone don't pr
   conversions (even in different branches, which share no rows) can't pick the same number.
   Trade-off: conversions are serialized for the moment between numbering and commit.
 
+### Amendment (2026-09-27): shared platform DbContext and one migration history (integration decision D2)
+
+Approved by the team as integration decision D2 (see `docs/integration/integration-plan.md` §3.1).
+
+- `ProcurementDbContext` and its three migrations (`InitialCreate`, `AddAuditColumnsAndConstraints`,
+  `AddOptimisticConcurrencyTokens`) are replaced by the shared `StockPilotPlatformDbContext`
+  (now `AppDbContext`, `backend/StockPilot.Api/Shared/Data`) and its single `PlatformBaseline` migration.
+- The separate `procurement."__EFMigrationsHistory"` table (set in `AddProcurementInfrastructure`) is gone;
+  all modules record migrations in `public."__EFMigrationsHistory"`.
+- **Unchanged:** every table stays in the `procurement` schema under the same name. The shared context
+  sets the schema on Procurement's entity types only, since `HasDefaultSchema("procurement")` would move
+  every other module's tables. Every `IEntityTypeConfiguration` in this module, the seed data, the
+  `numeric(12,2)` / `timestamptz` mappings, the enum CHECK constraints, the `xmin` row versions and the
+  transaction/advisory-lock behaviour are all applied as before.
+- Repositories and `EfUnitOfWork` now depend on `IProcurementDbContext` (same members they used on
+  `ProcurementDbContext`) instead of the concrete class. No repository logic changed.
+- The PostgreSQL integration tests (`PostgresProcurementFixture`) migrate the shared baseline and pass
+  unchanged (15 tests, run on PostgreSQL 18 on 2026-09-27).
+- Existing local databases created with the old histories must be dropped and recreated.
+
 ## Consequences
 
 ### Positive

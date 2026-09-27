@@ -22,12 +22,34 @@ StockPilot is an integrated inventory and procurement management system built fo
 
 ## Repository layout
 
-- `backend/` - ASP.NET Core solution/projects and tests
-- `web/` - React app
-- `mobile-flutter/` - Flutter app
-- `agentic-ai/` - contracts, prompts/configuration, evaluation cases or internal service code
-- `docs/` - architecture, ADRs, database, API, testing evidence
-- `.github/` - CI and collaboration templates
+```
+backend/
+  StockPilot.Api/                 single ASP.NET Core Web API project
+    Modules/
+      Inventory/                  Student 1 — controllers, services, entities, host services
+      SalesDemand/                Student 2 — incl. the Demand Forecast Agent
+      Suppliers/                  Student 3 — incl. the bridge to the Supplier Evaluation Agent
+      Procurement/                Student 4 — incl. the Procurement Coordinator Agent
+    Shared/
+      Identity/                   one JWT + role-policy setup for every module
+      Data/                       AppDbContext (the one DbContext), migrations, dev demo data
+      Agents/Orchestrator/        multi-agent Replenishment Orchestrator
+      Agents/Contracts/           shared agent workflow-state contract
+      Integration/                cross-module adapters (Procurement <-> Inventory/Suppliers)
+    Program.cs                    one composition root
+  tests/, StockPilot.Tests/       test projects
+web/                              React app (one shell)
+  src/modules/{inventory, sales-demand, suppliers, procurement}
+  src/shared/{theme, layout, navigation, auth, api}
+mobile/                           Flutter app
+  lib/modules/{inventory, sales_demand, procurement}
+  lib/shared/{theme, navigation, auth}
+agentic-ai/
+  agents/supplier_evaluation/     the Python agent (the other agents and the orchestrator run in the API)
+  contracts/, evaluation/         agent contracts and golden cases
+docs/                             architecture, ADRs, database, integration plan, testing evidence
+scripts/e2e/                      cross-platform end-to-end run
+```
 
 ## First setup
 

@@ -6,7 +6,7 @@ using StockPilot.Procurement.Application.Exceptions;
 using StockPilot.Procurement.Application.Repositories;
 using StockPilot.Procurement.Domain.Entities;
 using StockPilot.Procurement.Domain.Enums;
-using StockPilot.Procurement.Infrastructure.Persistence;
+using StockPilot.Shared.Data;
 using StockPilot.Procurement.Infrastructure.Persistence.Seed;
 using StockPilot.Procurement.Infrastructure.Repositories;
 
@@ -499,7 +499,7 @@ public class OrderNumberingIntegrationTests(PostgresProcurementFixture db)
         }
     }
 
-    private static async Task<int> HighestNumberBefore(Guid excludedProposal, ProcurementDbContext context)
+    private static async Task<int> HighestNumberBefore(Guid excludedProposal, AppDbContext context)
     {
         var prefix = $"PO-{DateTimeOffset.UtcNow.Year}-";
         var numbers = await context.PurchaseOrders.AsNoTracking()

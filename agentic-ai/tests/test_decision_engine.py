@@ -1,6 +1,6 @@
 import unittest
 
-from src.decision_engine import decide_supplier
+from agents.supplier_evaluation.decision_engine import decide_supplier
 
 class TestDecisionEngine(unittest.TestCase):
     def test_no_candidates(self):
@@ -54,11 +54,11 @@ class TestDecisionEngine(unittest.TestCase):
         self.assertTrue(result1["humanApprovalRequired"])
         self.assertTrue(result2["humanApprovalRequired"])
 
-from src.decision_engine import decide_supplier_ai
+from agents.supplier_evaluation.decision_engine import decide_supplier_ai
 from unittest.mock import patch, MagicMock
 
 class TestDecisionEngineAI(unittest.TestCase):
-    @patch('src.decision_engine.get_openai_client')
+    @patch('agents.supplier_evaluation.decision_engine.get_openai_client')
     def test_successful_ai_decision(self, mock_get_client):
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -80,7 +80,7 @@ class TestDecisionEngineAI(unittest.TestCase):
         self.assertEqual(result["selectedQuotationId"], "q2")
         self.assertTrue(result["humanApprovalRequired"]) # forced true
         
-    @patch('src.decision_engine.get_openai_client')
+    @patch('agents.supplier_evaluation.decision_engine.get_openai_client')
     def test_malformed_json_raises_error(self, mock_get_client):
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -92,7 +92,7 @@ class TestDecisionEngineAI(unittest.TestCase):
             decide_supplier_ai("p1", [{"supplierId": "s1"}])
         self.assertIn("Malformed JSON", str(context.exception))
         
-    @patch('src.decision_engine.get_openai_client')
+    @patch('agents.supplier_evaluation.decision_engine.get_openai_client')
     def test_missing_fields_raises_error(self, mock_get_client):
         mock_client = MagicMock()
         mock_response = MagicMock()

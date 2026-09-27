@@ -4,13 +4,13 @@ import sys
 import io
 import json
 
-import src.__main__ as cli_main
+import agents.supplier_evaluation.__main__ as cli_main
 
 class TestMainCLI(unittest.TestCase):
     @patch('sys.stdin', new_callable=io.StringIO)
     @patch('sys.stdout', new_callable=io.StringIO)
     @patch('sys.stderr', new_callable=io.StringIO)
-    @patch('src.__main__.execute_workflow')
+    @patch('agents.supplier_evaluation.__main__.execute_workflow')
     def test_successful_execution(self, mock_execute, mock_stderr, mock_stdout, mock_stdin):
         # Setup
         mock_execute.return_value = {"decisionStatus": "PendingHumanApproval"}
@@ -47,7 +47,7 @@ class TestMainCLI(unittest.TestCase):
     @patch('sys.stdin', new_callable=io.StringIO)
     @patch('sys.stdout', new_callable=io.StringIO)
     @patch('sys.stderr', new_callable=io.StringIO)
-    @patch('src.__main__.execute_workflow')
+    @patch('agents.supplier_evaluation.__main__.execute_workflow')
     def test_workflow_error(self, mock_execute, mock_stderr, mock_stdout, mock_stdin):
         mock_execute.side_effect = ValueError("Missing product ID")
         mock_stdin.write('{"candidates": []}')

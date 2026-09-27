@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from src.workflow_orchestrator import execute_workflow
+from agents.supplier_evaluation.workflow_orchestrator import execute_workflow
 
 class TestWorkflowOrchestrator(unittest.TestCase):
 
@@ -76,8 +76,8 @@ class TestWorkflowOrchestrator(unittest.TestCase):
         with self.assertRaises(ValueError):
             execute_workflow(input_data)
             
-    @patch('src.workflow_orchestrator.decide_supplier')
-    @patch('src.workflow_orchestrator.decide_supplier_ai')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier_ai')
     def test_default_mode_calls_deterministic(self, mock_ai, mock_det):
         mock_det.return_value = {"decisionStatus": "PendingHumanApproval"}
         input_data = {"productId": "p1", "candidates": [self.valid_candidate]}
@@ -88,8 +88,8 @@ class TestWorkflowOrchestrator(unittest.TestCase):
         mock_ai.assert_not_called()
         self.assertTrue(output["humanApprovalRequired"])
 
-    @patch('src.workflow_orchestrator.decide_supplier')
-    @patch('src.workflow_orchestrator.decide_supplier_ai')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier_ai')
     def test_explicit_deterministic_mode(self, mock_ai, mock_det):
         mock_det.return_value = {"decisionStatus": "PendingHumanApproval"}
         input_data = {"productId": "p1", "candidates": [self.valid_candidate]}
@@ -100,8 +100,8 @@ class TestWorkflowOrchestrator(unittest.TestCase):
         mock_ai.assert_not_called()
         self.assertTrue(output["humanApprovalRequired"])
 
-    @patch('src.workflow_orchestrator.decide_supplier')
-    @patch('src.workflow_orchestrator.decide_supplier_ai')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier')
+    @patch('agents.supplier_evaluation.workflow_orchestrator.decide_supplier_ai')
     def test_ai_mode_calls_ai(self, mock_ai, mock_det):
         mock_ai.return_value = {"decisionStatus": "PendingHumanApproval"}
         input_data = {"productId": "p1", "candidates": [self.valid_candidate]}

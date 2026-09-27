@@ -2,19 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using StockPilot.Application.Sales.DTOs;
 using StockPilot.Application.Sales.Services;
 using StockPilot.Domain.Enums.Sales;
-using StockPilot.Infrastructure.Persistence;
+using StockPilot.Shared.Data;
 
 namespace StockPilot.Api.Tests;
 
 public class SalesAndDemandTests
 {
-    private StockPilotDbContext CreateInMemoryDbContext()
+    private AppDbContext CreateInMemoryDbContext()
     {
-        var options = new DbContextOptionsBuilder<StockPilotDbContext>()
+        var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        return new StockPilotDbContext(options);
+        return new AppDbContext(options);
     }
 
     [Fact]

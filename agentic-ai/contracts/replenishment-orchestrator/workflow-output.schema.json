@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReplenishmentOrchestratorWorkflowOutput",
+  "description": "Result of one Replenishment Orchestrator run. The orchestrator never approves anything: every outcome that leads to stock movement or spending ends at a human decision in the owning module.",
+  "type": "object",
+  "required": ["workflowId", "status", "branchId", "productId", "humanApprovalRequired", "childWorkflows", "errors"],
+  "properties": {
+    "workflowId": { "type": "string", "format": "uuid" },
+    "status": {
+      "enum": [
+        "PendingApproval",
+        "TransferRecommended",
+        "NoActionRequired",
+        "QuantityConflict",
+        "NoEligibleSupplier",
+        "ChecksFailed",
+        "InvalidInput",
+        "Failed"
+      ],
+      "description": "PendingApproval: a procurement proposal awaits approval. TransferRecommended: Inventory Optimization recommends a transfer, awaiting approval in the Inventory module. NoActionRequired: stock is above the reorder level. QuantityConflict: the forecast gives no positive order quantity although Inventory Optimization recommends a reorder (integration decision D12); a human must decide. NoEligibleSupplier: Supplier Evaluation selected no quotation. ChecksFailed: the Procurement Coordinator's budget/business-rule checks failed. InvalidInput: the objective failed validation. Failed: an agent or a contract check failed."
+    },
+    "branchId": { "type": "string", "format": "uuid" },
+    "productId": { "type": "string", "format": "uuid" },
+    "decision": { "enum": ["Reorder", "Transfer", "None", null] },
+    "orderQuantity": { "type": ["integer", "null"] },
+    "forecastReorderQuantity": { "type": ["number", "null"] },
+    "inventoryShortageQuantity": { "type": ["number", "null"] },
+    "selectedSupplierId": { "type": ["string", "null"], "format": "uuid" },
+    "selectedQuotationId": { "type": ["string", "null"], "format": "uuid" },
+    "proposalId": { "type": ["string", "null"], "format": "uuid" },
+    "humanApprovalRequired": { "type": "boolean" },
+    "nextAction": { "type": ["string", "null"], "description": "What a human does next, and where." },
+    "childWorkflows": {
+      "type": "object",
+      "description": "Ids linking this run to each agent's own record.",
+      "properties": {
+        "inventoryRecommendationId": { "type": ["string", "null"], "format": "uuid" },
+        "demandForecastWorkflowId": { "type": ["string", "null"], "format": "uuid" },
+        "procurementWorkflowId": { "type": ["string", "null"], "format": "uuid" }
+      }
+    },
+    "errors": { "type": "array", "items": { "type": "string" } }
+  }
+}
