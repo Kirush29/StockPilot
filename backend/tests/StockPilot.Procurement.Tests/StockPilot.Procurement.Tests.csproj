@@ -27,13 +27,11 @@
 
   <ItemGroup>
     <!-- Golden-case scenario for the Procurement Coordinator Agent; kept with the other agent evaluation material. -->
-    <None Include="..\..\..\agentic-ai\evaluation\golden-cases\*.golden.json"
-          Link="GoldenCases\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\agentic-ai\evaluation\golden-cases\*.golden.json" Link="GoldenCases\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\StockPilot.API\StockPilot.API.csproj" />
+    <ProjectReference Include="..\..\StockPilot.Api\StockPilot.Api.csproj" />
   </ItemGroup>
 
 </Project>

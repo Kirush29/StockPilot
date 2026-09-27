@@ -12,15 +12,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
-using StockPilot.API.Data;
-using StockPilot.Infrastructure.Persistence;
-using StockPilot.Procurement.Infrastructure.Persistence;
+
+using StockPilot.Shared.Data;
+using StockPilot.Procurement.Application.Abstractions;
+using StockPilot.Procurement.Infrastructure.ExternalStubs;
 
 namespace StockPilot.Procurement.Tests.Api;
 
 /// <summary>
 /// Hosts the real StockPilot API (routing, JWT auth, role policies, exception handler) over
-/// in-memory databases that are private to this factory instance, so tests don't share state.
+/// the shared in-memory database, private to this factory instance so tests don't share state.
 /// </summary>
 public class ProcurementApiFactory : WebApplicationFactory<Program>
 {
@@ -37,11 +38,17 @@ public class ProcurementApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("UseInMemoryDatabase", "true");
+        builder.UseSetting("Jwt:SigningKey", SigningKey);
         builder.ConfigureTestServices(services =>
         {
-            Replace<ProcurementDbContext>(services, $"procurement-{_suffix}");
-            Replace<StockPilotDbContext>(services, $"sales-{_suffix}");
-            Replace<AppDbContext>(services, $"app-{_suffix}");
+            Replace<AppDbContext>(services, $"platform-{_suffix}");
+
+            // These tests are written against the Procurement module's own stand-in data (SeedIds).
+            // The running API uses adapters over the real Inventory/Supplier tables instead.
+            services.Replace(ServiceDescriptor.Singleton<IProductCatalogService, InMemoryProductCatalogService>());
+            services.Replace(ServiceDescriptor.Singleton<ISupplierDirectoryService, InMemorySupplierDirectoryService>());
+            services.Replace(ServiceDescriptor.Singleton<IBranchDirectoryService, InMemoryBranchDirectoryService>());
+            services.Replace(ServiceDescriptor.Singleton<IInventoryStockUpdater, NoOpInventoryStockUpdater>());
         });
     }
 

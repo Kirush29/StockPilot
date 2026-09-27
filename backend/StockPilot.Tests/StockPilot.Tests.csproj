@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StockPilot.API\StockPilot.API.csproj" />
+    <ProjectReference Include="..\StockPilot.Api\StockPilot.Api.csproj" />
   </ItemGroup>
 
 </Project>

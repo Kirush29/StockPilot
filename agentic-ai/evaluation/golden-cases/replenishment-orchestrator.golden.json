@@ -1,0 +1,67 @@
+{
+  "$comment": "Golden cases for the Replenishment Orchestrator (multi-agent integration). Run by backend/tests/StockPilot.Api.Tests/ReplenishmentOrchestratorTests.cs (GoldenCase). Each case fixes what each agent returns; the orchestrator must route, size, hand off and stop exactly as expected. The agents are stand-ins here: their own reasoning is covered by each agent's own golden cases. Expected values are exact.",
+  "cases": [
+    {
+      "name": "reorder-low-stock-reaches-pending-approval",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 292.4 },
+      "supplier": { "selected": true },
+      "procurement": { "status": "PendingApproval" },
+      "expected": { "status": "PendingApproval", "decision": "Reorder", "orderQuantity": 293, "triggerType": "LowStock", "sourceAgent": "DemandForecastAgent", "humanApprovalRequired": true, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation", "ProcurementCoordinator"] }
+    },
+    {
+      "name": "reorder-out-of-stock-keeps-trigger-type",
+      "inventory": { "decision": "Reorder", "issue": "OutOfStock", "shortage": 150 },
+      "forecast": { "reorderQuantity": 40 },
+      "supplier": { "selected": true },
+      "procurement": { "status": "PendingApproval" },
+      "expected": { "status": "PendingApproval", "decision": "Reorder", "orderQuantity": 40, "triggerType": "OutOfStock", "sourceAgent": "DemandForecastAgent", "humanApprovalRequired": true, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation", "ProcurementCoordinator"] }
+    },
+    {
+      "name": "forecast-sizes-even-when-smaller-than-shortage (D12)",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 25 },
+      "supplier": { "selected": true },
+      "procurement": { "status": "PendingApproval" },
+      "expected": { "status": "PendingApproval", "decision": "Reorder", "orderQuantity": 25, "triggerType": "LowStock", "sourceAgent": "DemandForecastAgent", "humanApprovalRequired": true, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation", "ProcurementCoordinator"] }
+    },
+    {
+      "name": "transfer-stops-in-inventory",
+      "inventory": { "decision": "Transfer", "issue": "LowStock", "shortage": 90 },
+      "expected": { "status": "TransferRecommended", "decision": "Transfer", "orderQuantity": null, "humanApprovalRequired": true, "agentsCalled": ["InventoryOptimization"] }
+    },
+    {
+      "name": "no-shortage-no-action",
+      "inventory": { "decision": "None" },
+      "expected": { "status": "NoActionRequired", "decision": "None", "orderQuantity": null, "humanApprovalRequired": false, "agentsCalled": ["InventoryOptimization"] }
+    },
+    {
+      "name": "zero-forecast-is-a-conflict-for-a-human (D12)",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 0 },
+      "expected": { "status": "QuantityConflict", "decision": "Reorder", "orderQuantity": null, "humanApprovalRequired": true, "agentsCalled": ["InventoryOptimization", "DemandForecast"] }
+    },
+    {
+      "name": "no-eligible-supplier-stops-before-procurement",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 120 },
+      "supplier": { "selected": false },
+      "expected": { "status": "NoEligibleSupplier", "decision": "Reorder", "orderQuantity": 120, "humanApprovalRequired": false, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation"] }
+    },
+    {
+      "name": "procurement-checks-failed-is-reported",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 120 },
+      "supplier": { "selected": true },
+      "procurement": { "status": "ChecksFailed" },
+      "expected": { "status": "ChecksFailed", "decision": "Reorder", "orderQuantity": 120, "triggerType": "LowStock", "sourceAgent": "DemandForecastAgent", "humanApprovalRequired": false, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation", "ProcurementCoordinator"] }
+    },
+    {
+      "name": "quantity-above-procurement-limit-fails-hand-off-contract",
+      "inventory": { "decision": "Reorder", "issue": "LowStock", "shortage": 110 },
+      "forecast": { "reorderQuantity": 250000 },
+      "supplier": { "selected": true },
+      "expected": { "status": "Failed", "decision": "Reorder", "orderQuantity": 250000, "humanApprovalRequired": false, "agentsCalled": ["InventoryOptimization", "DemandForecast", "SupplierEvaluation"] }
+    }
+  ]
+}

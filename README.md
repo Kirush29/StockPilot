@@ -22,12 +22,34 @@ StockPilot is an integrated inventory and procurement management system built fo
 
 ## Repository layout
 
-- `backend/` - ASP.NET Core solution/projects and tests
-- `web/` - React app
-- `mobile-flutter/` - Flutter app
-- `agentic-ai/` - contracts, prompts/configuration, evaluation cases or internal service code
-- `docs/` - architecture, ADRs, database, API, testing evidence
-- `.github/` - CI and collaboration templates
+```
+backend/
+  StockPilot.Api/                 single ASP.NET Core Web API project
+    Modules/
+      Inventory/                  Student 1 — controllers, services, entities, host services
+      SalesDemand/                Student 2 — incl. the Demand Forecast Agent
+      Suppliers/                  Student 3 — incl. the bridge to the Supplier Evaluation Agent
+      Procurement/                Student 4 — incl. the Procurement Coordinator Agent
+    Shared/
+      Identity/                   one JWT + role-policy setup for every module
+      Data/                       AppDbContext (the one DbContext), migrations, dev demo data
+      Agents/Orchestrator/        multi-agent Replenishment Orchestrator
+      Agents/Contracts/           shared agent workflow-state contract
+      Integration/                cross-module adapters (Procurement <-> Inventory/Suppliers)
+    Program.cs                    one composition root
+  tests/, StockPilot.Tests/       test projects
+web/                              React app (one shell)
+  src/modules/{inventory, sales-demand, suppliers, procurement}
+  src/shared/{theme, layout, navigation, auth, api}
+mobile/                           Flutter app
+  lib/modules/{inventory, sales_demand, procurement}
+  lib/shared/{theme, navigation, auth}
+agentic-ai/
+  agents/supplier_evaluation/     the Python agent (the other agents and the orchestrator run in the API)
+  contracts/, evaluation/         agent contracts and golden cases
+docs/                             architecture, ADRs, database, integration plan, testing evidence
+scripts/e2e/                      cross-platform end-to-end run
+```
 
 ## First setup
 
@@ -54,3 +76,17 @@ Use small meaningful commits, e.g. `feat: add stock movement endpoint`, `test: c
 ## Never commit
 
 Secrets, API keys, connection-string passwords, real personal data, build folders, local IDE files, or fabricated test/evaluation evidence.
+
+## Production Configuration & Environment Variables
+
+| Variable | Description | Default / Example |
+|---|---|---|
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string | `Host=postgres;Port=5432;Database=stockpilotdb;Username=postgres;Password=...` |
+| `Jwt__SigningKey` | HMAC-SHA256 signing secret (**>= 32 chars**, required) | `StockPilotSuperSecretDevelopmentKeyForJWTValidation2026` |
+| `OpenAI__ApiKey` / `OPENAI_API_KEY` | OpenAI API key for backend Semantic Kernel & agentic-ai | Optional (fallback to deterministic) |
+| `GEMINI_API_KEY` | Google Gemini API key for agentic-ai & backend Semantic Kernel | Optional (fallback to deterministic) |
+| `AgenticAi__WorkingDirectory` | Directory where Python agentic-ai lives | `../../agentic-ai` (local dev) or `/app/agentic-ai` (Docker) |
+| `AgenticAi__PythonPath` | Executable path for Python 3 | `python` (Windows/dev) or `python3` (Docker/Linux) |
+| `AgenticAi__AgentMode` | Decision engine mode (`deterministic` or `ai`) | `deterministic` |
+| `Cors__AllowedOrigins` | Allowed CORS origins (semicolon or comma separated) | `http://localhost:5173;http://localhost:3000` |
+

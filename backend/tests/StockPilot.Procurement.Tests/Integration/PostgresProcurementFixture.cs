@@ -5,7 +5,7 @@ using Npgsql;
 using StockPilot.Procurement.Application.Services;
 using StockPilot.Procurement.Domain.Common;
 using StockPilot.Procurement.Infrastructure.ExternalStubs;
-using StockPilot.Procurement.Infrastructure.Persistence;
+using StockPilot.Shared.Data;
 using StockPilot.Procurement.Infrastructure.Repositories;
 using StockPilot.Procurement.Tests.TestHelpers;
 
@@ -30,8 +30,8 @@ public sealed class PostgresFactAttribute : FactAttribute
 }
 
 /// <summary>
-/// Creates a uniquely named database, applies the real Procurement migrations (including the
-/// seed data and CHECK constraints), and drops the database afterwards.
+/// Creates a uniquely named database, applies the shared platform baseline migration (all modules,
+/// including Procurement's seed data and CHECK constraints), and drops the database afterwards.
 /// </summary>
 public sealed class PostgresProcurementFixture : IAsyncLifetime
 {
@@ -74,13 +74,13 @@ public sealed class PostgresProcurementFixture : IAsyncLifetime
         await drop.ExecuteNonQueryAsync();
     }
 
-    /// <summary>A fresh context, configured exactly like AddProcurementInfrastructure does for Npgsql.</summary>
-    public ProcurementDbContext NewContext() => new(
-        new DbContextOptionsBuilder<ProcurementDbContext>()
-            .UseNpgsql(ConnectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "procurement"))
+    /// <summary>A fresh context, configured exactly like AddPlatformPersistence does for Npgsql.</summary>
+    public AppDbContext NewContext() => new(
+        new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(ConnectionString)
             .Options);
 
-    public ProcurementProposalService ProposalService(ProcurementDbContext context, Guid userId, params string[] roles) => new(
+    public ProcurementProposalService ProposalService(AppDbContext context, Guid userId, params string[] roles) => new(
         new EfProposalRepository(context),
         new EfBudgetRepository(context),
         new InMemoryProductCatalogService(),
@@ -91,7 +91,7 @@ public sealed class PostgresProcurementFixture : IAsyncLifetime
         Options.Create(new ApprovalLimitOptions { ProcurementManager = 50_000m, BusinessOwner = null }),
         NullLogger<ProcurementProposalService>.Instance);
 
-    public PurchaseOrderService OrderService(ProcurementDbContext context, Guid userId, IProposalRepositoryHook? hook = null) => new(
+    public PurchaseOrderService OrderService(AppDbContext context, Guid userId, IProposalRepositoryHook? hook = null) => new(
         new EfPurchaseOrderRepository(context),
         hook?.Wrap(new EfProposalRepository(context)) ?? new EfProposalRepository(context),
         new EfBudgetRepository(context),

@@ -1,43 +1,140 @@
-name: CI
+name: StockPilot CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, integration/*]
   pull_request:
     branches: [main]
 
 jobs:
+  # ----------------------------------------------------------------------------
+  # 1. Backend CI (.NET 8 + PostgreSQL Service + Agentic AI Subprocess)
+  # ----------------------------------------------------------------------------
   backend-ci:
-    name: Backend Build & Test (.NET 8)
+    name: Backend Build & Test (.NET 8 + Postgres)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stockpilotdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Setup Python 3.11 for Agentic AI Subprocess
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Agentic AI Dependencies
+        run: pip install -r agentic-ai/requirements.txt pytest
+
       - name: Restore dependencies
         run: dotnet restore backend/StockPilot.sln
+
       - name: Build solution
         run: dotnet build --no-restore backend/StockPilot.sln
+
       - name: Run unit & integration tests
+        env:
+          STOCKPILOT_TEST_POSTGRES: Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=stockpilotdb
+          ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=stockpilotdb
+          Jwt__SigningKey: StockPilotSuperSecretDevelopmentKeyForJWTValidation2026
         run: dotnet test --no-build --verbosity normal backend/StockPilot.sln
 
+  # ----------------------------------------------------------------------------
+  # 2. Web Frontend CI (React 18 + Vite 5 + Vitest)
+  # ----------------------------------------------------------------------------
   web-ci:
-    name: Web Frontend Build & Lint (React 19)
+    name: Web Frontend Test & Build (React 18 + Vite 5)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
       - name: Install dependencies
         working-directory: ./web
         run: npm ci
-      - name: Run Linter
+
+      - name: Run unit & component tests
         working-directory: ./web
-        run: npm run lint
-      - name: Build Web Application
+        run: npm test -- --run
+
+      - name: Build web application
         working-directory: ./web
         run: npm run build
+
+  # ----------------------------------------------------------------------------
+  # 3. Mobile CI (Flutter + Dart)
+  # ----------------------------------------------------------------------------
+  mobile-ci:
+    name: Mobile Static Analysis & Tests (Flutter)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install mobile dependencies
+        working-directory: ./mobile
+        run: flutter pub get
+
+      - name: Analyze mobile code
+        working-directory: ./mobile
+        run: flutter analyze
+
+      - name: Run mobile unit & widget tests
+        working-directory: ./mobile
+        run: flutter test
+
+  # ----------------------------------------------------------------------------
+  # 4. Agentic AI CI (Python 3.11 + Pytest)
+  # ----------------------------------------------------------------------------
+  agentic-ai-ci:
+    name: Agentic AI Contracts & Unit Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: ./agentic-ai
+        run: pip install -r requirements.txt pytest
+
+      - name: Run Pytest suite
+        working-directory: ./agentic-ai
+        run: python -m pytest -v

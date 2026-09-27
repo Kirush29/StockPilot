@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>c8dcc5be-4855-455e-860e-5cdec1429dd7</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.9.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.29" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.12" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.80.1" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.80.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Procurement Coordinator Agent validates against the contract files themselves, so they stay the single source of truth. -->
+    <EmbeddedResource Include="..\..\agentic-ai\contracts\procurement-coordinator\*.schema.json" LogicalName="ProcurementCoordinatorSchemas.%(Filename)%(Extension)" Link="AgenticContracts\ProcurementCoordinator\%(Filename)%(Extension)" />
+    <!-- Integration: contracts the Replenishment Orchestrator validates each agent hand-off against. -->
+    <EmbeddedResource Include="..\..\agentic-ai\contracts\demand-forecast-agent-contract.json;..\..\agentic-ai\contracts\supplier-evaluation-output.schema.json" LogicalName="AgentContracts.%(Filename)%(Extension)" Link="AgenticContracts\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\agentic-ai\contracts\replenishment-orchestrator\*.schema.json" LogicalName="AgentContracts.replenishment-orchestrator.%(Filename)%(Extension)" Link="AgenticContracts\ReplenishmentOrchestrator\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

@@ -10,9 +10,9 @@ tests found. Owner: Procurement module (Kirush29).
 | Backend unit, controller, agent, golden cases | `dotnet test backend/tests/StockPilot.Procurement.Tests` | nothing |
 | PostgreSQL integration | same, with `STOCKPILOT_TEST_POSTGRES="Host=localhost;Port=5432;Username=postgres;Password=..."` | a PostgreSQL server the tests may create/drop databases on (skipped when unset) |
 | LLM-as-judge evidence (optional) | same, with `STOCKPILOT_LLM_JUDGE_OPENAI_KEY=...` | OpenAI key (skipped when unset) |
-| React | `cd web/stockpilot-web && npm test` | nothing |
-| Flutter | `cd mobile-flutter && flutter test test/procurement` | nothing |
-| Cross-client end-to-end | `scripts/e2e/run-procurement-cross-client.sh` (see header for env vars) | PostgreSQL, .NET 8, Flutter, Node |
+| React | `cd web && npm test` | nothing |
+| Flutter | `cd mobile && flutter test test/procurement` | nothing |
+| Cross-platform end-to-end (multi-agent) | `scripts/e2e/run-replenishment-e2e.sh` (see header for env vars) | PostgreSQL, .NET 8, Flutter, Node, Python (`agentic-ai/requirements.txt`) |
 
 Testcontainers is not used because the development machine has no Docker. The PostgreSQL tests
 take any server via the connection string instead; a throwaway local cluster works:
@@ -47,7 +47,7 @@ take any server via the connection string instead; a throwaway local cluster wor
 Note: approving a proposal does not change `Budget.SpentAmount`; spend is committed when an
 Approved proposal is converted to a purchase order. The integration tests cover both transactions.
 
-### React (`web/stockpilot-web`)
+### React (`web`)
 - `ProposalDetailPage.test.jsx`: Approve/Reject/Request Revision only for managers on a pending
   proposal; Convert only for managers once Approved; decision requests and payloads; 403 approval
   limit and 409 messages; conversion navigates to orders.
@@ -56,7 +56,7 @@ Approved proposal is converted to a purchase order. The integration tests cover 
 - `procurementApi.integration.test.js`: the real axios client against MSW-mocked endpoints: bearer
   token, query parameters, request bodies, ProblemDetails → field errors, 401 clears the session.
 
-### Flutter (`mobile-flutter/test/procurement`)
+### Flutter (`mobile/test/procurement`)
 - `purchase_order_status_screen_test.dart`, `delivery_receiving_screen_test.dart`: loading, empty,
   error/retry, filtering, scanning, quantity bounds, partial vs full receipt payloads.
 - `receiving_navigation_test.dart`: Receive → receiving screen → confirm pops and refreshes; back
@@ -64,21 +64,30 @@ Approved proposal is converted to a purchase order. The integration tests cover 
 - `procurement_api_service_test.dart`, `agent_workflow_api_test.dart`: the real service over
   `MockClient`: URLs, headers, JSON bodies, error messages, agent workflow start/status, login body.
 
-### Cross-client end-to-end
-`scripts/e2e/run-procurement-cross-client.sh`: Flutter Branch Manager starts the agent → API →
-PostgreSQL → agent (PendingApproval) → React Procurement Manager approves (a Branch Manager is
-refused) → Flutter initiator sees Approved via the same query as `ProposalDecisionWatcher`. It
-prints the proposal, decision and agent trace rows from PostgreSQL as evidence and writes
-`scripts/e2e/last-run.log`.
+### Cross-platform end-to-end (multi-agent replenishment)
+`scripts/e2e/run-replenishment-e2e.sh` replaces the earlier Procurement-only run. The workflow starts in
+the React app and goes through the Replenishment Orchestrator and all four real agents:
 
-Recorded run, 2026-09-27, against local PostgreSQL 18 (database `stockpilot_e2e_20260927091152`):
+1. React (Procurement Manager) runs a check on the real Replenishment page. The orchestrator calls Inventory
+   Optimization, then Demand Forecast, then Supplier Evaluation (Python agent), then the Procurement Coordinator,
+   and stops at PendingApproval.
+2. React (Business Owner) approves on the same page. The proposal is converted to a purchase order and
+   received, which creates an Inventory batch (D14).
+3. Flutter (Branch Manager) sees the final status.
+
+It prints the orchestrator trace, the agents' rows, the decision, the order and the batch from PostgreSQL,
+and writes `scripts/e2e/last-run.log`. Stages: `web/e2e/replenishment.e2e.test.jsx`
+(`E2E_STAGE=initiate|approve`) and `mobile/test/e2e/replenishment_e2e_test.dart` (`verify`).
+
+Recorded run, 2026-09-27, against local PostgreSQL 18 (database `stockpilot_e2e_20260927204331`):
 
 | Stage | Result |
 | --- | --- |
-| 1. Flutter, Branch Manager starts the agent | workflow `c7869516-…`, proposal `c2debdcc-…`: PendingApproval, 4 × 7,500.00 = 30,000.00; audit row at `AwaitHumanApproval` |
-| 2. React, Procurement Manager | proposal found in the approval queue as agent-created with tools CheckBudget → ValidateBusinessRules → CreateProposal; Branch Manager approve attempt → 403; Procurement Manager approve → 200 |
-| 3. Flutter, initiator | sees the proposal as Approved via the `ProposalDecisionWatcher` query |
-| PostgreSQL afterwards | proposal Approved with one decision ("Approved in web app during E2E run"); agent trace `HumanDecisionRecorded` / Approved; 0 purchase orders created (approval never converts) |
+| 1. React, Procurement Manager, Replenishment page | Paracetamol @ Colombo: Reorder (Inventory shortage 110), forecast quantity 293, Supplier Evaluation picked quotation `c0000000-…0002` (Acme), proposal `85be4ba3-…` PendingApproval for 4,160.60. Four agent calls, all succeeded; every contract check passed. Vitamin C: TransferRecommended; Amoxicillin: NoActionRequired. A Branch Manager's approve attempt got 403. |
+| PostgreSQL | one `ReplenishmentOrchestrator` row at `AwaitHumanApproval`, linking the inventory recommendation, forecast workflow and procurement workflow ids |
+| 2. React, Business Owner | approved on the Replenishment page. `PO-2026-000002` created and Received, batch `PO-2026-000002-L1` (293 × 14.20); Colombo stock 40 → 333 |
+| 3. Flutter, Branch Manager | sees the run with proposal Converted and order Received |
+| PostgreSQL afterwards | proposal Converted, decision Approved ("Approved from the replenishment run"), order Received, batch and stock as above |
 
 ## Defects found by these tests
 
@@ -88,4 +97,4 @@ Recorded run, 2026-09-27, against local PostgreSQL 18 (database `stockpilot_e2e_
 | Order numbers are `COUNT + 1` per year: once any number is out of sequence, every later conversion that year fails on the unique index | Fixed: `MAX + 1` for the year, generated inside the conversion transaction under an advisory lock | `Conversion_StillSucceeds_AfterAGapInOrderNumbers`, `OrderNumber_IsOnePastTheHighestThisYear_IgnoringOtherFormats`, `ConcurrentConversions_InDifferentBranches_BothSucceed_WithDistinctOrderNumbers` |
 | Flutter login sent `email`, the API reads `username`, so every mobile login failed | Fixed | `agent_workflow_api_test.dart` login test |
 | Purchase Orders screen: badge + Receive button overflowed the list tile's 56 px trailing slot and clipped the button | Fixed (button moved to the subtitle row) | `purchase_order_status_screen_test.dart` |
-| `Program.cs` seeds dev accounts before applying migrations, so Development mode can't start on an empty database | Open; the E2E script works around it | `run-procurement-cross-client.sh` |
+| `Program.cs` seeds dev accounts before applying migrations, so Development mode can't start on an empty database | Fixed during integration (migrate, then seed); the E2E starts the API once | `run-replenishment-e2e.sh` |

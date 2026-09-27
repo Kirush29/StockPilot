@@ -1,0 +1,43 @@
+/* tailwind.css — Tailwind utilities for the modules that were built with Tailwind (Sales & Demand, Supplier
+ * Management, Users), themed with the shell's design tokens so the whole app has one visual theme.
+ *
+ * - No Tailwind preflight: the shell's own resets (global.css, layer `base`) already cover it, and a second
+ *   global reset would restyle the shell's pages.
+ * - Utilities are generated only from src/modules, so class names in the shell's JSX never pick up utilities.
+ * - Tailwind's gray scale maps to the shell's slate palette; `dark:` variants only apply under a `.dark` class,
+ *   which the shell never sets (it has a single light theme).
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "../../modules";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-gray-50: var(--slate-50);
+  --color-gray-100: var(--slate-100);
+  --color-gray-200: var(--slate-200);
+  --color-gray-300: var(--slate-300);
+  --color-gray-400: var(--slate-400);
+  --color-gray-500: var(--slate-500);
+  --color-gray-600: var(--slate-600);
+  --color-gray-700: var(--slate-700);
+  --color-gray-800: var(--slate-800);
+  --color-gray-900: var(--slate-900);
+  /* --font-sans, --font-mono and --radius-* are not redefined: the shell's unlayered tokens of the same
+     names (global.css) take precedence over Tailwind's theme layer, so utilities already use them. */
+}
+
+/* Variables the web/src pages used (web/src/index.css), mapped onto the shell's tokens. */
+:root {
+  --text: var(--color-text-secondary);
+  --text-h: var(--color-text);
+  --bg: var(--color-bg);
+  --border: var(--color-border);
+  --accent: var(--color-primary);
+  --accent-bg: var(--color-primary-light);
+  --accent-border: var(--color-primary-border);
+}
