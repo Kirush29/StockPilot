@@ -171,16 +171,60 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── CORS Configuration ────────────────────────────────────────────────────────
+var rawOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (rawOrigins == null || rawOrigins.Length == 0)
+{
+    var rawString = builder.Configuration["Cors:AllowedOrigins"];
+    if (!string.IsNullOrWhiteSpace(rawString))
+    {
+        rawOrigins = rawString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+}
+
+string[] defaultDevOrigins =
+[
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+];
+
+var allowedOrigins = (rawOrigins != null && rawOrigins.Length > 0)
+    ? rawOrigins
+    : (builder.Environment.IsDevelopment() ? defaultDevOrigins : Array.Empty<string>());
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowStockPilotClients", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+    });
 });
 
 var app = builder.Build();
