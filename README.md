@@ -1,92 +1,412 @@
 # StockPilot
+
 **Right Stock. Right Supplier. Right Time.**
 
-StockPilot is an integrated inventory and procurement management system built for SE3090 Assignment 1. The system uses one ASP.NET Core Web API and one PostgreSQL database shared by a React management web app and a Flutter operational mobile app. A controlled four-agent AI workflow supports demand forecasting, inventory optimization, supplier evaluation and procurement coordination.
+StockPilot is an integrated **inventory and procurement management system** developed for **SE3090 Assignment 1**.
 
-## Architecture rules
+The system combines a **React web application**, **Flutter mobile application**, **ASP.NET Core Web API**, and **PostgreSQL database**. It also includes a controlled **Agentic AI workflow** for inventory optimization, demand forecasting, supplier evaluation, and procurement coordination.
 
-- React and Flutter call only the ASP.NET Core API.
-- Clients never call PostgreSQL, Agentic AI, or third-party services directly.
-- AI creates procurement proposals, not purchase orders. Purchase-order creation requires an authorized human approval.
-- Persist auditable workflow summaries, not hidden model reasoning.
-- Keep credentials out of Git. Copy `.env.example` locally and fill secrets outside version control.
+---
 
-## Student-owned components
+## System Architecture
 
-| Component | Suggested AI agent | Owner |
-|---|---|---|
-| Inventory Management | Inventory Optimization Agent | Mathusha P (In Progress) |
-| Sales & Demand | Demand Forecast Agent | Ravi (Active Implementation) |
-| Supplier Management | Supplier Evaluation Agent | Kulshan Begum (TBD) |
-| Procurement Management | Procurement Coordinator Agent | Kirushan (Under Development) |
-
-## Repository layout
-
+```text
+React Web / Flutter Mobile
+          │
+          ▼
+   ASP.NET Core API
+          │
+          ▼
+      PostgreSQL
+          │
+          ▼
+Replenishment Orchestrator
+          │
+     ┌────┴────┐
+     ▼         ▼
+ C# Agents   Python Agent
+     │         │
+     └────┬────┘
+          ▼
+   Workflow Result
+          │
+          ▼
+   Human Approval
+          │
+          ▼
+    Purchase Order
 ```
+
+### Architecture Rules
+
+- React and Flutter communicate only with the ASP.NET Core API.
+- Client applications never access PostgreSQL or AI services directly.
+- PostgreSQL acts as the centralized database.
+- AI agents generate recommendations and procurement proposals.
+- Purchase orders require authorized **human approval**.
+- AI workflow activities are recorded for auditing and traceability.
+- Credentials and API keys must never be committed to Git.
+
+---
+
+## Main Technologies
+
+| Area | Technology |
+|---|---|
+| Web Application | React |
+| Mobile Application | Flutter |
+| Backend | ASP.NET Core Web API |
+| Database | PostgreSQL |
+| Backend Language | C# |
+| AI Component | C# + Python |
+| External AI | OpenAI / Gemini |
+| Authentication | JWT |
+| Containerization | Docker |
+| CI | GitHub Actions |
+
+---
+
+## Agentic AI Workflow
+
+StockPilot uses four specialized AI agents:
+
+| Component | AI Agent | Owner |
+|---|---|---|
+| Inventory Management | Inventory Optimization Agent | Mathusha P |
+| Sales & Demand | Demand Forecast Agent | Ravi |
+| Supplier Management | Supplier Evaluation Agent | Kulshan Begum |
+| Procurement Management | Procurement Coordinator Agent | Kirushan |
+
+The workflow follows:
+
+```text
+Inventory Condition
+        │
+        ▼
+Inventory Optimization Agent
+        │
+        ▼
+Demand Forecast Agent
+        │
+        ▼
+Supplier Evaluation Agent
+        │
+        ▼
+Procurement Coordinator Agent
+        │
+        ▼
+Business Rule Validation
+        │
+        ▼
+Procurement Proposal
+        │
+        ▼
+Human Review & Approval
+        │
+        ▼
+Purchase Order
+```
+
+The AI assists with decision-making but does not independently complete high-impact purchasing actions.
+
+---
+
+## Repository Structure
+
+```text
 backend/
-  StockPilot.Api/                 single ASP.NET Core Web API project
+  StockPilot.Api/
     Modules/
-      Inventory/                  Student 1 — controllers, services, entities, host services
-      SalesDemand/                Student 2 — incl. the Demand Forecast Agent
-      Suppliers/                  Student 3 — incl. the bridge to the Supplier Evaluation Agent
-      Procurement/                Student 4 — incl. the Procurement Coordinator Agent
+      Inventory/
+      SalesDemand/
+      Suppliers/
+      Procurement/
+
     Shared/
-      Identity/                   one JWT + role-policy setup for every module
-      Data/                       AppDbContext (the one DbContext), migrations, dev demo data
-      Agents/Orchestrator/        multi-agent Replenishment Orchestrator
-      Agents/Contracts/           shared agent workflow-state contract
-      Integration/                cross-module adapters (Procurement <-> Inventory/Suppliers)
-    Program.cs                    one composition root
-  tests/, StockPilot.Tests/       test projects
-web/                              React app (one shell)
-  src/modules/{inventory, sales-demand, suppliers, procurement}
-  src/shared/{theme, layout, navigation, auth, api}
-mobile/                           Flutter app
-  lib/modules/{inventory, sales_demand, procurement}
-  lib/shared/{theme, navigation, auth}
+      Identity/
+      Data/
+      Agents/
+        Orchestrator/
+        Contracts/
+      Integration/
+
+    Program.cs
+
+  tests/
+  StockPilot.Tests/
+
+web/
+  src/
+    modules/
+      inventory/
+      sales-demand/
+      suppliers/
+      procurement/
+
+    shared/
+      theme/
+      layout/
+      navigation/
+      auth/
+      api/
+
+mobile/
+  lib/
+    modules/
+      inventory/
+      sales_demand/
+      procurement/
+
+    shared/
+      theme/
+      navigation/
+      auth/
+
 agentic-ai/
-  agents/supplier_evaluation/     the Python agent (the other agents and the orchestrator run in the API)
-  contracts/, evaluation/         agent contracts and golden cases
-docs/                             architecture, ADRs, database, integration plan, testing evidence
-scripts/e2e/                      cross-platform end-to-end run
+  agents/
+    supplier_evaluation/
+
+  contracts/
+  evaluation/
+
+docs/
+  architecture/
+  ADRs/
+  database/
+  integration/
+  testing/
+
+scripts/
+  e2e/
 ```
 
-## First setup
+---
 
-1. Create a private GitHub repository named using your module/group convention, for example `SE3090_GXX_StockPilot`.
-2. Add all four students as collaborators.
-3. Push this base to `main`.
-4. Protect `main`: require pull requests and at least one approval.
-5. Create labels: `inventory`, `sales-demand`, `supplier`, `procurement`, `agentic-ai`, `backend`, `react`, `flutter`, `database`, `testing`, `docs`.
-6. Create a GitHub Project board: Backlog -> Ready -> In Progress -> Review -> Done.
-7. Assign one business component and one distinct AI agent to each student.
-8. Replace placeholders with real .NET, React and Flutter scaffolds.
-9. Update CI so it builds/tests real projects on every push/PR.
+## Main Features
 
-## Branch naming
+- User authentication and role-based authorization
+- Product and category management
+- Branch inventory management
+- Batch and stock movement tracking
+- Inter-branch stock transfers
+- Sales recording
+- Demand forecasting
+- Inventory optimization
+- Supplier management
+- Supplier ratings
+- Quotation management
+- AI-assisted supplier evaluation
+- Procurement budget management
+- Procurement proposal generation
+- Human approval workflow
+- Purchase order management
+- AI recommendations
+- Agent workflow auditing
+- React management interface
+- Flutter operational mobile application
 
-`feature/<short-name>`, `fix/<short-name>`, `test/<short-name>`, `docs/<short-name>`
+---
 
-Examples: `feature/inventory-stock-count`, `feature/supplier-quotation-compare`, `test/procurement-approval`.
+## Security
 
-## Commit convention
+StockPilot uses **JWT authentication** with role and policy-based authorization.
 
-Use small meaningful commits, e.g. `feat: add stock movement endpoint`, `test: cover invalid quotation`, `docs: add ADR for Flutter state management`.
+Main roles include:
 
-## Never commit
+- Business Owner
+- Procurement Manager
+- Branch Manager
+- Store Employee
 
-Secrets, API keys, connection-string passwords, real personal data, build folders, local IDE files, or fabricated test/evaluation evidence.
+Protected operations are validated through the ASP.NET Core backend before accessing business services or PostgreSQL.
 
-## Production Configuration & Environment Variables
+---
 
-| Variable | Description | Default / Example |
+## Database
+
+StockPilot uses a centralized **PostgreSQL database** accessed through **Entity Framework Core**.
+
+```text
+React / Flutter
+      │
+      ▼
+ASP.NET Core API
+      │
+      ▼
+Application Services
+      │
+      ▼
+Entity Framework Core
+      │
+      ▼
+AppDbContext
+      │
+      ▼
+PostgreSQL
+```
+
+The client applications never connect directly to the database.
+
+Database migrations are maintained under:
+
+```text
+backend/StockPilot.API/Shared/Data/Migrations/
+```
+
+Development seed data is provided for testing and demonstration.
+
+---
+
+## AI Safety and Validation
+
+AI-generated recommendations are controlled using:
+
+- Structured input/output contracts
+- Schema validation
+- Deterministic business rules
+- Budget validation
+- Supplier validation
+- Quotation validation
+- Controlled AI tools
+- Workflow auditing
+- Human approval
+
+If external AI services are unavailable, selected workflows can use deterministic fallback behaviour.
+
+---
+
+## Environment Configuration
+
+Copy the example environment configuration and provide secrets locally.
+
+```bash
+cp .env.example .env
+```
+
+### Environment Variables
+
+| Variable | Description | Example / Default |
 |---|---|---|
-| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string | `Host=postgres;Port=5432;Database=stockpilotdb;Username=postgres;Password=...` |
-| `Jwt__SigningKey` | HMAC-SHA256 signing secret (**>= 32 chars**, required) | `StockPilotSuperSecretDevelopmentKeyForJWTValidation2026` |
-| `OpenAI__ApiKey` / `OPENAI_API_KEY` | OpenAI API key for backend Semantic Kernel & agentic-ai | Optional (fallback to deterministic) |
-| `GEMINI_API_KEY` | Google Gemini API key for agentic-ai & backend Semantic Kernel | Optional (fallback to deterministic) |
-| `AgenticAi__WorkingDirectory` | Directory where Python agentic-ai lives | `../../agentic-ai` (local dev) or `/app/agentic-ai` (Docker) |
-| `AgenticAi__PythonPath` | Executable path for Python 3 | `python` (Windows/dev) or `python3` (Docker/Linux) |
-| `AgenticAi__AgentMode` | Decision engine mode (`deterministic` or `ai`) | `deterministic` |
-| `Cors__AllowedOrigins` | Allowed CORS origins (semicolon or comma separated) | `http://localhost:5173;http://localhost:3000` |
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection | `Host=postgres;Port=5432;Database=stockpilotdb;Username=postgres;Password=...` |
+| `Jwt__SigningKey` | JWT signing secret (minimum 32 characters) | Development secret |
+| `OpenAI__ApiKey` | OpenAI API key | Optional |
+| `OPENAI_API_KEY` | OpenAI key for Python components | Optional |
+| `GEMINI_API_KEY` | Gemini API key | Optional |
+| `AgenticAi__WorkingDirectory` | Python AI directory | `../../agentic-ai` |
+| `AgenticAi__PythonPath` | Python executable | `python` / `python3` |
+| `AgenticAi__AgentMode` | AI execution mode | `deterministic` / `ai` |
+| `Cors__AllowedOrigins` | Allowed frontend origins | `http://localhost:5173;http://localhost:3000` |
 
+> **Important:** Never commit real API keys, passwords, JWT secrets, or production connection strings.
+
+---
+
+## Git Workflow
+
+### Branch Naming
+
+```text
+feature/<short-name>
+fix/<short-name>
+test/<short-name>
+docs/<short-name>
+```
+
+Examples:
+
+```text
+feature/inventory-stock-count
+feature/supplier-quotation-compare
+test/procurement-approval
+docs/database-design
+```
+
+### Commit Convention
+
+Use small and meaningful commits:
+
+```text
+feat: add stock movement endpoint
+fix: correct inventory validation
+test: cover invalid quotation
+docs: update database architecture
+```
+
+---
+
+## Continuous Integration
+
+GitHub Actions is used for Continuous Integration, including:
+
+```text
+Code Push / Pull Request
+          │
+          ▼
+     Backend Build
+          │
+          ▼
+    Automated Tests
+          │
+          ▼
+ PostgreSQL Integration Tests
+          │
+          ▼
+ React Test & Build
+          │
+          ▼
+Flutter Analysis & Tests
+          │
+          ▼
+     Python Pytest
+```
+
+Automated production deployment is not currently included.
+
+---
+
+## Current Limitations
+
+- Flutter Supplier Management is not fully implemented.
+- Some React and Flutter modules have limited automated test coverage.
+- Android release configuration requires finalization.
+- Production deployment is not automated.
+- External AI functionality depends on provider availability.
+- The Agentic AI workflow currently follows a sequential execution model.
+
+---
+
+## Future Improvements
+
+Future improvements include:
+
+- Complete Flutter Supplier Management
+- Expand automated and end-to-end testing
+- Add automated deployment
+- Improve database and API performance
+- Expand Agentic AI evaluation
+- Improve workflow monitoring and observability
+- Strengthen production secret management
+- Add database backup and recovery policies
+
+---
+
+## Development Rules
+
+1. Use the ASP.NET Core API as the authoritative application layer.
+2. Keep shared business logic in the backend.
+3. Do not connect React or Flutter directly to PostgreSQL.
+4. Do not allow AI agents to bypass business-rule validation.
+5. Require human approval for purchase-order creation.
+6. Store auditable AI workflow results rather than hidden model reasoning.
+7. Never commit credentials, API keys, passwords, or real personal data.
+8. Use meaningful branches, commits, pull requests, and code reviews.
+
+---
+
+## Project Goal
+
+StockPilot aims to provide a centralized system for managing **inventory, sales, suppliers, procurement, and AI-assisted replenishment decisions** across web and mobile platforms.
+
+The overall objective is simple:
+
+> **Right Stock. Right Supplier. Right Time.**
