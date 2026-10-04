@@ -11,13 +11,15 @@ COPY backend/StockPilot.Api/StockPilot.Api.csproj ./backend/StockPilot.Api/
 COPY backend/StockPilot.Tests/StockPilot.Tests.csproj ./backend/StockPilot.Tests/
 COPY backend/tests/StockPilot.Api.Tests/StockPilot.Api.Tests.csproj ./backend/tests/StockPilot.Api.Tests/
 COPY backend/tests/StockPilot.Procurement.Tests/StockPilot.Procurement.Tests.csproj ./backend/tests/StockPilot.Procurement.Tests/
-
 WORKDIR /src/backend
 RUN dotnet restore StockPilot.sln
 
 # Copy remaining backend source files
 WORKDIR /src
 COPY backend/ ./backend/
+
+# Copy Agentic AI files required during .NET compilation
+COPY agentic-ai/ ./agentic-ai/
 
 WORKDIR /src/backend/StockPilot.Api
 RUN dotnet publish StockPilot.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
