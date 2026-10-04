@@ -33,7 +33,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-StockPilot}
       Jwt__Audience: ${JWT_AUDIENCE:-StockPilotClients}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:-StockPilotSuperSecretProductionKeyForDockerTesting2026}
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000;http://localhost:5173;http://localhost:80}
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000;http://localhost:5173;http://localhost:80;https://stock-pilot-gilt.vercel.app}
       AgenticAi__WorkingDirectory: /app/agentic-ai
       AgenticAi__PythonPath: python3
       AgenticAi__AgentMode: ${AGENT_MODE:-deterministic}
