@@ -22,6 +22,14 @@ public static class DatabaseUrlParser
             Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty
         };
 
+        // For cloud-hosted PostgreSQL (Supabase, Neon, AWS RDS), ensure SSL is required if not local
+        if (!builder.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) &&
+            !builder.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) &&
+            !builder.Host.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.SslMode = SslMode.Require;
+        }
+
         return builder.ConnectionString;
     }
 }

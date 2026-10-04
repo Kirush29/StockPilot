@@ -172,31 +172,47 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ── CORS Configuration ────────────────────────────────────────────────────────
-var rawOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-if (rawOrigins == null || rawOrigins.Length == 0)
+// ── Reverse Proxy / Forwarded Headers (Render, AWS, Cloudflare) ───────────────
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    var rawString = builder.Configuration["Cors:AllowedOrigins"];
-    if (!string.IsNullOrWhiteSpace(rawString))
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
+                               Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// ── CORS Configuration ────────────────────────────────────────────────────────
+var originsList = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (configuredOrigins != null)
+{
+    foreach (var o in configuredOrigins)
     {
-        rawOrigins = rawString.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!string.IsNullOrWhiteSpace(o))
+            originsList.Add(o.Trim().TrimEnd('/'));
     }
 }
 
-string[] defaultDevOrigins =
-[
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-];
+var singleEnvOrigins = builder.Configuration["Cors:AllowedOrigins"];
+if (!string.IsNullOrWhiteSpace(singleEnvOrigins))
+{
+    var split = singleEnvOrigins.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    foreach (var o in split)
+    {
+        originsList.Add(o.Trim().TrimEnd('/'));
+    }
+}
 
-var allowedOrigins = (rawOrigins != null && rawOrigins.Length > 0)
-    ? rawOrigins
-    : (builder.Environment.IsDevelopment() ? defaultDevOrigins : Array.Empty<string>());
-    // ADD THIS
-Console.WriteLine(
-    $"CORS allowed origins: {string.Join(", ", allowedOrigins)}");
+if (builder.Environment.IsDevelopment())
+{
+    originsList.Add("http://localhost:3000");
+    originsList.Add("http://127.0.0.1:3000");
+    originsList.Add("http://localhost:5173");
+    originsList.Add("http://127.0.0.1:5173");
+}
+
+var allowedOrigins = originsList.ToArray();
 
 builder.Services.AddCors(options =>
 {
@@ -254,6 +270,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseExceptionHandler();
 
@@ -269,7 +286,9 @@ app.UseWhen(
     ctx => inventoryAndSupplierRoutes.Any(r => ctx.Request.Path.StartsWithSegments(r, StringComparison.OrdinalIgnoreCase)),
     branch => branch.UseMiddleware<StockPilot.Api.Middlewares.ExceptionHandlingMiddleware>());
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment() ||
+                    app.Configuration.GetValue<bool>("EnableSwagger", false);
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -288,7 +307,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // ── Health Check Endpoints ────────────────────────────────────────────────────
-async Task<IResult> HealthCheckHandler(AppDbContext db)
+async Task<IResult> HealthCheckHandler(AppDbContext db, ILogger<Program> logger, IHostEnvironment env)
 {
     try
     {
@@ -311,17 +330,18 @@ async Task<IResult> HealthCheckHandler(AppDbContext db)
             database = "Connected",
             service = "StockPilot.Api",
             timestamp = DateTime.UtcNow,
-            component = "Sales & Demand and Inventory Integration Ready",
+            component = "StockPilot API Gateway and Agents Ready",
             databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
         });
     }
     catch (Exception ex)
     {
+        logger.LogError(ex, "Health check failed.");
         return Results.Json(new
         {
             status = "Unhealthy",
             database = "Error",
-            error = ex.Message,
+            error = env.IsDevelopment() ? ex.Message : "Database connection failure",
             service = "StockPilot.Api",
             timestamp = DateTime.UtcNow,
             databaseProvider = useInMemory ? "InMemory" : "PostgreSQL"
@@ -329,23 +349,29 @@ async Task<IResult> HealthCheckHandler(AppDbContext db)
     }
 }
 
-app.MapGet("/health", (AppDbContext db) => HealthCheckHandler(db)).AllowAnonymous();
-app.MapGet("/api/health", (AppDbContext db) => HealthCheckHandler(db)).AllowAnonymous();
+app.MapGet("/health", (AppDbContext db, ILogger<Program> logger, IHostEnvironment env) => HealthCheckHandler(db, logger, env)).AllowAnonymous();
+app.MapGet("/api/health", (AppDbContext db, ILogger<Program> logger, IHostEnvironment env) => HealthCheckHandler(db, logger, env)).AllowAnonymous();
 
 app.MapControllers();
 
-// Ensure database tables are provisioned and seed initial data
+// Ensure database tables are provisioned, migrations applied, and initial data safely initialized
 using (var scope = app.Services.CreateScope())
 {
     var platformDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
     if (useInMemory)
         await platformDb.Database.EnsureCreatedAsync();
     else
         await platformDb.Database.MigrateAsync();
-    await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(platformDb);
 
+    // Idempotent initial Business Owner bootstrap if configured via environment variables
+    await ProductionAdminBootstrap.BootstrapAdminAsync(platformDb, app.Configuration, logger);
+
+    // Development-only demo accounts and mock sales history
     if (app.Environment.IsDevelopment())
     {
+        await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(platformDb);
         SeedDevAccounts(platformDb);
         await PlatformDemoDataSeeder.SeedAsync(platformDb);
     }

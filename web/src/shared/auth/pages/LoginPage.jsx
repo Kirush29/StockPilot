@@ -79,10 +79,22 @@ export default function LoginPage() {
       login(accessToken, user, rememberUsername)
       navigate('/inventory', { replace: true })
     } catch (err) {
-      if (err.message === 'Network Error') {
-        setError('Backend is unavailable. Please make sure the server is running.')
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+        setError('Backend service is unavailable. Please verify that the API server is online.')
       } else if (err.response?.status === 401) {
-        setError('Invalid username/email or password. Please check your credentials.')
+        setError('Invalid username/email or password. Please verify your credentials.')
+      } else if (err.response?.status === 403) {
+        setError('Access denied. Your account is inactive or not authorized to access StockPilot.')
+      } else if (err.response?.status === 429) {
+        setError('Too many login attempts. Please wait a minute and try again.')
+      } else if (err.response?.status === 400) {
+        const errorData = err.response.data
+        const validationMsg = errorData?.errors
+          ? Object.values(errorData.errors).flat().join(' ')
+          : errorData?.message || errorData?.title || 'Validation error. Please verify your input.'
+        setError(validationMsg)
+      } else if (err.response?.status >= 500) {
+        setError('A server error occurred while processing authentication. Please try again later.')
       } else {
         setError(err.response?.data?.message || 'Login failed. Please check your credentials.')
       }
@@ -178,34 +190,36 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Quick Demo Persona Chips */}
-            <div className="demo-personas-container">
-              <div className="demo-personas-header">
-                <div className="demo-header-title">
-                  <Zap size={13} className="demo-bolt-icon" aria-hidden="true" />
-                  <span>Quick Test Personas</span>
+            {/* Quick Demo Persona Chips (Development Only) */}
+            {import.meta.env.DEV && (
+              <div className="demo-personas-container">
+                <div className="demo-personas-header">
+                  <div className="demo-header-title">
+                    <Zap size={13} className="demo-bolt-icon" aria-hidden="true" />
+                    <span>Quick Test Personas (Dev Mode)</span>
+                  </div>
+                  <span className="demo-hint-text">Click to auto-fill</span>
                 </div>
-                <span className="demo-hint-text">Click to auto-fill</span>
+                <div className="demo-pills-grid">
+                  {DEMO_PERSONAS.map((persona) => {
+                    const isSelected = username === persona.username
+                    return (
+                      <button
+                        key={persona.label}
+                        type="button"
+                        className={`demo-pill-btn ${isSelected ? 'active' : ''}`}
+                        onClick={() => handleSelectPersona(persona)}
+                        title={`Click to fill ${persona.label} credentials`}
+                      >
+                        <span className="pill-icon">{persona.icon}</span>
+                        <span className="pill-name">{persona.label}</span>
+                        {isSelected && <Check size={13} className="pill-check-icon" aria-hidden="true" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="demo-pills-grid">
-                {DEMO_PERSONAS.map((persona) => {
-                  const isSelected = username === persona.username
-                  return (
-                    <button
-                      key={persona.label}
-                      type="button"
-                      className={`demo-pill-btn ${isSelected ? 'active' : ''}`}
-                      onClick={() => handleSelectPersona(persona)}
-                      title={`Click to fill ${persona.label} credentials`}
-                    >
-                      <span className="pill-icon">{persona.icon}</span>
-                      <span className="pill-name">{persona.label}</span>
-                      {isSelected && <Check size={13} className="pill-check-icon" aria-hidden="true" />}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            )}
 
             {error && (
               <div className="login-error-wrapper">

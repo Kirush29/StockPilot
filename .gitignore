@@ -35,6 +35,8 @@ node_modules/
 dist/
 **/dist/
 dist-ssr/
+.vite/
+**/.vite/
 *.local
 .eslintcache
 npm-debug.log*

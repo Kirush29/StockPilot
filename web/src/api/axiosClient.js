@@ -4,8 +4,13 @@ function getAuthToken() {
   return sessionStorage.getItem('stockpilot_token') || localStorage.getItem('stockpilot_token')
 }
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL
+const resolvedBaseUrl = rawBaseUrl && rawBaseUrl.trim() !== ''
+  ? rawBaseUrl.trim().replace(/\/+$/, '')
+  : (import.meta.env.DEV ? 'http://localhost:5257' : '')
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5257',
+  baseURL: resolvedBaseUrl,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 })

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace StockPilot.Application.DTOs;
 
@@ -43,6 +43,9 @@ public class CreateUserDto
     public string Address { get; set; } = string.Empty;
     public string District { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+
+    [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters long if provided.")]
+    public string? Password { get; set; }
 }
 
 public class UpdateUserDto

@@ -6,8 +6,9 @@ DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/open
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 
+load_dotenv()
+
 def get_provider():
-    load_dotenv()
     provider = os.environ.get("AGENT_MODEL_PROVIDER", "").strip().lower()
     if provider:
         return provider
@@ -20,14 +21,12 @@ def get_provider():
     return None
 
 def get_model_name():
-    load_dotenv()
     provider = get_provider()
     if provider == "gemini":
         return os.environ.get("GEMINI_MODEL") or os.environ.get("AGENT_MODEL_NAME") or DEFAULT_GEMINI_MODEL
     return os.environ.get("OPENAI_MODEL") or os.environ.get("AGENT_MODEL_NAME") or DEFAULT_OPENAI_MODEL
 
 def get_openai_client():
-    load_dotenv()
     provider = get_provider()
     
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")

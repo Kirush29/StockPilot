@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -75,18 +75,43 @@ public class UsersController(StockPilotDbContext db) : ControllerBase
         });
     }
 
+    private static readonly HashSet<string> AllowedRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        StockPilot.Shared.Identity.StockPilotIdentity.Roles.BusinessOwner,
+        StockPilot.Shared.Identity.StockPilotIdentity.Roles.ProcurementManager,
+        StockPilot.Shared.Identity.StockPilotIdentity.Roles.BranchManager,
+        StockPilot.Shared.Identity.StockPilotIdentity.Roles.StoreEmployee
+    };
+
     [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser([FromBody] CreateUserDto dto)
     {
-        if ((dto.Role == "BranchManager" || dto.Role == "StoreEmployee") && dto.BranchId == null)
+        if (!AllowedRoles.Contains(dto.Role))
         {
-            ModelState.AddModelError("BranchId", "Branch is required for this role.");
+            ModelState.AddModelError("Role", $"Invalid role. Allowed roles are: {string.Join(", ", AllowedRoles)}");
             return ValidationProblem(ModelState);
         }
 
-        if (dto.Role == "StoreEmployee" && string.IsNullOrWhiteSpace(dto.EmployeeNumber))
+        if (dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.BranchManager ||
+            dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.StoreEmployee)
         {
-            ModelState.AddModelError("EmployeeNumber", "Employee number is required.");
+            if (dto.BranchId == null)
+            {
+                ModelState.AddModelError("BranchId", "Branch is required for this role.");
+                return ValidationProblem(ModelState);
+            }
+
+            var branchExists = await db.Branches.AnyAsync(b => b.BranchId == dto.BranchId.Value);
+            if (!branchExists)
+            {
+                ModelState.AddModelError("BranchId", "The specified branch does not exist.");
+                return ValidationProblem(ModelState);
+            }
+        }
+
+        if (dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.StoreEmployee && string.IsNullOrWhiteSpace(dto.EmployeeNumber))
+        {
+            ModelState.AddModelError("EmployeeNumber", "Employee number is required for store employees.");
             return ValidationProblem(ModelState);
         }
 
@@ -104,6 +129,8 @@ public class UsersController(StockPilotDbContext db) : ControllerBase
         }
 
         var normalizedPhone = NormalizePhone(dto.PhoneNumber);
+        var passwordToUse = !string.IsNullOrWhiteSpace(dto.Password) ? dto.Password : "TempPassword123!";
+        var mustChangePassword = string.IsNullOrWhiteSpace(dto.Password);
 
         var user = new User
         {
@@ -119,11 +146,11 @@ public class UsersController(StockPilotDbContext db) : ControllerBase
             BranchId = dto.BranchId,
             IsActive = dto.IsActive,
             CreatedAt = DateTime.UtcNow,
-            MustChangePassword = true
+            MustChangePassword = mustChangePassword
         };
 
         var hasher = new PasswordHasher<User>();
-        user.PasswordHash = hasher.HashPassword(user, "TempPassword123!"); // Temporary password
+        user.PasswordHash = hasher.HashPassword(user, passwordToUse);
 
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -151,15 +178,32 @@ public class UsersController(StockPilotDbContext db) : ControllerBase
         var user = await db.Users.FindAsync(id);
         if (user == null) return NotFound();
 
-        if ((dto.Role == "BranchManager" || dto.Role == "StoreEmployee") && dto.BranchId == null)
+        if (!AllowedRoles.Contains(dto.Role))
         {
-            ModelState.AddModelError("BranchId", "Branch is required for this role.");
+            ModelState.AddModelError("Role", $"Invalid role. Allowed roles are: {string.Join(", ", AllowedRoles)}");
             return ValidationProblem(ModelState);
         }
 
-        if (dto.Role == "StoreEmployee" && string.IsNullOrWhiteSpace(dto.EmployeeNumber))
+        if (dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.BranchManager ||
+            dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.StoreEmployee)
         {
-            ModelState.AddModelError("EmployeeNumber", "Employee number is required.");
+            if (dto.BranchId == null)
+            {
+                ModelState.AddModelError("BranchId", "Branch is required for this role.");
+                return ValidationProblem(ModelState);
+            }
+
+            var branchExists = await db.Branches.AnyAsync(b => b.BranchId == dto.BranchId.Value);
+            if (!branchExists)
+            {
+                ModelState.AddModelError("BranchId", "The specified branch does not exist.");
+                return ValidationProblem(ModelState);
+            }
+        }
+
+        if (dto.Role == StockPilot.Shared.Identity.StockPilotIdentity.Roles.StoreEmployee && string.IsNullOrWhiteSpace(dto.EmployeeNumber))
+        {
+            ModelState.AddModelError("EmployeeNumber", "Employee number is required for store employees.");
             return ValidationProblem(ModelState);
         }
 
@@ -246,6 +290,11 @@ public class UsersController(StockPilotDbContext db) : ControllerBase
     [HttpPost("{id}/reset-password")]
     public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetPasswordAdminDto dto)
     {
+        if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 8)
+        {
+            return BadRequest(new { Message = "New password must be at least 8 characters long." });
+        }
+
         var user = await db.Users.FindAsync(id);
         if (user == null) return NotFound();
 
