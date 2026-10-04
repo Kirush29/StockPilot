@@ -94,14 +94,14 @@ export default function Sidebar({ isOpen = false, onClose }) {
         {/* Brand Header */}
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="brand-icon-wrapper">
-              <BoxIcon style={{ width: 20, height: 20 }} />
+            <div className="brand-icon-wrapper" style={{ overflow: 'hidden', padding: 0, border: '1px solid rgba(255, 255, 255, 0.2)', boxShadow: '0 0 12px rgba(6, 182, 212, 0.3)' }}>
+              <img src="/stockpilot_logo.jpg" alt="StockPilot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div className="brand-text">
               <span className="brand-name">
                 Stock<span>Pilot</span>
               </span>
-              <span className="brand-tag">Inventory v1.0</span>
+              <span className="brand-tag">AI Enterprise</span>
             </div>
           </div>
           <button
