@@ -194,6 +194,9 @@ string[] defaultDevOrigins =
 var allowedOrigins = (rawOrigins != null && rawOrigins.Length > 0)
     ? rawOrigins
     : (builder.Environment.IsDevelopment() ? defaultDevOrigins : Array.Empty<string>());
+    // ADD THIS
+Console.WriteLine(
+    $"CORS allowed origins: {string.Join(", ", allowedOrigins)}");
 
 builder.Services.AddCors(options =>
 {
