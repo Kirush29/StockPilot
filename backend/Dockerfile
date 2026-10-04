@@ -43,12 +43,11 @@ COPY --from=build /app/publish .
 COPY agentic-ai/ ./agentic-ai/
 RUN pip install --no-cache-dir --break-system-packages -r ./agentic-ai/requirements.txt
 
-# Default environment configuration
-ENV ASPNETCORE_URLS=http://+:5004 \
+ENV ASPNETCORE_URLS=http://+:10000 \
     ASPNETCORE_ENVIRONMENT=Production \
     AgenticAi__WorkingDirectory=/app/agentic-ai \
     AgenticAi__PythonPath=python3
 
-EXPOSE 5004
+EXPOSE 10000
 
 ENTRYPOINT ["dotnet", "StockPilot.Api.dll"]
