@@ -5,21 +5,43 @@ const AuthContext = createContext(null)
 const TOKEN_KEY = 'stockpilot_token'
 const USER_KEY = 'stockpilot_user'
 
-export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem(USER_KEY)
-    return savedUser ? JSON.parse(savedUser) : null
-  })
+function getStoredToken() {
+  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY)
+}
 
-  const login = (accessToken, userData) => {
-    localStorage.setItem(TOKEN_KEY, accessToken)
-    localStorage.setItem(USER_KEY, JSON.stringify(userData))
+function getStoredUser() {
+  const raw = sessionStorage.getItem(USER_KEY) || localStorage.getItem(USER_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [token, setToken] = useState(getStoredToken)
+  const [user, setUser] = useState(getStoredUser)
+
+  const login = (accessToken, userData, remember = false) => {
+    if (remember) {
+      localStorage.setItem(TOKEN_KEY, accessToken)
+      localStorage.setItem(USER_KEY, JSON.stringify(userData))
+      sessionStorage.removeItem(TOKEN_KEY)
+      sessionStorage.removeItem(USER_KEY)
+    } else {
+      sessionStorage.setItem(TOKEN_KEY, accessToken)
+      sessionStorage.setItem(USER_KEY, JSON.stringify(userData))
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
+    }
     setToken(accessToken)
     setUser(userData)
   }
 
   const logout = () => {
+    sessionStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(USER_KEY)
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     setToken(null)

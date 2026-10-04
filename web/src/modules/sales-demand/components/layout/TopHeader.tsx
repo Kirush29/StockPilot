@@ -375,7 +375,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#059669' }}>
-                            ${sale.totalAmount.toFixed(2)}
+                            Rs. {sale.totalAmount.toFixed(2)}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: 'var(--primary-color)' }}>
                             View in Ledger &rarr;

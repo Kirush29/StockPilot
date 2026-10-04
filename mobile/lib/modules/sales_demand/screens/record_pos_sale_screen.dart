@@ -1,4 +1,4 @@
-﻿import '../../../shared/theme/app_theme.dart';
+import '../../../shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/auth/providers/auth_provider.dart';
@@ -46,16 +46,45 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
   double get _total => _subTotal + _tax;
 
   Future<void> _submitTransaction() async {
-    if (_cartItems.isEmpty) return;
+    if (_cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot complete sale: Cart is empty. Please add at least one item.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    for (final item in _cartItems) {
+      if (item.quantity <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid quantity for "${item.productName}". Quantity must be at least 1.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      if (item.unitPrice < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid unit price for "${item.productName}". Unit price in Rs. cannot be negative.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    }
 
     setState(() => _isSubmitting = true);
 
     final payload = CreateSalePayload(
       branchName: _selectedBranch,
       paymentMethod: _paymentMethod,
-      customerReference: _customerController.text.isEmpty
+      customerReference: _customerController.text.trim().isEmpty
           ? 'Walk-in Customer'
-          : _customerController.text,
+          : _customerController.text.trim(),
       items: _cartItems,
     );
 
@@ -67,8 +96,8 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(success
-              ? 'Sale recorded successfully!'
-              : 'Failed to record sale. Check backend connection.'),
+              ? 'Sale transaction recorded successfully!'
+              : 'Failed to record sale. Please check backend connection.'),
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
@@ -114,7 +143,7 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
                 labelStyle: TextStyle(color: Colors.grey),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             const Align(
               alignment: Alignment.centerLeft,
               child: Text('Scanned Cart Items',
@@ -133,10 +162,10 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
                       title: Text(item.productName,
                           style: const TextStyle(color: AppTokens.textPrimary)),
                       subtitle: Text(
-                          '${item.quantity} × \$${item.unitPrice.toStringAsFixed(2)}',
+                          '${item.quantity} × Rs. ${item.unitPrice.toStringAsFixed(2)}',
                           style: const TextStyle(color: Colors.grey)),
                       trailing: Text(
-                          '\$${(item.quantity * item.unitPrice).toStringAsFixed(2)}',
+                          'Rs. ${(item.quantity * item.unitPrice).toStringAsFixed(2)}',
                           style: const TextStyle(
                               color: AppTokens.secondary,
                               fontWeight: FontWeight.bold)),
@@ -158,7 +187,7 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
                       children: [
                         const Text('Subtotal:',
                             style: TextStyle(color: Colors.grey)),
-                        Text('\$${_subTotal.toStringAsFixed(2)}',
+                        Text('Rs. ${_subTotal.toStringAsFixed(2)}',
                             style: const TextStyle(color: AppTokens.textPrimary)),
                       ]),
                   const SizedBox(height: 4),
@@ -167,7 +196,7 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
                       children: [
                         const Text('Tax (8%):',
                             style: TextStyle(color: Colors.grey)),
-                        Text('\$${_tax.toStringAsFixed(2)}',
+                        Text('Rs. ${_tax.toStringAsFixed(2)}',
                             style: const TextStyle(color: AppTokens.textPrimary)),
                       ]),
                   const Divider(color: AppTokens.border),
@@ -179,7 +208,7 @@ class _RecordPosSaleScreenState extends ConsumerState<RecordPosSaleScreen> {
                                 color: AppTokens.textPrimary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16)),
-                        Text('\$${_total.toStringAsFixed(2)}',
+                        Text('Rs. ${_total.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 color: AppTokens.success,
                                 fontWeight: FontWeight.bold,

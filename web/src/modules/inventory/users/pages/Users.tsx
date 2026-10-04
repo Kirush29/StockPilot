@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Shield, Search, Lock } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import Badge from '../components/ui/Badge';
@@ -111,7 +111,9 @@ export default function Users() {
     const errs: any = {};
     if (!formData.fullName.trim()) errs.fullName = 'Full Name is required.';
     if (!/^[a-zA-Z][a-zA-Z0-9._-]*$/.test(formData.username)) errs.username = 'Username must start with a letter and contain only letters, numbers, dot, underscore, or hyphen.';
-    if (!formData.email.includes('@')) errs.email = 'Invalid email address.';
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = 'Please enter a valid email address (e.g. user@example.com).';
+    }
     if (!/^(\+94|0)[1-9][0-9]{8}$/.test(formData.phoneNumber)) errs.phoneNumber = 'Invalid Sri Lankan phone number format (+94... or 0...).';
     if (!formData.district) errs.district = 'District is required.';
     if (formData.role === 'StoreEmployee' && !formData.employeeNumber) errs.employeeNumber = 'Employee Number is required for Store Employees.';

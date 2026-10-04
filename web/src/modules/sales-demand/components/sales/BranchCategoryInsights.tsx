@@ -149,7 +149,7 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
                     </span>
                   </div>
                   <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    ${branch.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs. {branch.revenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
@@ -205,7 +205,7 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ${cat.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rs. {cat.revenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

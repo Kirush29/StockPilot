@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Check, ShoppingCart } from 'lucide-react';
+import { X, Plus, Trash2, Check, ShoppingCart, AlertCircle } from 'lucide-react';
 import type { CreateSaleRequest } from '../../types/sales';
 import { salesApi } from '../../services/api';
 
@@ -27,6 +27,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   const [customerReference, setCustomerReference] = useState('');
   const [notes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [items, setItems] = useState([
     {
@@ -43,6 +44,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   if (!isOpen) return null;
 
   const handleAddItem = () => {
+    setValidationError(null);
     const defaultProduct = PRESET_PRODUCTS[items.length % PRESET_PRODUCTS.length];
     setItems([
       ...items,
@@ -59,12 +61,14 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   };
 
   const handleRemoveItem = (index: number) => {
+    setValidationError(null);
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
     }
   };
 
   const handleProductSelect = (index: number, productId: string) => {
+    setValidationError(null);
     const found = PRESET_PRODUCTS.find((p) => p.id === productId);
     if (!found) return;
 
@@ -81,12 +85,14 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   };
 
   const handleQuantityChange = (index: number, qty: number) => {
+    setValidationError(null);
     const newItems = [...items];
     newItems[index].quantity = Math.max(1, qty);
     setItems(newItems);
   };
 
   const handleDiscountChange = (index: number, discount: number) => {
+    setValidationError(null);
     const newItems = [...items];
     newItems[index].discountPercent = Math.max(0, Math.min(100, discount));
     setItems(newItems);
@@ -98,15 +104,48 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   const tax = Math.round((subtotal - discountTotal) * 0.05 * 100) / 100;
   const grandTotal = (subtotal - discountTotal) + tax;
 
+  const validate = (): string | null => {
+    if (!branchName.trim()) {
+      return 'Please select a branch location.';
+    }
+    if (items.length === 0) {
+      return 'Please add at least one product item to the transaction.';
+    }
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (!it.productId) {
+        return `Please select a product for line item #${i + 1}.`;
+      }
+      if (isNaN(it.quantity) || it.quantity <= 0) {
+        return `Quantity for "${it.productName}" must be at least 1.`;
+      }
+      if (isNaN(it.unitPrice) || it.unitPrice < 0) {
+        return `Unit price for "${it.productName}" must be a valid amount in Rs. (0 or greater).`;
+      }
+      if (it.discountPercent < 0 || it.discountPercent > 100) {
+        return `Discount percentage for "${it.productName}" must be between 0% and 100%.`;
+      }
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
+
+    const errorMsg = validate();
+    if (errorMsg) {
+      setValidationError(errorMsg);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const payload: CreateSaleRequest = {
         branchName,
         paymentMethod,
-        customerReference: customerReference || undefined,
+        customerReference: customerReference.trim() || undefined,
         notes: notes || undefined,
         items
       };
@@ -115,7 +154,8 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
       onSaleCreated();
       onClose();
     } catch (err: any) {
-      alert('Failed to record sale: ' + (err.response?.data?.error || err.message));
+      const apiMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+      setValidationError(`Failed to record sale: ${apiMsg || 'Please verify your network connection and server status.'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,6 +181,24 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit}>
+          {validationError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 14px',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: 'var(--radius-sm)',
+              color: '#B91C1C',
+              fontSize: '0.85rem',
+              marginBottom: 16
+            }}>
+              <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+              <span>{validationError}</span>
+            </div>
+          )}
+
           {/* Branch & Payment Method & Customer */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr', gap: 14, marginBottom: 20 }}>
             <div>
@@ -309,7 +367,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                   <div>
                     <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', textAlign: 'right' }}>Total</label>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', paddingTop: 6 }}>
-                      ${lineTotal.toFixed(2)}
+                      Rs. {lineTotal.toFixed(2)}
                     </div>
                   </div>
 
@@ -343,17 +401,17 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 6 }}>
               <span>Subtotal</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>${subtotal.toFixed(2)}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Rs. {subtotal.toFixed(2)}</span>
             </div>
             {discountTotal > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#059669', marginBottom: 6 }}>
                 <span>Total Discount</span>
-                <span>-${discountTotal.toFixed(2)}</span>
+                <span>-Rs. {discountTotal.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 10 }}>
               <span>Standard Tax (5%)</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>+${tax.toFixed(2)}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>+Rs. {tax.toFixed(2)}</span>
             </div>
             <div style={{
               display: 'flex',
@@ -365,7 +423,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
               paddingTop: 10
             }}>
               <span>Grand Total</span>
-              <span style={{ color: '#059669' }}>${grandTotal.toFixed(2)}</span>
+              <span style={{ color: '#059669' }}>Rs. {grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -376,7 +434,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
             </button>
             <button type="submit" className="btn btn-emerald" disabled={isSubmitting}>
               <Check size={16} />
-              {isSubmitting ? 'Recording Sale...' : `Confirm & Record ($${grandTotal.toFixed(2)})`}
+              {isSubmitting ? 'Recording Sale...' : `Confirm & Record (Rs. ${grandTotal.toFixed(2)})`}
             </button>
           </div>
         </form>

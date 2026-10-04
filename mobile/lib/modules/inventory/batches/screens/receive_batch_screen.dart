@@ -45,7 +45,15 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please check and fill all required fields correctly.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -57,8 +65,8 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
         'batchNumber': _batchNumberController.text.trim(),
         'productId': _selectedProductId,
         'branchId': authState.user?.branchId,
-        'quantity': double.parse(_quantityController.text),
-        'unitCost': double.tryParse(_costController.text) ?? 0.0,
+        'quantity': double.parse(_quantityController.text.trim()),
+        'unitCost': double.tryParse(_costController.text.trim()) ?? 0.0,
         'expiryDate': _expiryDate.toIso8601String(),
         'receivedDate': DateTime.now().toUtc().toIso8601String(),
         // Inventory's CreateBatchDto has no supplier field; supplier comes from the purchase order (D14).
@@ -79,7 +87,10 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Failed to receive batch. Please verify batch data and connection.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -111,7 +122,7 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedProductId = v),
                       validator: (v) =>
-                          v == null ? 'Select received product' : null,
+                          v == null ? 'Please select a received product' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -119,7 +130,7 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
                       decoration: const InputDecoration(
                           labelText: 'Batch / Lot Number'),
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Enter batch number'
+                          ? 'Please enter batch or lot number'
                           : null,
                     ),
                     const SizedBox(height: 16),
@@ -129,9 +140,10 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
                       decoration:
                           const InputDecoration(labelText: 'Quantity Received'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Enter quantity';
-                        if (double.tryParse(v) == null) {
-                          return 'Enter valid number';
+                        if (v == null || v.trim().isEmpty) return 'Please enter quantity received';
+                        final qty = double.tryParse(v.trim());
+                        if (qty == null || qty <= 0) {
+                          return 'Quantity must be a valid number greater than 0';
                         }
                         return null;
                       },
@@ -141,7 +153,16 @@ class _ReceiveBatchScreenState extends ConsumerState<ReceiveBatchScreen> {
                       controller: _costController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                          labelText: 'Unit Purchase Cost (\$)'),
+                          labelText: 'Unit Purchase Cost (Rs.)'),
+                      validator: (v) {
+                        if (v != null && v.trim().isNotEmpty) {
+                          final cost = double.tryParse(v.trim());
+                          if (cost == null || cost < 0) {
+                            return 'Enter a valid cost in Rs. (0 or greater)';
+                          }
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

@@ -52,14 +52,15 @@ export default function App() {
       <ProcurementProvider>
         <BrowserRouter>
           <Routes>
+            {/* Root entry: always routes to /login first */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
 
             {/* Protected Routes — all authenticated users */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
-                <Route index element={<Navigate to="/inventory" replace />} />
-
                 {/* Auth Profile */}
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/change-password" element={<ChangePasswordPage />} />
@@ -119,6 +120,9 @@ export default function App() {
                 </Route>
               </Route>
             </Route>
+
+            {/* Fallback for unmapped routes */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
       </ProcurementProvider>

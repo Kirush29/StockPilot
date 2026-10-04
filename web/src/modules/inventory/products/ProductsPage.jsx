@@ -63,9 +63,9 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError, 
   const validate = () => {
     const e = {}
     if (!form.name.trim()) e.name = 'Product name is required.'
-    if (!form.sku.trim()) e.sku = 'SKU is required.'
-    if (!form.categoryId) e.categoryId = 'Category is required.'
-    if (!form.unit.trim()) e.unit = 'Unit is required (e.g. pcs, kg, box).'
+    if (!form.sku.trim()) e.sku = 'SKU is required (e.g. SKU-ITEM-001).'
+    if (!form.categoryId) e.categoryId = 'Please select a product category.'
+    if (!form.unit.trim()) e.unit = 'Unit of measure is required (e.g. pcs, kg, box).'
 
     const cost   = parseFloat(form.costPrice)
     const sell   = parseFloat(form.sellingPrice)
@@ -73,11 +73,24 @@ function ProductModal({ initial, categories, onSave, onClose, saving, apiError, 
     const reord  = parseFloat(form.reorderLevel)
     const maxQty = parseFloat(form.maximumStockLevel)
 
-    if (form.costPrice === '' || isNaN(cost) || cost < 0) e.costPrice = 'Must be 0 or greater.'
-    if (form.sellingPrice === '' || isNaN(sell) || sell < 0) e.sellingPrice = 'Must be 0 or greater.'
-    if (form.minimumStockLevel !== '' && (isNaN(minQty) || minQty < 0)) e.minimumStockLevel = 'Must be 0 or greater.'
-    if (form.reorderLevel !== '' && (isNaN(reord) || reord < 0)) e.reorderLevel = 'Must be 0 or greater.'
-    if (form.maximumStockLevel !== '' && (isNaN(maxQty) || maxQty < 0)) e.maximumStockLevel = 'Must be 0 or greater.'
+    if (form.costPrice === '' || isNaN(cost) || cost < 0) {
+      e.costPrice = 'Cost price must be a valid amount in Rs. (0 or greater).'
+    }
+    if (form.sellingPrice === '' || isNaN(sell) || sell < 0) {
+      e.sellingPrice = 'Selling price must be a valid amount in Rs. (0 or greater).'
+    }
+    if (form.minimumStockLevel !== '' && (isNaN(minQty) || minQty < 0)) {
+      e.minimumStockLevel = 'Minimum stock level must be 0 or greater.'
+    }
+    if (form.reorderLevel !== '' && (isNaN(reord) || reord < 0)) {
+      e.reorderLevel = 'Reorder level must be 0 or greater.'
+    }
+    if (form.maximumStockLevel !== '' && (isNaN(maxQty) || maxQty < 0)) {
+      e.maximumStockLevel = 'Maximum stock level must be 0 or greater.'
+    }
+    if (!isNaN(minQty) && !isNaN(maxQty) && form.minimumStockLevel !== '' && form.maximumStockLevel !== '' && maxQty < minQty) {
+      e.maximumStockLevel = 'Maximum stock level cannot be less than minimum stock level.'
+    }
     return e
   }
 

@@ -44,7 +44,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ analytics, forecastConfidenc
           </div>
         </div>
         <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#FFF', letterSpacing: '-0.02em', marginBottom: 4 }}>
-          ${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          Rs. {revenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: '#10B981' }}>
           <span className="badge badge-emerald" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>+14.2%</span>
@@ -79,7 +79,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ analytics, forecastConfidenc
           {totalUnits.toLocaleString()} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>units</span>
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Across <strong style={{ color: '#FFF' }}>{transactions}</strong> orders (Avg: ${avgOrder.toFixed(2)})
+          Across <strong style={{ color: '#FFF' }}>{transactions}</strong> orders (Avg: Rs. {avgOrder.toFixed(2)})
         </div>
       </div>
 

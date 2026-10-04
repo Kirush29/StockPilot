@@ -50,7 +50,15 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please correct the validation errors in the transfer request.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     if (_sourceBranchId == _destinationBranchId) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +80,7 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
         'items': [
           {
             'productId': _selectedProductId,
-            'requestedQuantity': double.parse(_quantityController.text),
+            'requestedQuantity': double.parse(_quantityController.text.trim()),
           }
         ],
       };
@@ -92,7 +100,10 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Failed to submit transfer request. Please verify connection and parameters.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -124,7 +135,7 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
                       }).toList(),
                       onChanged: (v) => setState(() => _sourceBranchId = v),
                       validator: (v) =>
-                          v == null ? 'Select source branch' : null,
+                          v == null ? 'Please select a source branch' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -139,8 +150,13 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
                       }).toList(),
                       onChanged: (v) =>
                           setState(() => _destinationBranchId = v),
-                      validator: (v) =>
-                          v == null ? 'Select destination branch' : null,
+                      validator: (v) {
+                        if (v == null) return 'Please select a destination branch';
+                        if (v == _sourceBranchId) {
+                          return 'Destination must be different from source branch';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -154,7 +170,7 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedProductId = v),
-                      validator: (v) => v == null ? 'Select product' : null,
+                      validator: (v) => v == null ? 'Please select a product to transfer' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -163,9 +179,10 @@ class _CreateTransferScreenState extends ConsumerState<CreateTransferScreen> {
                       decoration:
                           const InputDecoration(labelText: 'Transfer Quantity'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Enter quantity';
-                        if (double.tryParse(v) == null) {
-                          return 'Enter valid number';
+                        if (v == null || v.trim().isEmpty) return 'Please enter transfer quantity';
+                        final qty = double.tryParse(v.trim());
+                        if (qty == null || qty <= 0) {
+                          return 'Transfer quantity must be a valid number greater than 0';
                         }
                         return null;
                       },

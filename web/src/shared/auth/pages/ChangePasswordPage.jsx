@@ -36,8 +36,25 @@ export default function ChangePasswordPage() {
         setFieldErrors({});
         setSuccess('');
 
-        if (formData.newPassword !== formData.confirmPassword) {
-            setFieldErrors({ confirmPassword: "New password and confirm password do not match." });
+        const errors = {};
+        if (!formData.currentPassword) {
+            errors.currentPassword = "Please enter your current password.";
+        }
+        if (!formData.newPassword) {
+            errors.newPassword = "Please enter a new password.";
+        } else if (formData.newPassword.length < 8) {
+            errors.newPassword = "New password must be at least 8 characters long.";
+        } else if (formData.newPassword === formData.currentPassword) {
+            errors.newPassword = "New password cannot be the same as your current password.";
+        }
+        if (!formData.confirmPassword) {
+            errors.confirmPassword = "Please confirm your new password.";
+        } else if (formData.newPassword !== formData.confirmPassword) {
+            errors.confirmPassword = "New password and confirm password do not match.";
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             setLoading(false);
             return;
         }

@@ -203,10 +203,10 @@ export const CustomerBehaviorWidget: React.FC<CustomerBehaviorWidgetProps> = ({ 
 
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
-                  ${cust.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  Rs. {cust.totalSpend.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
-                  Avg ${(cust.totalSpend / Math.max(cust.orderCount, 1)).toFixed(0)}/order
+                  Avg Rs. {(cust.totalSpend / Math.max(cust.orderCount, 1)).toFixed(0)}/order
                 </div>
               </div>
             </div>

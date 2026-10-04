@@ -52,7 +52,7 @@ export const ActivityPipeline: React.FC<ActivityPipelineProps> = ({
             </span>
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Total Invoiced: <strong style={{ color: '#059669' }}>${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            Total Invoiced: <strong style={{ color: '#059669' }}>Rs. {totalRevenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </span>
         </div>
 
@@ -65,7 +65,7 @@ export const ActivityPipeline: React.FC<ActivityPipelineProps> = ({
                 {confirmedCount} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>orders</span>
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--primary-color)', marginTop: 2 }}>
-                ~${(totalRevenue * 0.2).toFixed(0)} volume
+                ~Rs. {(totalRevenue * 0.2).toFixed(0)} volume
               </div>
             </div>
             <div style={{
