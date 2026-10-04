@@ -50,7 +50,15 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please correct the validation errors in the adjustment form.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -59,9 +67,9 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
       final payload = {
         'productId': _selectedProductId,
         'branchId': _selectedBranchId,
-        'quantity': double.parse(_quantityController.text),
+        'quantity': double.parse(_quantityController.text.trim()),
         'movementType': _movementType,
-        'reason': _notesController.text,
+        'reason': _notesController.text.trim(),
       };
 
       await apiClient.post('/api/stock-movements/adjustment', data: payload);
@@ -79,7 +87,10 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Failed to log stock adjustment. Please verify connection and try again.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -109,7 +120,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedProductId = v),
-                      validator: (v) => v == null ? 'Select product' : null,
+                      validator: (v) => v == null ? 'Please select a product' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -122,7 +133,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedBranchId = v),
-                      validator: (v) => v == null ? 'Select branch' : null,
+                      validator: (v) => v == null ? 'Please select a branch' : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
@@ -147,9 +158,10 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Quantity'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Enter quantity';
-                        if (double.tryParse(v) == null) {
-                          return 'Enter valid number';
+                        if (v == null || v.trim().isEmpty) return 'Please enter quantity';
+                        final qty = double.tryParse(v.trim());
+                        if (qty == null || qty <= 0) {
+                          return 'Quantity must be a valid number greater than 0';
                         }
                         return null;
                       },

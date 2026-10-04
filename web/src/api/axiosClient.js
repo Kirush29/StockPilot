@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 function getAuthToken() {
-  return localStorage.getItem('stockpilot_token')
+  return sessionStorage.getItem('stockpilot_token') || localStorage.getItem('stockpilot_token')
 }
 
 const apiClient = axios.create({
@@ -27,6 +27,8 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      sessionStorage.removeItem('stockpilot_token')
+      sessionStorage.removeItem('stockpilot_user')
       localStorage.removeItem('stockpilot_token')
       localStorage.removeItem('stockpilot_user')
       if (window.location.pathname !== '/login') {

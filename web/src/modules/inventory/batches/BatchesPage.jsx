@@ -92,16 +92,21 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
 
   function validate() {
     const e = {}
-    if (!form.productId) e.productId = 'Product is required.'
+    if (!form.productId) e.productId = 'Please select a product.'
     if (!form.branchId) e.branchId = 'Branch ID is required.'
     if (!form.batchNumber.trim()) e.batchNumber = 'Batch number is required.'
     if (form.quantity === '' || isNaN(Number(form.quantity)) || Number(form.quantity) < 0) {
-      e.quantity = 'Quantity must be 0 or greater.'
+      e.quantity = 'Quantity must be a valid number (0 or greater).'
+    }
+    if (form.unitCost !== '' && (isNaN(Number(form.unitCost)) || Number(form.unitCost) < 0)) {
+      e.unitCost = 'Unit cost must be a valid amount in Rs. (0 or greater).'
     }
     if (!form.expiryDate) {
       e.expiryDate = 'Expiry date is required.'
     } else if (isNaN(new Date(form.expiryDate).getTime())) {
-      e.expiryDate = 'Invalid expiry date.'
+      e.expiryDate = 'Please enter a valid expiry date.'
+    } else if (form.manufacturingDate && new Date(form.manufacturingDate) > new Date(form.expiryDate)) {
+      e.expiryDate = 'Expiry date cannot be earlier than manufacturing date.'
     }
     return e
   }

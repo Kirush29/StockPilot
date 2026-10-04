@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type Supplier, type SupplierRating, supplierService, type SaveSupplierRequest, type CreateSupplierRatingRequest } from '../services/supplierService';
 import { Search, Plus, Edit2, Trash2, Star, X, AlertCircle, Building2 } from 'lucide-react';
 
@@ -163,12 +163,25 @@ export default function Suppliers() {
   };
 
   const validateForm = () => {
-    if (!formData.supplierCode.trim()) return 'Supplier Code is required.';
-    if (!formData.name.trim()) return 'Supplier Name is required.';
-    if (!formData.contactEmail.trim()) return 'Contact Email is required.';
-    if (!/^\S+@\S+\.\S+$/.test(formData.contactEmail)) return 'Contact Email must be a valid email format.';
-    if (!formData.contactPhone.trim()) return 'Contact Phone is required.';
-    if (!formData.address.trim()) return 'Address is required.';
+    const errors: Record<string, string> = {};
+    if (!formData.supplierCode.trim()) errors.supplierCode = 'Supplier code is required (e.g. SUP-001).';
+    if (!formData.name.trim()) errors.name = 'Supplier name is required.';
+    if (!formData.contactEmail.trim()) {
+      errors.contactEmail = 'Contact email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail.trim())) {
+      errors.contactEmail = 'Please enter a valid email format (e.g. supplier@company.com).';
+    }
+    if (!formData.contactPhone.trim()) {
+      errors.contactPhone = 'Contact phone number is required.';
+    } else if (!/^[0-9+\-\s()]{7,20}$/.test(formData.contactPhone.trim())) {
+      errors.contactPhone = 'Please enter a valid phone number (e.g. +94 11 234 5678).';
+    }
+    if (!formData.address.trim()) errors.address = 'Physical or registered address is required.';
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return Object.values(errors)[0];
+    }
     return null;
   };
 

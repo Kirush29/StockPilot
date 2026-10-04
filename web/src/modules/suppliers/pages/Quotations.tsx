@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type Quotation, type QuotationStatus, quotationService, type SaveQuotationRequest } from '../services/quotationService';
 import { supplierService, type Supplier } from '../services/supplierService';
 import { productService, type Product } from '../services/productService';
@@ -117,20 +117,40 @@ export default function Quotations() {
   };
 
   const validateForm = () => {
-    if (!formData.supplierId.trim()) return 'Supplier ID is required.';
-    if (!formData.productId.trim()) return 'Product ID is required.';
+    const errors: Record<string, string> = {};
+    if (!formData.supplierId.trim()) errors.supplierId = 'Please select a supplier.';
+    if (!formData.productId.trim()) errors.productId = 'Please select a product item.';
 
     const unitPrice = parseFloat(formData.unitPrice);
-    if (isNaN(unitPrice) || unitPrice <= 0) return 'Unit Price must be greater than 0.';
+    if (!formData.unitPrice || isNaN(unitPrice) || unitPrice <= 0) {
+      errors.unitPrice = 'Unit price must be a valid amount in Rs. greater than 0.';
+    }
 
     const quantity = parseInt(formData.quantity, 10);
-    if (isNaN(quantity) || quantity <= 0) return 'Quantity must be greater than 0.';
+    if (!formData.quantity || isNaN(quantity) || quantity <= 0) {
+      errors.quantity = 'Quantity must be a valid number greater than 0.';
+    }
 
     const deliveryDays = parseInt(formData.deliveryDays, 10);
-    if (isNaN(deliveryDays) || deliveryDays < 0) return 'Delivery Days must be 0 or greater.';
+    if (formData.deliveryDays !== '' && (isNaN(deliveryDays) || deliveryDays < 0)) {
+      errors.deliveryDays = 'Delivery days must be 0 or greater.';
+    }
 
-    if (!formData.validUntil.trim()) return 'Valid Until date is required.';
+    if (!formData.validUntil.trim()) {
+      errors.validUntil = 'Please select an expiration date for the quotation.';
+    } else {
+      const selectedDate = new Date(formData.validUntil);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate < today) {
+        errors.validUntil = 'Quotation expiration date cannot be in the past.';
+      }
+    }
 
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return Object.values(errors)[0];
+    }
     return null;
   };
 
@@ -329,7 +349,7 @@ export default function Quotations() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price (Rs.) *</label>
                     <input
                       type="number"
                       step="0.01"

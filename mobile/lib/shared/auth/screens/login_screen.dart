@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/common_widgets.dart';
@@ -26,7 +26,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please correct the validation errors in the login form.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
@@ -39,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final error = ref.read(authStateProvider).errorMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error ?? 'Login failed. Please check credentials.'),
+          content: Text(error ?? 'Login failed. Please check your credentials and try again.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -89,9 +97,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       labelText: 'Username or Email',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Please enter username or email'
-                        : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Please enter your username or email';
+                      }
+                      final trimmed = v.trim();
+                      if (trimmed.contains('@')) {
+                        final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                        if (!emailRegex.hasMatch(trimmed)) {
+                          return 'Please enter a valid email address (e.g. name@domain.com)';
+                        }
+                      } else if (trimmed.length < 3) {
+                        return 'Username must be at least 3 characters long';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -108,8 +128,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             () => _obscurePassword = !_obscurePassword),
                       ),
                     ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Please enter password' : null,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      if (v.length < 6) {
+                        return 'Password must be at least 6 characters long';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(

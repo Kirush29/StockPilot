@@ -101,7 +101,7 @@ class _ProductLookupScreenState extends ConsumerState<ProductLookupScreen> {
                           'Category: ${_product!["categoryName"] ?? "General"}'),
                       const SizedBox(height: 12),
                       Text(
-                        'Selling Price: \$${(_product!["price"] as num?)?.toStringAsFixed(2) ?? "0.00"}',
+                        'Selling Price: Rs. ${(_product!["price"] as num?)?.toStringAsFixed(2) ?? "0.00"}',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

@@ -168,7 +168,7 @@ class _PurchaseOrderStatusScreenState
                   children: [
                     Expanded(
                       child: Text(
-                        '\$${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
+                        'Rs. ${order.totalCost.toStringAsFixed(2)} · ${order.expectedDeliveryDate != null ? 'Expected ${order.expectedDeliveryDate}' : 'No delivery date yet'}',
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ),

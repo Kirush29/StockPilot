@@ -113,7 +113,7 @@ class _BarcodeScannerScreenState extends ConsumerState<BarcodeScannerScreen> {
                                       color: Colors.green.shade50,
                                       borderRadius: BorderRadius.circular(4)),
                                   child: Text(
-                                    '\$${(_scannedProduct!['sellingPrice'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
+                                    'Rs. ${(_scannedProduct!['sellingPrice'] as num?)?.toStringAsFixed(2) ?? "0.00"}',
                                     style: TextStyle(
                                         color: Colors.green.shade900,
                                         fontWeight: FontWeight.bold),

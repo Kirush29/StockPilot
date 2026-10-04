@@ -41,7 +41,7 @@ void main() {
     ]) {
       expect(find.text(text), findsOneWidget, reason: text);
     }
-    expect(find.textContaining('\$1500.00'), findsOneWidget);
+    expect(find.textContaining('Rs. 1500.00'), findsOneWidget);
     expect(find.text('Receive'), findsNWidgets(2),
         reason: 'only Ordered and PartiallyReceived can be received');
   });

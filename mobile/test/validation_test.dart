@@ -1,14 +1,41 @@
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('LKR Formatting works', () {
-    // Assuming a formatter like `LkrFormatter.format(1000)` -> `LKR 1,000.00`
-    // Since we didn't extract a formatter class, we test the logic.
+  test('Rs. Currency formatting works', () {
     String formatCurrency(double amount) {
-      return 'LKR ${amount.toStringAsFixed(2)}';
+      return 'Rs. ${amount.toStringAsFixed(2)}';
     }
 
-    expect(formatCurrency(1500.5), 'LKR 1500.50');
+    expect(formatCurrency(1500.5), 'Rs. 1500.50');
+    expect(formatCurrency(0), 'Rs. 0.00');
+  });
+
+  test('Email validation works', () {
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    expect(emailRegex.hasMatch('test@domain.com'), true);
+    expect(emailRegex.hasMatch('invalid-email'), false);
+    expect(emailRegex.hasMatch('invalid@domain'), false);
+  });
+
+  test('Price and quantity validation works', () {
+    bool isValidPrice(String value) {
+      final parsed = double.tryParse(value);
+      return parsed != null && parsed >= 0;
+    }
+
+    bool isValidQuantity(String value) {
+      final parsed = double.tryParse(value);
+      return parsed != null && parsed > 0;
+    }
+
+    expect(isValidPrice('150.00'), true);
+    expect(isValidPrice('0'), true);
+    expect(isValidPrice('-10'), false);
+    expect(isValidPrice('abc'), false);
+
+    expect(isValidQuantity('5'), true);
+    expect(isValidQuantity('0'), false);
+    expect(isValidQuantity('-1'), false);
   });
 
   test('Password complexity validation works', () {

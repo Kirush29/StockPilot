@@ -56,7 +56,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
     );
   }
 
-  // Estimated price per unit for revenue projection mode ($24.50 avg SKU price)
+  // Estimated price per unit for revenue projection mode (Rs. 24.50 avg SKU price)
   const estUnitPrice = 24.50;
 
   // Format data for Recharts with confidence interval band calculations
@@ -261,7 +261,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
           </div>
           <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#059669' }}>
             {metricMode === 'revenue' 
-              ? `$${Math.round(forecast.predictedTotalDemand * estUnitPrice).toLocaleString()}`
+              ? `Rs. ${Math.round(forecast.predictedTotalDemand * estUnitPrice).toLocaleString()}`
               : `${forecast.predictedTotalDemand.toLocaleString()} units`}
           </div>
           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -337,7 +337,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
               fontSize={11}
               tickLine={false}
               axisLine={{ stroke: '#E2E8F0' }}
-              tickFormatter={(v) => (metricMode === 'revenue' ? `$${v}` : `${v}`)}
+              tickFormatter={(v) => (metricMode === 'revenue' ? `Rs. ${v}` : `${v}`)}
             />
             <Tooltip
               content={({ active, payload, label }) => {
@@ -359,20 +359,20 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#0068FF' }} />
                         <span style={{ color: 'var(--text-muted)' }}>Predicted:</span>
-                        <strong>{metricMode === 'revenue' ? `$${data.predicted.toLocaleString()}` : `${data.predicted} units`}</strong>
+                        <strong>{metricMode === 'revenue' ? `Rs. ${data.predicted.toLocaleString()}` : `${data.predicted} units`}</strong>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#818CF8' }} />
                         <span style={{ color: 'var(--text-muted)' }}>Upper Bound (95%):</span>
-                        <span>{metricMode === 'revenue' ? `$${data.upperBound.toLocaleString()}` : `${data.upperBound} units`}</span>
+                        <span>{metricMode === 'revenue' ? `Rs. ${data.upperBound.toLocaleString()}` : `${data.upperBound} units`}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#38BDF8' }} />
                         <span style={{ color: 'var(--text-muted)' }}>Lower Bound (95%):</span>
-                        <span>{metricMode === 'revenue' ? `$${data.lowerBound.toLocaleString()}` : `${data.lowerBound} units`}</span>
+                        <span>{metricMode === 'revenue' ? `Rs. ${data.lowerBound.toLocaleString()}` : `${data.lowerBound} units`}</span>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#0068FF', backgroundColor: '#EFF6FF', padding: '3px 6px', borderRadius: 4 }}>
-                        Confidence Spread: &plusmn;{metricMode === 'revenue' ? `$${data.spread}` : `${data.spread} units`}
+                        Confidence Spread: &plusmn;{metricMode === 'revenue' ? `Rs. ${data.spread}` : `${data.spread} units`}
                       </div>
                     </div>
                   );
@@ -398,7 +398,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
               stroke="#0068FF"
               strokeWidth={2.8}
               fill="url(#predGradient)"
-              name={metricMode === 'revenue' ? 'Predicted Revenue ($)' : 'Predicted Demand (Units)'}
+              name={metricMode === 'revenue' ? 'Predicted Revenue (Rs.)' : 'Predicted Demand (Units)'}
             />
             {/* Lower Bound */}
             <Area

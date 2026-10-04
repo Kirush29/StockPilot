@@ -339,14 +339,14 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
                           {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'}
                         </span>
                       </td>
-                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>${sale.subTotal.toFixed(2)}</td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Rs. {sale.subTotal.toFixed(2)}</td>
                       <td style={{ fontSize: '0.8rem', color: sale.discountAmount > 0 ? '#059669' : 'var(--text-muted)' }}>
-                        -${sale.discountAmount.toFixed(2)}
+                        -Rs. {sale.discountAmount.toFixed(2)}
                       </td>
-                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>+${sale.taxAmount.toFixed(2)}</td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>+Rs. {sale.taxAmount.toFixed(2)}</td>
                       <td style={{ textAlign: 'right' }}>
                         <strong style={{ color: 'var(--text-primary)', fontSize: '0.92rem' }}>
-                          ${sale.totalAmount.toFixed(2)}
+                          Rs. {sale.totalAmount.toFixed(2)}
                         </strong>
                       </td>
                     </tr>
@@ -372,9 +372,9 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
                                   <th style={{ padding: '5px 8px' }}>SKU</th>
                                   <th style={{ padding: '5px 8px' }}>Category</th>
                                   <th style={{ padding: '5px 8px', textAlign: 'center' }}>Quantity</th>
-                                  <th style={{ padding: '5px 8px', textAlign: 'right' }}>Unit Price</th>
+                                  <th style={{ padding: '5px 8px', textAlign: 'right' }}>Unit Price (Rs.)</th>
                                   <th style={{ padding: '5px 8px', textAlign: 'right' }}>Discount</th>
-                                  <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total</th>
+                                  <th style={{ padding: '5px 8px', textAlign: 'right' }}>Total (Rs.)</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -384,12 +384,12 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
                                     <td style={{ padding: '7px 8px', color: 'var(--text-muted)' }}><code>{item.productSku}</code></td>
                                     <td style={{ padding: '7px 8px', color: 'var(--text-muted)' }}>{item.category}</td>
                                     <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
-                                    <td style={{ padding: '7px 8px', textAlign: 'right' }}>${item.unitPrice.toFixed(2)}</td>
+                                    <td style={{ padding: '7px 8px', textAlign: 'right' }}>Rs. {item.unitPrice.toFixed(2)}</td>
                                     <td style={{ padding: '7px 8px', textAlign: 'right', color: item.discountPercent > 0 ? '#059669' : 'inherit' }}>
                                       {item.discountPercent}%
                                     </td>
                                     <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
-                                      ${(item.totalPrice ?? (item.quantity * item.unitPrice * (1 - item.discountPercent / 100))).toFixed(2)}
+                                      Rs. {(item.totalPrice ?? (item.quantity * item.unitPrice * (1 - item.discountPercent / 100))).toFixed(2)}
                                     </td>
                                   </tr>
                                 ))}

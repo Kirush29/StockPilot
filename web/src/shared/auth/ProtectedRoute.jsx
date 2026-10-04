@@ -24,7 +24,7 @@ import { useAuth } from './AuthContext'
  * boundary and still returns 401/403 on its own.
  * @param {string} [redirectTo]
  */
-export default function ProtectedRoute({ roles, redirectTo = '/' }) {
+export default function ProtectedRoute({ roles, redirectTo = '/inventory' }) {
   const { isAuthenticated, user } = useAuth()
 
   if (!isAuthenticated()) {

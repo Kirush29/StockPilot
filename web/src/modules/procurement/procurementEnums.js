@@ -71,7 +71,7 @@ export function isWithinApprovalLimit(role, amount) {
 
 export function formatCurrency(amount) {
   const n = Number(amount) || 0
-  return n.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+  return `Rs. ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export function formatGuid(id, length = 8) {

@@ -155,7 +155,7 @@ export const TopSellingWidget: React.FC<TopSellingWidgetProps> = ({ products, sl
 
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
-                      ${item.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rs. {item.totalRevenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                       {item.unitsSold} units sold
@@ -203,7 +203,7 @@ export const TopSellingWidget: React.FC<TopSellingWidgetProps> = ({ products, sl
                       {item.unitsSold} units sold
                     </div>
                     <div style={{ fontSize: '0.68rem', color: '#7F1D1D' }}>
-                      ${item.totalRevenue.toFixed(2)} invoiced
+                      Rs. {item.totalRevenue.toFixed(2)} invoiced
                     </div>
                   </div>
                 </div>

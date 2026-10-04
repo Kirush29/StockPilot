@@ -154,7 +154,7 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
               </span>
             </div>
             <span style={{ fontWeight: 600, color: '#0068FF' }}>
-              ${peakDay.averageRevenue.toFixed(0)} avg revenue
+              Rs. {peakDay.averageRevenue.toFixed(0)} avg revenue
             </span>
           </div>
 
@@ -193,7 +193,7 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
                         }}>
                           <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
                           <div>Avg Demand: <strong>{data.averageQuantity.toFixed(1)} units</strong></div>
-                          <div>Avg Revenue: <strong>${data.averageRevenue.toFixed(2)}</strong></div>
+                          <div>Avg Revenue: <strong>Rs. {data.averageRevenue.toFixed(2)}</strong></div>
                         </div>
                       );
                     }
@@ -270,7 +270,7 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
                       {spike.totalQuantity} units
                     </div>
                     <div style={{ fontSize: '0.7rem', color: '#7F1D1D' }}>
-                      ${spike.totalRevenue.toFixed(2)}
+                      Rs. {spike.totalRevenue.toFixed(2)}
                     </div>
                   </div>
                 </div>

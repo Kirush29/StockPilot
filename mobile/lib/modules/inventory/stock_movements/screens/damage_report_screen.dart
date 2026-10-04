@@ -42,7 +42,15 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please correct the validation errors in the damage report.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -55,7 +63,7 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
         'branchId': authState.user?.branchId,
         'quantity': double.parse(_quantityController.text),
         'movementType': 4, // MovementType.WriteOff — Inventory's adjustment for damaged/expired stock
-        'reason': 'DAMAGED/EXPIRED: ${_reasonController.text}',
+        'reason': 'DAMAGED/EXPIRED: ${_reasonController.text.trim()}',
       };
 
       await apiClient.post('/api/stock-movements/adjustment', data: payload);
@@ -66,14 +74,17 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Damage report logged successfully!'),
-            backgroundColor: Colors.orange),
+            backgroundColor: Colors.green),
       );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Failed to submit damage report: ${e.toString().replaceAll("Exception:", "").trim()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -105,7 +116,7 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedProductId = v),
                       validator: (v) =>
-                          v == null ? 'Select damaged product' : null,
+                          v == null ? 'Please select the damaged or expired product' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -114,9 +125,10 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
                       decoration:
                           const InputDecoration(labelText: 'Damaged Quantity'),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Enter quantity';
-                        if (double.tryParse(v) == null) {
-                          return 'Enter valid number';
+                        if (v == null || v.trim().isEmpty) return 'Please enter damaged quantity';
+                        final parsed = double.tryParse(v);
+                        if (parsed == null || parsed <= 0) {
+                          return 'Please enter a valid quantity greater than 0';
                         }
                         return null;
                       },
@@ -128,7 +140,7 @@ class _DamageReportScreenState extends ConsumerState<DamageReportScreen> {
                           labelText: 'Reason for Damage / Expiry Note'),
                       maxLines: 3,
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Describe damage cause'
+                          ? 'Please describe the cause of damage or expiry reason'
                           : null,
                     ),
                     const SizedBox(height: 24),
