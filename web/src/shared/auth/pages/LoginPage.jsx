@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Zap, Check } from 'lucide-react'
 import { authApi } from '../../../api/authApi'
 import { useAuth } from '../AuthContext'
 import ErrorState from '../../../components/ui/ErrorState'
@@ -7,7 +8,7 @@ import { FormInput } from '../../../components/ui/FormControls'
 import './login.css'
 
 const DEMO_PERSONAS = [
-  { label: 'Business Owner', username: 'owner@stockpilot.local', password: 'DevPassword123!', icon: '👑' },
+  { label: 'Business Owner', username: 'business@stockpilot.local', password: 'DevPassword123!', icon: '👑' },
   { label: 'Procurement Mgr', username: 'procurement@stockpilot.local', password: 'DevPassword123!', icon: '📦' },
   { label: 'Branch Manager', username: 'branch@stockpilot.local', password: 'DevPassword123!', icon: '🏬' },
   { label: 'Store Employee', username: 'employee@stockpilot.local', password: 'DevPassword123!', icon: '👷' },
@@ -97,11 +98,11 @@ export default function LoginPage() {
         <aside className="login-hero-side">
           <div className="hero-brand-row">
             <img src="/stockpilot_logo.jpg" alt="StockPilot Logo" className="hero-logo-img" />
-            <div>
+            <div className="hero-brand-info">
               <span className="hero-brand-name">StockPilot</span>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+              <div className="hero-meta-row">
                 <span className="hero-badge-tag">AI-Powered</span>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Enterprise v2.4</span>
+                <span className="hero-version-tag">Enterprise v2.4</span>
               </div>
             </div>
           </div>
@@ -111,7 +112,10 @@ export default function LoginPage() {
               <img src="/login_hero.jpg" alt="Autonomous Inventory Control" className="hero-main-img" />
 
               <div className="hero-float-card hero-float-top">
-                <div className="float-badge-icon green">📈</div>
+                <div className="float-badge-icon green">
+                  <span className="live-pulse-dot" />
+                  📈
+                </div>
                 <div>
                   <div className="float-badge-title">99.4% Stock Accuracy</div>
                   <div className="float-badge-sub">Live Telemetry & Sync</div>
@@ -139,7 +143,7 @@ export default function LoginPage() {
           </div>
         </aside>
 
-        {/* Right: Modern Sign-In Portal */}
+        {/* Right: Modern SaaS Sign-In Portal */}
         <main className="login-form-side">
           <div className="login-form-card">
             <div className="login-form-header">
@@ -148,19 +152,12 @@ export default function LoginPage() {
             </div>
 
             {isAuthenticated() && (
-              <div style={{
-                background: 'var(--color-bg-secondary, #F8FAFC)',
-                border: '1px solid var(--color-border, #E2E8F0)',
-                borderRadius: '12px',
-                padding: '14px 16px',
-                marginBottom: '20px',
-                fontSize: '13px',
-                color: 'var(--color-text)'
-              }}>
-                <div style={{ marginBottom: '10px' }}>
-                  Currently signed in as <strong>{user?.fullName || user?.username || 'Authenticated User'}</strong> ({user?.role || 'Staff'}).
+              <div className="login-authenticated-card">
+                <div className="authenticated-info">
+                  Currently signed in as <strong>{user?.fullName || user?.username || 'Authenticated User'}</strong>{' '}
+                  <span className="role-tag">({user?.role || 'Staff'})</span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="authenticated-actions">
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
@@ -181,72 +178,89 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Quick Demo Persona Pills */}
+            {/* Quick Demo Persona Chips */}
             <div className="demo-personas-container">
-              <div className="demo-personas-label">
-                <span>⚡ Quick Test Personas</span>
-                <span className="hint">Click to auto-fill</span>
+              <div className="demo-personas-header">
+                <div className="demo-header-title">
+                  <Zap size={13} className="demo-bolt-icon" aria-hidden="true" />
+                  <span>Quick Test Personas</span>
+                </div>
+                <span className="demo-hint-text">Click to auto-fill</span>
               </div>
-              <div className="demo-pills-row">
-                {DEMO_PERSONAS.map((persona) => (
-                  <button
-                    key={persona.label}
-                    type="button"
-                    className="demo-pill-btn"
-                    onClick={() => handleSelectPersona(persona)}
-                    title={`Click to fill ${persona.label} credentials`}
-                  >
-                    <span className="pill-icon">{persona.icon}</span>
-                    <span>{persona.label}</span>
-                  </button>
-                ))}
+              <div className="demo-pills-grid">
+                {DEMO_PERSONAS.map((persona) => {
+                  const isSelected = username === persona.username
+                  return (
+                    <button
+                      key={persona.label}
+                      type="button"
+                      className={`demo-pill-btn ${isSelected ? 'active' : ''}`}
+                      onClick={() => handleSelectPersona(persona)}
+                      title={`Click to fill ${persona.label} credentials`}
+                    >
+                      <span className="pill-icon">{persona.icon}</span>
+                      <span className="pill-name">{persona.label}</span>
+                      {isSelected && <Check size={13} className="pill-check-icon" aria-hidden="true" />}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             {error && (
-              <div style={{ marginBottom: '20px' }}>
+              <div className="login-error-wrapper">
                 <ErrorState error={error} inline />
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <FormInput
                 label="Username or Email"
+                id="login-username"
+                className="login-input-group"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
                 placeholder="Enter your username or email"
                 required
+                prefix={<Mail size={18} className="login-input-icon" aria-hidden="true" />}
               />
               <FormInput
                 label="Password"
+                id="login-password"
+                className="login-input-group login-input-with-suffix"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 placeholder="Enter your password"
                 required
+                prefix={<Lock size={18} className="login-input-icon" aria-hidden="true" />}
                 suffix={
-                  <span
-                    style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)' }}
+                  <button
+                    type="button"
+                    className="login-pwd-toggle"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={0}
                   >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </span>
+                    {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                    <span>{showPassword ? 'Hide' : 'Show'}</span>
+                  </button>
                 }
               />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '13px', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <div className="login-remember-row">
+                <label htmlFor="rememberUsername" className="login-remember-label">
                   <input
                     type="checkbox"
                     id="rememberUsername"
                     checked={rememberUsername}
                     onChange={(e) => setRememberUsername(e.target.checked)}
                     disabled={loading}
-                    style={{ marginRight: '8px', cursor: 'pointer' }}
+                    className="login-checkbox"
                   />
-                  Remember Username
+                  <span>Remember Username</span>
                 </label>
               </div>
 
@@ -257,13 +271,13 @@ export default function LoginPage() {
               >
                 {loading ? (
                   <>
-                    <span className="btn-spinner" />
+                    <span className="btn-spinner" aria-hidden="true" />
                     <span>Signing in...</span>
                   </>
                 ) : (
                   <>
                     <span>Sign In</span>
-                    <span aria-hidden="true">&rarr;</span>
+                    <ArrowRight size={18} className="btn-arrow-icon" aria-hidden="true" />
                   </>
                 )}
               </button>
@@ -274,3 +288,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

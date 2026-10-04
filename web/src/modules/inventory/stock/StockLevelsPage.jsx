@@ -1,6 +1,6 @@
 // StockLevelsPage.jsx — Polished SaaS Stock Health & Inventory Levels
 import React, { useState, useEffect, useCallback } from 'react'
-import { inventoryApi, productsApi } from '../../../api/inventoryApi'
+import { inventoryApi, productsApi, branchesApi } from '../../../api/inventoryApi'
 import StatCard from '../../../components/ui/StatCard'
 import Badge from '../../../components/ui/Badge'
 import EmptyState from '../../../components/ui/EmptyState'
@@ -19,10 +19,12 @@ import '../../../shared/theme/inventory.css'
 export default function StockLevelsPage() {
   const [rows, setRows]                   = useState([])
   const [products, setProducts]           = useState([])
+  const [branches, setBranches]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(null)
   const [search, setSearch]               = useState('')
   const [productFilter, setProductFilter] = useState('')
+  const [branchFilter, setBranchFilter]   = useState('')
   const [lowStockOnly, setLowStockOnly]   = useState(false)
 
   const fetchAll = useCallback(async () => {
@@ -54,6 +56,9 @@ export default function StockLevelsPage() {
     productsApi.getAll(true)
       .then(r => setProducts(r.data?.data ?? []))
       .catch(() => {})
+    branchesApi.getAll()
+      .then(r => setBranches((r.data?.data ?? []).filter(b => b.isActive !== false)))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -80,6 +85,7 @@ export default function StockLevelsPage() {
   }).length
 
   const visible = rows.filter(r => {
+    if (branchFilter && r.branchId !== branchFilter) return false
     if (productFilter && r.productId !== productFilter) return false
     return true
   })
@@ -176,9 +182,23 @@ export default function StockLevelsPage() {
             )}
           </div>
 
+          {branches.length > 1 && (
+            <select
+              className="form-control"
+              style={{ flex: '0 0 190px' }}
+              value={branchFilter}
+              onChange={e => setBranchFilter(e.target.value)}
+            >
+              <option value="">All Branches</option>
+              {branches.map(b => (
+                <option key={b.branchId} value={b.branchId}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
           <select
             className="form-control"
-            style={{ flex: '0 0 200px' }}
+            style={{ flex: '0 0 190px' }}
             value={productFilter}
             onChange={e => setProductFilter(e.target.value)}
           >
@@ -204,11 +224,11 @@ export default function StockLevelsPage() {
             </button>
           )}
 
-          {(search || productFilter || lowStockOnly) && (
+          {(search || productFilter || branchFilter || lowStockOnly) && (
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => { setSearch(''); setProductFilter(''); setLowStockOnly(false) }}
+              onClick={() => { setSearch(''); setProductFilter(''); setBranchFilter(''); setLowStockOnly(false) }}
             >
               Reset Filters
             </button>
