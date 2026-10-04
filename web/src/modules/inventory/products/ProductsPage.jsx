@@ -330,6 +330,8 @@ export default function ProductsPage() {
   const [search, setSearch]             = useState('')
   const [categoryFilter, setCatFilter]  = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [sortField, setSortField]       = useState('name')
+  const [sortOrder, setSortOrder]       = useState('asc')
 
   // Modal states: null | { mode: 'add'|'edit'|'deactivate', data?: any }
   const [modal, setModal]               = useState(null)
@@ -396,7 +398,8 @@ export default function ProductsPage() {
     setSaving(true)
     try {
       await productsApi.deactivate(id)
-      showToast('Product deactivated successfully.')
+      setShowInactive(true)
+      showToast('Product deactivated successfully. Inactive products view enabled.')
       setModal(null)
       loadData()
     } catch (err) {
@@ -404,6 +407,20 @@ export default function ProductsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const renderSortIndicator = (field) => {
+    if (sortField !== field) return <span style={{ opacity: 0.3, marginLeft: 4, fontSize: '10px' }}>↕</span>
+    return <span style={{ color: 'var(--color-primary)', marginLeft: 4, fontSize: '10px' }}>{sortOrder === 'asc' ? '▲' : '▼'}</span>
   }
 
   // Filter products in memory
@@ -417,6 +434,30 @@ export default function ProductsPage() {
       (p.sku && p.sku.toLowerCase().includes(q)) ||
       (p.barcode && p.barcode.toLowerCase().includes(q))
     )
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
+    let aVal = a[sortField]
+    let bVal = b[sortField]
+
+    if (sortField === 'status') {
+      aVal = a.isActive ? 1 : 0
+      bVal = b.isActive ? 1 : 0
+    } else if (sortField === 'category') {
+      aVal = categoryMap.get(a.categoryId) || ''
+      bVal = categoryMap.get(b.categoryId) || ''
+    } else if (sortField === 'costPrice' || sortField === 'sellingPrice' || sortField === 'reorderLevel') {
+      aVal = Number(aVal) || 0
+      bVal = Number(bVal) || 0
+    }
+
+    if (typeof aVal === 'string') {
+      const cmp = aVal.localeCompare(bVal || '')
+      return sortOrder === 'asc' ? cmp : -cmp
+    }
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
+    return 0
   })
 
   return (
@@ -559,20 +600,34 @@ export default function ProductsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
+                  <th onClick={() => handleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Product {renderSortIndicator('name')}
+                  </th>
+                  <th onClick={() => handleSort('sku')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    SKU {renderSortIndicator('sku')}
+                  </th>
                   <th>Barcode</th>
-                  <th>Category</th>
+                  <th onClick={() => handleSort('category')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Category {renderSortIndicator('category')}
+                  </th>
                   <th>Unit</th>
-                  <th style={{ textAlign: 'right' }}>Cost</th>
-                  <th style={{ textAlign: 'right' }}>Price</th>
-                  <th style={{ textAlign: 'right' }}>Reorder Lvl</th>
-                  <th>Status</th>
+                  <th onClick={() => handleSort('costPrice')} style={{ textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}>
+                    Cost {renderSortIndicator('costPrice')}
+                  </th>
+                  <th onClick={() => handleSort('sellingPrice')} style={{ textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}>
+                    Price {renderSortIndicator('sellingPrice')}
+                  </th>
+                  <th onClick={() => handleSort('reorderLevel')} style={{ textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}>
+                    Reorder Lvl {renderSortIndicator('reorderLevel')}
+                  </th>
+                  <th onClick={() => handleSort('status')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Status {renderSortIndicator('status')}
+                  </th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(p => (
+                {sorted.map(p => (
                   <tr key={p.productId}>
                     <td>
                       <strong style={{ color: 'var(--color-text)' }}>{p.name}</strong>

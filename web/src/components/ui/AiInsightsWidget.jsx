@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { optimizationApi, branchesApi } from '../../api/inventoryApi'
 import Badge from './Badge'
 import { CardSkeleton } from './Skeleton'
@@ -9,6 +10,7 @@ export default function AiInsightsWidget() {
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
   const [error, setError] = useState(null)
 
   const fetchBranches = useCallback(async () => {
@@ -62,18 +64,29 @@ export default function AiInsightsWidget() {
 
   const handleAction = async (rec, action) => {
     try {
+      setActionLoadingId(rec.recommendationId)
       if (action === 'Approve') {
         const res = await optimizationApi.approve(rec.recommendationId)
         const updatedRec = res.data?.data || res.data
         setRecommendations(prev => prev.map(r => r.recommendationId === rec.recommendationId ? updatedRec : r))
       } else if (action === 'Reject') {
-        const reason = window.prompt("Reason for rejection:")
-        if (!reason) return // Cancelled
+        const reason = window.prompt("Reason for dismissal:")
+        if (!reason) {
+          setActionLoadingId(null)
+          return // Cancelled
+        }
         await optimizationApi.reject(rec.recommendationId, reason)
         setRecommendations(prev => prev.filter(r => r.recommendationId !== rec.recommendationId))
       }
     } catch (err) {
-      alert('Failed to apply action: ' + (err.response?.data?.message ?? err.message))
+      const errMsg = err.response?.data?.detail 
+        || err.response?.data?.message 
+        || (typeof err.response?.data === 'string' ? err.response?.data : null)
+        || err.message 
+        || 'Failed to apply action.'
+      alert('Action notice: ' + errMsg)
+    } finally {
+      setActionLoadingId(null)
     }
   }
 
@@ -142,64 +155,84 @@ export default function AiInsightsWidget() {
               </tr>
             </thead>
             <tbody>
-              {recommendations.map(rec => (
-                <tr key={rec.recommendationId}>
-                  <td>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      <Badge variant={rec.recommendationType === 'Transfer' ? 'info' : 'warning'}>
-                        {rec.recommendationType}
-                      </Badge>
-                      <Badge variant={rec.priority === 'Critical' ? 'danger' : 'secondary'}>
-                        {rec.priority || 'High'}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td>
-                    <strong>{rec.product?.name ?? 'Unknown'}</strong>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      Issue: {rec.issueType || 'LowStock'}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ marginBottom: 4 }}>
-                      <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
-                        Suggest {rec.suggestedQuantity} units
-                      </span>
-                      <span style={{ marginLeft: 8, fontSize: 'var(--font-size-xs)', color: 'var(--color-success)' }}>
-                        {Math.round(rec.confidenceScore * 100)}% Match
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                      {rec.reasoning}
-                    </p>
-                  </td>
-                  <td>
-                    {rec.status === 'TransferCreated' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Transfer Created</span>
-                        <a href="/inventory/transfers" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>View Transfers →</a>
+              {recommendations.map(rec => {
+                const isTransfer = rec.recommendationType === 'Transfer'
+                const isReorder = rec.recommendationType === 'Reorder'
+                const isActionBusy = actionLoadingId === rec.recommendationId
+
+                return (
+                  <tr key={rec.recommendationId}>
+                    <td>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <Badge variant={isTransfer ? 'info' : isReorder ? 'warning' : 'secondary'}>
+                          {rec.recommendationType}
+                        </Badge>
+                        <Badge variant={rec.priority === 'Critical' ? 'danger' : 'secondary'}>
+                          {rec.priority || 'High'}
+                        </Badge>
                       </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                        <button
-                          type="button"
-                          className="btn btn-success btn-sm"
-                          onClick={() => handleAction(rec, 'Approve')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger-outline btn-sm"
-                          onClick={() => handleAction(rec, 'Reject')}
-                        >
-                          Dismiss
-                        </button>
+                    </td>
+                    <td>
+                      <strong>{rec.product?.name ?? 'Unknown'}</strong>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        Issue: {rec.issueType || 'LowStock'}
                       </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <div style={{ marginBottom: 4 }}>
+                        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                          Suggest {rec.suggestedQuantity} units
+                        </span>
+                        <span style={{ marginLeft: 8, fontSize: 'var(--font-size-xs)', color: 'var(--color-success)' }}>
+                          {Math.round(rec.confidenceScore * 100)}% Match
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        {rec.reasoning}
+                      </p>
+                    </td>
+                    <td>
+                      {rec.status === 'TransferCreated' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 'var(--font-size-xs)' }}>Transfer Created</span>
+                          <Link to="/inventory/transfers" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>View Transfers →</Link>
+                        </div>
+                      ) : rec.status === 'Approved' ? (
+                        <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 'var(--font-size-xs)' }}>Approved</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {isTransfer ? (
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm"
+                              onClick={() => handleAction(rec, 'Approve')}
+                              disabled={isActionBusy}
+                            >
+                              {isActionBusy ? 'Approving…' : 'Approve Transfer'}
+                            </button>
+                          ) : (
+                            <Link
+                              to={`/procurement/replenishment?branchId=${rec.destinationBranchId}&productId=${rec.productId}`}
+                              className="btn btn-primary btn-sm"
+                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              Order via Procurement →
+                            </Link>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-danger-outline btn-sm"
+                            onClick={() => handleAction(rec, 'Reject')}
+                            disabled={isActionBusy}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

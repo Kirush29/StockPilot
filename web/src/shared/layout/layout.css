@@ -179,6 +179,7 @@
   border-radius: 50%;
   background-color: var(--color-success);
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulseGlow 2s infinite;
 }
 
 /* ── Sidebar active link — monochrome white highlight ────────────────────── */
@@ -294,11 +295,12 @@
 }
 
 .topbar-status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--color-success);
-  box-shadow: 0 0 6px rgba(5, 150, 105, 0.6);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+  animation: pulseGlow 2s infinite;
 }
 
 /* ── Topbar: User button ─────────────────────────────────────────────────── */
@@ -460,6 +462,7 @@
   overscroll-behavior: contain;
   padding: var(--space-6);
   background: var(--color-bg);
+  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Responsive Breakdown ────────────────────────────────────────────────── */
