@@ -127,4 +127,24 @@ describe('Users administration in the shell', () => {
     const row = (await screen.findByText('John Doe')).closest('tr') ?? document.body
     expect(within(row as HTMLElement).getByText('@john')).toBeInTheDocument()
   })
+
+  it('handles ApiResponse branch envelope and opens Add User modal without crashing', async () => {
+    const BRANCH_ID = '22222222-2222-2222-2222-222222222222'
+    server.use(
+      http.get(`${API}/api/users`, () => HttpResponse.json([])),
+      http.get(`${API}/api/branches`, () => HttpResponse.json({
+        success: true,
+        data: [{ branchId: BRANCH_ID, name: 'Kandy Hub', branchCode: 'KDY-01' }],
+      })),
+    )
+    const user = renderIn({ '/users': <UsersPage /> }, '/users', 'BusinessOwner')
+
+    // Click Add User button
+    await user.click(await screen.findByRole('button', { name: /Add User/i }))
+
+    // Modal title should appear
+    expect(await screen.findByText('Add New User')).toBeInTheDocument()
+    // Branch option from envelope should be present
+    expect(await screen.findByRole('option', { name: /Kandy Hub/i })).toBeInTheDocument()
+  })
 })

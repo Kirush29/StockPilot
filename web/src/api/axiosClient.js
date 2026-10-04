@@ -11,7 +11,11 @@ const resolvedBaseUrl = rawBaseUrl && rawBaseUrl.trim() !== ''
 
 const apiClient = axios.create({
   baseURL: resolvedBaseUrl,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+  },
   timeout: 15000,
 })
 
@@ -51,10 +55,11 @@ apiClient.interceptors.response.use(
 
       // ValidationProblemDetails (ASP.NET Core standard)
       if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
-        // Map camelCase or PascalCase keys to standard camelCase for the frontend
+        // Map camelCase or PascalCase keys (and strip JSON-path prefixes like "$.") to standard camelCase for the frontend
         error.fieldErrors = {};
         for (const [key, messages] of Object.entries(data.errors)) {
-          const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+          const cleanKey = key.replace(/^\$\.?/, '').replace(/^\[['"]?/, '').replace(/['"]?\]$/, '');
+          const camelKey = cleanKey ? (cleanKey.charAt(0).toLowerCase() + cleanKey.slice(1)) : key;
           error.fieldErrors[camelKey] = Array.isArray(messages) ? messages[0] : messages;
         }
       }

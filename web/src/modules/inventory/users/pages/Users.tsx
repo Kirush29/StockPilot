@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Shield, Search, Lock } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, Search, Lock, RefreshCw } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,11 +55,13 @@ export default function Users() {
     try {
       setLoading(true);
       const [usersRes, branchesRes] = await Promise.all([
-        apiClient.get<User[]>('/users' + (searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '')),
-        apiClient.get<any[]>('/branches?isActive=true')
+        apiClient.get<any>('/users' + (searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '')),
+        apiClient.get<any>('/branches?isActive=true')
       ]);
-      setUsers(usersRes);
-      setBranches(branchesRes);
+      const userList = Array.isArray(usersRes) ? usersRes : (usersRes?.data ?? []);
+      const branchList = Array.isArray(branchesRes) ? branchesRes : (branchesRes?.data ?? []);
+      setUsers(userList);
+      setBranches(branchList);
       setError(null);
     } catch (err: any) {
       setError(err.data?.message || 'Failed to load users');
@@ -99,7 +101,7 @@ export default function Users() {
         district: '',
         role: 'StoreEmployee',
         employeeNumber: '',
-        branchId: '',
+        branchId: branches.length > 0 ? branches[0].branchId : '',
         isActive: true
       });
     }
@@ -116,7 +118,13 @@ export default function Users() {
     }
     if (!/^(\+94|0)[1-9][0-9]{8}$/.test(formData.phoneNumber)) errs.phoneNumber = 'Invalid Sri Lankan phone number format (+94... or 0...).';
     if (!formData.district) errs.district = 'District is required.';
-    if (formData.role === 'StoreEmployee' && !formData.employeeNumber) errs.employeeNumber = 'Employee Number is required for Store Employees.';
+    if (formData.role === 'StoreEmployee' && !formData.employeeNumber?.trim()) errs.employeeNumber = 'Employee Number is required for Store Employees.';
+    if ((formData.role === 'BranchManager' || formData.role === 'StoreEmployee') && !formData.branchId) {
+      errs.branchId = 'Branch is required for Branch Managers and Store Employees.';
+    }
+    if (!isEditing && formData.password && formData.password.length < 8) {
+      errs.password = 'Password must be at least 8 characters long if provided.';
+    }
 
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
@@ -126,38 +134,64 @@ export default function Users() {
     e.preventDefault();
     if (!validate()) return;
 
+    const payload: any = {
+      fullName: formData.fullName.trim(),
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      phoneNumber: formData.phoneNumber.trim(),
+      address: formData.address?.trim() || '',
+      district: formData.district || '',
+      role: formData.role,
+      employeeNumber: formData.employeeNumber?.trim() ? formData.employeeNumber.trim().toUpperCase() : '',
+      branchId: (formData.role === 'BranchManager' || formData.role === 'StoreEmployee') && formData.branchId ? formData.branchId : null,
+      isActive: Boolean(formData.isActive)
+    };
+
+    if (!isEditing && formData.password?.trim()) {
+      payload.password = formData.password.trim();
+    }
+
     try {
       if (isEditing) {
-        await apiClient.put(`/users/${formData.userId}`, formData);
+        await apiClient.put(`/users/${formData.userId}`, payload);
       } else {
-        await apiClient.post('/users', formData);
+        await apiClient.post('/users', payload);
       }
       setShowModal(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
-      if (err.data?.errors) {
-        const apiErrors: any = {};
+      const apiErrors: any = {};
+      let hasFieldErrors = false;
+
+      if (err.data?.errors && typeof err.data.errors === 'object') {
         for (const [key, val] of Object.entries(err.data.errors)) {
-          apiErrors[key.charAt(0).toLowerCase() + key.slice(1)] = (val as string[])[0];
+          const cleanKey = key.replace(/^\$\.?/, '').replace(/^\[['"]?/, '').replace(/['"]?\]$/, '');
+          const normalizedKey = cleanKey.charAt(0).toLowerCase() + cleanKey.slice(1);
+          const message = Array.isArray(val) ? val[0] : (val as string);
+          apiErrors[normalizedKey] = message;
+          hasFieldErrors = true;
         }
-        setFormErrors(apiErrors);
-      } else {
-        setFormErrors({ general: err.data?.message || 'An error occurred' });
       }
+
+      const fallbackMsg = err.data?.message || err.data?.title || err.message || 'An error occurred while saving the user.';
+      if (!hasFieldErrors || err.data?.message) {
+        apiErrors.general = fallbackMsg;
+      }
+      setFormErrors(apiErrors);
     }
   };
 
   const toggleStatus = async (user: User) => {
     try {
       await apiClient.patch(`/users/${user.userId}/status`, { isActive: !user.isActive });
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       alert(err.data?.message || 'Failed to update status');
     }
   };
 
   const resetPassword = async (user: User) => {
-    const newPwd = prompt(`Enter new password for ${user.username}:`);
+    const newPwd = prompt(`Enter new password for ${user.username} (min 8 chars, uppercase, lowercase, number, symbol):`);
     if (!newPwd) return;
 
     try {
@@ -175,13 +209,24 @@ export default function Users() {
           <h1 className="text-2xl font-bold text-[var(--text-h)]">User Management</h1>
           <p className="text-[var(--text)] mt-1">Manage system users, roles, and access.</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add User
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchUsers()}
+            disabled={loading}
+            title="Refresh Users List"
+            className="flex items-center gap-1.5 border border-[var(--border)] hover:bg-gray-100 dark:hover:bg-gray-800 text-[var(--text-h)] px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add User
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-[#1f2028] border border-[var(--border)] rounded-xl p-4 shadow-sm flex gap-3 items-center">
@@ -353,7 +398,14 @@ export default function Users() {
                   <label className="block text-sm font-medium text-[var(--text-h)] mb-1">Role *</label>
                   <select
                     value={formData.role}
-                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    onChange={e => {
+                      const newRole = e.target.value;
+                      setFormData({
+                        ...formData,
+                        role: newRole,
+                        branchId: (newRole === 'BusinessOwner' || newRole === 'ProcurementManager') ? '' : formData.branchId
+                      });
+                    }}
                     className="w-full border border-[var(--border)] rounded-lg p-2.5 text-sm bg-transparent text-[var(--text-h)] focus:ring-black"
                   >
                     <option value="BusinessOwner">Business Owner</option>
@@ -379,29 +431,55 @@ export default function Users() {
                 </div>
 
                 <div className="col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-[var(--text-h)] mb-1">Employee Number</label>
+                  <label className="block text-sm font-medium text-[var(--text-h)] mb-1">
+                    Employee Number {formData.role === 'StoreEmployee' && '*'}
+                  </label>
                   <input
                     type="text"
                     value={formData.employeeNumber}
                     onChange={e => setFormData({ ...formData, employeeNumber: e.target.value })}
                     className={`w-full border rounded-lg p-2.5 text-sm ${formErrors.employeeNumber ? 'border-red-300 focus:ring-red-500' : 'border-[var(--border)] focus:ring-black'} bg-transparent text-[var(--text-h)]`}
+                    placeholder={formData.role === 'StoreEmployee' ? 'EMP-001' : 'Optional'}
                   />
                   {formErrors.employeeNumber && <p className="text-red-500 text-xs mt-1">{formErrors.employeeNumber}</p>}
                 </div>
 
-                {formData.role !== 'BusinessOwner' && (
+                {formData.role !== 'BusinessOwner' && formData.role !== 'ProcurementManager' && (
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-[var(--text-h)] mb-1">Branch</label>
+                    <label className="block text-sm font-medium text-[var(--text-h)] mb-1">
+                      Branch {(formData.role === 'BranchManager' || formData.role === 'StoreEmployee') && '*'}
+                    </label>
                     <select
-                      value={formData.branchId}
+                      value={formData.branchId || ''}
                       onChange={e => setFormData({ ...formData, branchId: e.target.value })}
-                      className="w-full border border-[var(--border)] rounded-lg p-2.5 text-sm bg-transparent text-[var(--text-h)] focus:ring-black"
+                      className={`w-full border rounded-lg p-2.5 text-sm bg-transparent text-[var(--text-h)] focus:ring-black ${
+                        formErrors.branchId ? 'border-red-300 focus:ring-red-500' : 'border-[var(--border)]'
+                      }`}
                     >
-                      <option value="">Headquarters / None</option>
+                      <option value="">
+                        {(formData.role === 'BranchManager' || formData.role === 'StoreEmployee') ? '-- Select a Branch --' : 'Headquarters / None'}
+                      </option>
                       {branches.map(b => (
                         <option key={b.branchId} value={b.branchId}>{b.name} ({b.branchCode})</option>
                       ))}
                     </select>
+                    {formErrors.branchId && <p className="text-red-500 text-xs mt-1">{formErrors.branchId}</p>}
+                  </div>
+                )}
+
+                {!isEditing && (
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium text-[var(--text-h)] mb-1">
+                      Initial Password <span className="text-gray-400 text-xs font-normal">(Default: TempPassword123!)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password || ''}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      className={`w-full border rounded-lg p-2.5 text-sm ${formErrors.password ? 'border-red-300 focus:ring-red-500' : 'border-[var(--border)] focus:ring-black'} bg-transparent text-[var(--text-h)]`}
+                      placeholder="Leave blank for default"
+                    />
+                    {formErrors.password && <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>}
                   </div>
                 )}
 
