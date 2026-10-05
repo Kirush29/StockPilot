@@ -1,14 +1,14 @@
 // TransfersPage.jsx — Full inter-branch stock transfer management
 import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import { transfersApi, branchesApi, productsApi, inventoryApi } from '../../api/inventoryApi'
+import { transfersApi, branchesApi, productsApi, inventoryApi, optimizationApi } from '../../api/inventoryApi'
 import { useAuth } from '../../shared/auth/AuthContext'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
 import { TableSkeleton, CardSkeleton } from '../../components/ui/Skeleton'
 import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
-import { RefreshIcon, TransfersIcon, CloseIcon } from '../../components/ui/Icons'
+import { RefreshIcon, TransfersIcon, CloseIcon, AlertCircleIcon, CheckCircleIcon } from '../../components/ui/Icons'
 import '../../shared/theme/inventory.css'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -501,17 +501,24 @@ function TransferDetailModal({ transfer, userRole, onClose, onAction }) {
 // ── TransfersPage ─────────────────────────────────────────────────────────────
 
 export default function TransfersPage() {
+  const location = useLocation()
   const { user }  = useAuth()
   const userRole  = user?.role ?? ''
 
   const canCreate = ['BranchManager', 'BusinessOwner', 'ProcurementManager', 'StoreEmployee'].includes(userRole)
+  const canReviewAi = ['BusinessOwner', 'ProcurementManager', 'BranchManager'].includes(userRole)
 
-  const [transfers, setTransfers]         = useState([])
-  const [branches, setBranches]           = useState([])
-  const [products, setProducts]           = useState([])
-  const [loading, setLoading]             = useState(true)
-  const [error, setError]                 = useState(null)
-  const [statusFilter, setStatusFilter]   = useState('all')
+  const [transfers, setTransfers]                 = useState([])
+  const [branches, setBranches]                   = useState([])
+  const [products, setProducts]                   = useState([])
+  const [aiRecommendations, setAiRecommendations] = useState([])
+  const [approvingRecId, setApprovingRecId]       = useState(null)
+  const [rejectingRecId, setRejectingRecId]       = useState(null)
+  const [aiActionMessage, setAiActionMessage]     = useState(null)
+  const [aiActionError, setAiActionError]         = useState(null)
+  const [loading, setLoading]                     = useState(true)
+  const [error, setError]                         = useState(null)
+  const [statusFilter, setStatusFilter]           = useState('all')
 
   const initialPrefill = location.state?.prefill
   const [showCreate, setShowCreate]       = useState(!!initialPrefill)
@@ -528,14 +535,23 @@ export default function TransfersPage() {
     setLoading(true)
     setError(null)
     try {
-      const [trRes, brRes, prRes] = await Promise.all([
+      const [trRes, brRes, prRes, recRes] = await Promise.all([
         transfersApi.getAll(),
         branchesApi.getAll().catch(() => ({ data: [] })),
         productsApi.getAll().catch(() => ({ data: [] })),
+        optimizationApi.getRecommendations().catch(() => ({ data: [] })),
       ])
       setTransfers(trRes.data?.data ?? trRes.data ?? [])
       setBranches(brRes.data?.data ?? brRes.data ?? [])
       setProducts(prRes.data?.data ?? prRes.data ?? [])
+      const recs = recRes.data?.data ?? recRes.data ?? []
+      const pendingTransfers = Array.isArray(recs)
+        ? recs.filter(r => 
+            (r.status === 'PendingReview' || r.status === 0) &&
+            (r.recommendationType === 'Transfer' || r.recommendationType === 0)
+          )
+        : []
+      setAiRecommendations(pendingTransfers)
     } catch (err) {
       setError(err.response?.data?.message ?? err.message ?? 'Failed to load transfers.')
     } finally {
@@ -544,6 +560,40 @@ export default function TransfersPage() {
   }, [])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  const handleApproveRecommendation = async (recId) => {
+    setApprovingRecId(recId)
+    setAiActionError(null)
+    setAiActionMessage(null)
+    try {
+      await optimizationApi.approve(recId)
+      setAiActionMessage('AI transfer recommendation approved! Transfer request created successfully.')
+      await fetchAll()
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.detail || 'Failed to approve transfer recommendation.'
+      setAiActionError(msg)
+    } finally {
+      setApprovingRecId(null)
+    }
+  }
+
+  const handleRejectRecommendation = async (recId) => {
+    const reason = window.prompt('Enter reason for rejecting this transfer recommendation:', 'Transfer not needed at destination branch')
+    if (reason === null) return
+    setRejectingRecId(recId)
+    setAiActionError(null)
+    setAiActionMessage(null)
+    try {
+      await optimizationApi.reject(recId, reason || 'Rejected by reviewer')
+      setAiActionMessage('Transfer recommendation rejected.')
+      await fetchAll()
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.detail || 'Failed to reject transfer recommendation.'
+      setAiActionError(msg)
+    } finally {
+      setRejectingRecId(null)
+    }
+  }
 
   const filtered = statusFilter === 'all'
     ? transfers
@@ -574,6 +624,110 @@ export default function TransfersPage() {
           )}
         </div>
       </div>
+
+      {/* AI Action feedback alerts */}
+      {aiActionMessage && (
+        <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)', background: '#ecfdf5', borderRadius: 'var(--radius-md, 8px)', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: '#065f46', fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+            <CheckCircleIcon style={{ width: 18, height: 18, color: '#059669' }} />
+            <span>{aiActionMessage}</span>
+          </div>
+          <button type="button" onClick={() => setAiActionMessage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#047857', fontSize: '1rem' }}>✕</button>
+        </div>
+      )}
+
+      {aiActionError && (
+        <div className="error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          <div className="error-banner-content">
+            <AlertCircleIcon />
+            <span>{aiActionError}</span>
+          </div>
+          <button type="button" onClick={() => setAiActionError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+        </div>
+      )}
+
+      {/* AI Transfer Recommendations if any exist */}
+      {aiRecommendations.length > 0 && (
+        <div className="table-card" style={{ marginBottom: 'var(--space-6)', borderLeft: '4px solid var(--color-primary)' }}>
+          <div className="table-card-header" style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-border-subtle, #f1f5f9)' }}>
+            <div className="table-card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: '1.1rem' }}>🤖</span>
+              <span style={{ fontWeight: 600 }}>AI Transfer Recommendations</span>
+              <Badge variant="info">{aiRecommendations.length} Pending Approval</Badge>
+            </div>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              Identified by Inventory Optimization Agent (Cross-branch surplus balance)
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-4)' }}>
+            {aiRecommendations.map((rec) => {
+              const recId = rec.recommendationId || rec.id
+              const prodName = rec.product?.name || 'Product'
+              const prodSku = rec.product?.sku || ''
+              const srcName = rec.sourceBranch?.name || 'Surplus Branch'
+              const dstName = rec.destinationBranch?.name || 'Destination Branch'
+              const qty = rec.suggestedQuantity ?? 0
+              const isApproving = approvingRecId === recId
+              const isRejecting = rejectingRecId === recId
+
+              return (
+                <div
+                  key={recId}
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 'var(--space-3) var(--space-4)',
+                    background: 'var(--color-bg-subtle, #f8fafc)',
+                    border: '1px solid var(--color-border-subtle, #e2e8f0)',
+                    borderRadius: 'var(--radius-md, 8px)',
+                    gap: 'var(--space-3)',
+                  }}
+                >
+                  <div style={{ flex: '1 1 300px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                      <strong>{prodName}</strong>
+                      {prodSku && <span className="sku-pill">{prodSku}</span>}
+                      <Badge variant="warning">{qty} Units Needed</Badge>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+                      <span><strong>From:</strong> {srcName}</span>
+                      <span>➔</span>
+                      <span><strong>To:</strong> {dstName}</span>
+                    </div>
+                    {rec.reasoning && (
+                      <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                        💡 {rec.reasoning}
+                      </p>
+                    )}
+                  </div>
+                  {canReviewAi && (
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleApproveRecommendation(recId)}
+                        disabled={isApproving || isRejecting}
+                      >
+                        {isApproving ? 'Approving…' : 'Approve & Create Transfer'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleRejectRecommendation(recId)}
+                        disabled={isApproving || isRejecting}
+                      >
+                        {isRejecting ? 'Rejecting…' : 'Dismiss'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Status filter tabs */}
       <div className="filter-tabs" style={{ marginBottom: 'var(--space-4)' }}>

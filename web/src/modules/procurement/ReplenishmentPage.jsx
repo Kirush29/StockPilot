@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { replenishmentApi, agentWorkflowsApi } from '../../api/procurementApi'
-import { branchesApi, productsApi } from '../../api/inventoryApi'
+import { branchesApi, productsApi, optimizationApi } from '../../api/inventoryApi'
 import { useProcurement } from './ProcurementContext'
 import Badge from '../../components/ui/Badge'
 import ErrorState from '../../components/ui/ErrorState'
@@ -189,8 +189,12 @@ function RunForm({ onStarted }) {
 }
 
 function RunResult({ detail, onApproved }) {
-  const { canDecideOrManage } = useProcurement()
+  const { canDecideOrManage, canRaiseOrView } = useProcurement()
   const [approving, setApproving] = useState(false)
+  const [approvingTransfer, setApprovingTransfer] = useState(false)
+  const [rejectingTransfer, setRejectingTransfer] = useState(false)
+  const [transferApproved, setTransferApproved] = useState(false)
+  const [transferRejected, setTransferRejected] = useState(false)
   const [actionError, setActionError] = useState(null)
   const result = detail.result
   const meta = replenishmentStatusMeta[result?.status] ?? { label: result?.status ?? 'Unknown', variant: 'neutral' }
@@ -198,6 +202,12 @@ function RunResult({ detail, onApproved }) {
   const proposalMeta = detail.liveProposalStatus ? proposalStatusMeta[ProposalStatus[detail.liveProposalStatus]] : null
   const procurementWorkflowId = result?.childWorkflows?.procurementWorkflowId
   const canApprove = canDecideOrManage && result?.status === 'PendingApproval' && detail.liveProposalStatus === 'PendingApproval'
+
+  // Extract Recommendation ID from childWorkflows or nextAction URL
+  const recIdMatch = result?.nextAction?.match(/\/api\/optimization\/recommendations\/([0-9a-fA-F-]+)\/approve/i)
+  const recommendationId = result?.childWorkflows?.inventoryRecommendationId || (recIdMatch ? recIdMatch[1] : null)
+  const isTransferRecommended = (result?.status === 'TransferRecommended' || result?.decision === 'Transfer' || !!recommendationId) && !!recommendationId
+  const canApproveTransfer = (canDecideOrManage || canRaiseOrView) && isTransferRecommended && !transferApproved && !transferRejected
 
   const approve = async () => {
     setApproving(true)
@@ -211,6 +221,40 @@ function RunResult({ detail, onApproved }) {
       else setActionError(err.response?.data?.detail ?? 'Failed to approve the proposal.')
     } finally {
       setApproving(false)
+    }
+  }
+
+  const approveTransfer = async () => {
+    if (!recommendationId) return
+    setApprovingTransfer(true)
+    setActionError(null)
+    try {
+      await optimizationApi.approve(recommendationId)
+      setTransferApproved(true)
+      await onApproved()
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.detail || 'Failed to approve transfer recommendation.'
+      setActionError(msg)
+    } finally {
+      setApprovingTransfer(false)
+    }
+  }
+
+  const rejectTransfer = async () => {
+    if (!recommendationId) return
+    const reason = window.prompt('Enter reason for rejecting this transfer recommendation:', 'Transfer not required at destination branch')
+    if (reason === null) return
+    setRejectingTransfer(true)
+    setActionError(null)
+    try {
+      await optimizationApi.reject(recommendationId, reason || 'Rejected by reviewer')
+      setTransferRejected(true)
+      await onApproved()
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.detail || 'Failed to reject transfer recommendation.'
+      setActionError(msg)
+    } finally {
+      setRejectingTransfer(false)
     }
   }
 
@@ -246,6 +290,62 @@ function RunResult({ detail, onApproved }) {
                 {approving ? 'Approving…' : 'Approve proposal'}
               </button>
               <Link className="btn btn-secondary" to={`/procurement/proposals/${result.proposalId}`}>Review / reject</Link>
+            </div>
+          )}
+          {canApproveTransfer && (
+            <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-bg-subtle, #f8fafc)', borderRadius: 'var(--radius-md, 8px)', border: '1px solid var(--color-border-subtle, #e2e8f0)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                <Badge variant="info">Action Required</Badge>
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                  AI Inter-Branch Transfer
+                </span>
+              </div>
+              <p style={{ fontSize: 'var(--font-size-sm)', margin: '0 0 var(--space-3) 0', color: 'var(--color-text-secondary)' }}>
+                The AI optimization agent confirmed surplus inventory at another branch. Approve this recommendation to create an official stock transfer order in Inventory.
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={approveTransfer}
+                  disabled={approvingTransfer || rejectingTransfer}
+                >
+                  {approvingTransfer ? 'Approving & Creating Transfer…' : 'Approve transfer recommendation'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={rejectTransfer}
+                  disabled={approvingTransfer || rejectingTransfer}
+                >
+                  {rejectingTransfer ? 'Rejecting…' : 'Reject recommendation'}
+                </button>
+                <Link className="btn btn-secondary" to="/inventory/transfers">
+                  View transfers
+                </Link>
+              </div>
+            </div>
+          )}
+          {transferApproved && (
+            <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: '#ecfdf5', borderRadius: 'var(--radius-md, 8px)', border: '1px solid #a7f3d0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: '#065f46', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                <CheckCircleIcon style={{ width: 18, height: 18, color: '#059669' }} />
+                <span>Inter-branch transfer created successfully!</span>
+              </div>
+              <p style={{ margin: 'var(--space-1) 0 var(--space-3) 0', fontSize: 'var(--font-size-xs)', color: '#047857' }}>
+                The AI transfer recommendation has been officially converted to a stock transfer request in the Inventory module.
+              </p>
+              <Link className="btn btn-primary" to="/inventory/transfers">
+                Open in Stock Transfers →
+              </Link>
+            </div>
+          )}
+          {transferRejected && (
+            <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: '#fef2f2', borderRadius: 'var(--radius-md, 8px)', border: '1px solid #fecaca' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: '#991b1b', fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+                <AlertCircleIcon style={{ width: 18, height: 18, color: '#dc2626' }} />
+                <span>Transfer recommendation rejected.</span>
+              </div>
             </div>
           )}
           {result?.errors?.length > 0 && (

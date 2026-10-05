@@ -368,12 +368,14 @@ using (var scope = app.Services.CreateScope())
     // Idempotent initial Business Owner bootstrap if configured via environment variables
     await ProductionAdminBootstrap.BootstrapAdminAsync(platformDb, app.Configuration, logger);
 
+    // Cross-module baseline catalog alignment (safe and idempotent: only inserts missing seed rows)
+    await PlatformDemoDataSeeder.SeedAsync(platformDb);
+
     // Development-only demo accounts and mock sales history
     if (app.Environment.IsDevelopment())
     {
         await StockPilot.Infrastructure.Persistence.Seed.SalesDataSeeder.SeedAsync(platformDb);
         SeedDevAccounts(platformDb);
-        await PlatformDemoDataSeeder.SeedAsync(platformDb);
     }
 }
 
