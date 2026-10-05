@@ -88,6 +88,8 @@ apiClient.interceptors.response.use(
         data.detail ? data.detail :
         data.title && data.status === 400 ? 'Please correct the highlighted errors.' :
         firstErrorMessage ? firstErrorMessage :
+        data.errorMessage ? data.errorMessage :
+        data.ErrorMessage ? data.ErrorMessage :
         data.message ? data.message :
         data.title ? data.title :
         'An unexpected error occurred.';

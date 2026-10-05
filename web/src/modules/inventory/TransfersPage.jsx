@@ -31,9 +31,14 @@ function fmt(d) {
 
 // ── Create Transfer Modal ─────────────────────────────────────────────────────
 
-function CreateTransferModal({ branches, products, onClose, onCreated, prefill }) {
+function CreateTransferModal({ branches, products, onClose, onCreated, prefill, user }) {
+  const isBranchScoped = (user?.role === 'BranchManager' || user?.role === 'StoreEmployee') && !!user?.branchId
+  const userBranchId = user?.branchId || ''
+
   const [sourceBranchId, setSourceBranchId]           = useState(prefill?.sourceBranchId || '')
-  const [destinationBranchId, setDestinationBranchId] = useState(prefill?.destinationBranchId || '')
+  const [destinationBranchId, setDestinationBranchId] = useState(
+    prefill?.destinationBranchId || (isBranchScoped ? userBranchId : '')
+  )
   const [notes, setNotes]                             = useState(prefill?.reason || '')
   const [items, setItems]                             = useState(
     prefill?.productId
@@ -94,15 +99,14 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
       setError('Source and destination branches cannot be the same.')
       return
     }
+    if (isBranchScoped && sourceBranchId !== userBranchId && destinationBranchId !== userBranchId) {
+      setError('You can only create transfers involving your assigned branch (as source or destination).')
+      return
+    }
     for (const [i, item] of items.entries()) {
       if (!item.productId) { setError(`Row ${i + 1}: Please select a product.`); return }
       if (!item.requestedQuantity || Number(item.requestedQuantity) <= 0) {
         setError(`Row ${i + 1}: Quantity must be greater than 0.`); return
-      }
-      const stock = availableStock[`${i}`]
-      if (stock && Number(item.requestedQuantity) > Number(stock.availableQuantity)) {
-        setError(`Row ${i + 1}: Requested quantity exceeds available stock (${stock.availableQuantity} ${stock.unit ?? ''}).`)
-        return
       }
     }
 
@@ -124,7 +128,14 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
       if (err.response?.status === 400 && err.response?.data?.errors) {
         setErrors(err.response.data.errors);
       } else {
-        setError(err.response?.data?.message ?? err.message ?? 'Failed to create transfer.')
+        const serverMsg =
+          err.response?.data?.errorMessage ||
+          err.response?.data?.ErrorMessage ||
+          err.response?.data?.message ||
+          err.response?.data?.detail ||
+          err.message ||
+          'Failed to create transfer.';
+        setError(serverMsg);
       }
     } finally {
       setSubmitting(false)
@@ -152,6 +163,12 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
               </div>
             )}
 
+            {isBranchScoped && (
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)', background: 'var(--color-bg-alt)', padding: '6px 10px', borderRadius: '4px' }}>
+                ℹ️ Branch policy: This transfer must involve your assigned branch ({branches.find(b => (b.branchId ?? b.id) === userBranchId)?.name || 'Assigned Branch'}) as either source or destination.
+              </div>
+            )}
+
             <div className="form-row">
               <div style={{ flex: 1 }}>
                 <SearchableDropdown
@@ -162,21 +179,21 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
                   onChange={handleSourceChange}
                   error={errors.sourceBranchId || (errors.SourceBranchId ? errors.SourceBranchId[0] : null)}
                   placeholder="— Select source branch —"
-                  getOptionValue={(opt) => opt.branchId}
-                  renderOption={(opt) => `${opt.name} (${opt.branchCode})`}
+                  getOptionValue={(opt) => opt.branchId ?? opt.id}
+                  renderOption={(opt) => `${opt.name} (${opt.branchCode || opt.code || ''})`}
                 />
               </div>
               <div style={{ flex: 1 }}>
                 <SearchableDropdown
                   label="Destination Branch"
                   required
-                  options={branches.filter(b => b.branchId !== sourceBranchId)}
+                  options={branches.filter(b => (b.branchId ?? b.id) !== sourceBranchId)}
                   value={destinationBranchId}
                   onChange={setDestinationBranchId}
                   error={errors.destinationBranchId || (errors.DestinationBranchId ? errors.DestinationBranchId[0] : null)}
                   placeholder="— Select destination branch —"
-                  getOptionValue={(opt) => opt.branchId}
-                  renderOption={(opt) => `${opt.name} (${opt.branchCode})`}
+                  getOptionValue={(opt) => opt.branchId ?? opt.id}
+                  renderOption={(opt) => `${opt.name} (${opt.branchCode || opt.code || ''})`}
                 />
               </div>
             </div>
@@ -202,8 +219,8 @@ function CreateTransferModal({ branches, products, onClose, onCreated, prefill }
                         onChange={(val) => handleItemChange(idx, 'productId', val)}
                         error={errors[`Items[${idx}].ProductId`] ? errors[`Items[${idx}].ProductId`][0] : null}
                         placeholder="— Select product —"
-                        getOptionValue={(opt) => opt.productId}
-                        renderOption={(opt) => `${opt.name} (${opt.sku})`}
+                        getOptionValue={(opt) => opt.productId ?? opt.id}
+                        renderOption={(opt) => `${opt.name} (${opt.sku || 'SKU'})`}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -487,8 +504,7 @@ export default function TransfersPage() {
   const { user }  = useAuth()
   const userRole  = user?.role ?? ''
 
-  const location = useLocation()
-  const canCreate = userRole === 'BranchManager' || userRole === 'BusinessOwner' || userRole === 'ProcurementManager' // Actually let any privileged user create transfers if they want to in this prototype.
+  const canCreate = ['BranchManager', 'BusinessOwner', 'ProcurementManager', 'StoreEmployee'].includes(userRole)
 
   const [transfers, setTransfers]         = useState([])
   const [branches, setBranches]           = useState([])
@@ -657,6 +673,7 @@ export default function TransfersPage() {
           onClose={() => setShowCreate(false)}
           onCreated={fetchAll}
           prefill={initialPrefill}
+          user={user}
         />
       )}
 

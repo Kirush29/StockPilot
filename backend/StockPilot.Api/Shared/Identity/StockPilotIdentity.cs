@@ -53,7 +53,7 @@ public static class StockPilotIdentity
             options.AddPolicy("InventoryRead", policy => policy.RequireRole(Roles.BusinessOwner, Roles.ProcurementManager, Roles.BranchManager, Roles.StoreEmployee));
             options.AddPolicy("InventoryManage", policy => policy.RequireRole(Roles.BusinessOwner, Roles.ProcurementManager, Roles.BranchManager, Roles.StoreEmployee));
             options.AddPolicy("BranchManage", policy => policy.RequireRole(Roles.BusinessOwner));
-            options.AddPolicy("TransferCreate", policy => policy.RequireRole(Roles.BusinessOwner, Roles.BranchManager, Roles.StoreEmployee));
+            options.AddPolicy("TransferCreate", policy => policy.RequireRole(Roles.BusinessOwner, Roles.ProcurementManager, Roles.BranchManager, Roles.StoreEmployee));
             options.AddPolicy("TransferApprove", policy => policy.RequireRole(Roles.BusinessOwner, Roles.ProcurementManager, Roles.BranchManager));
             options.AddPolicy("TransferShip", policy => policy.RequireRole(Roles.BusinessOwner, Roles.BranchManager, Roles.StoreEmployee));
             options.AddPolicy("TransferReceive", policy => policy.RequireRole(Roles.BusinessOwner, Roles.BranchManager, Roles.StoreEmployee));

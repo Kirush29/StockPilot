@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using StockPilot.Domain.Entities;
 using StockPilot.Domain.Enums;
 
@@ -58,5 +59,6 @@ public class UpdateBatchDto
 
     public DateTime? ManufacturingDate { get; set; }
     public DateTime? ExpiryDate { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public BatchStatus Status { get; set; }
 }

@@ -21,7 +21,7 @@ import { FormInput } from '../../../components/ui/FormControls'
 import { formatCurrency } from '../../../utils/currencyFormatter'
 import '../../../shared/theme/inventory.css'
 
-const BATCH_STATUSES = ['Active', 'Expired', 'Damaged', 'Depleted']
+const BATCH_STATUSES = ['Active', 'Quarantined', 'Expired', 'Exhausted', 'Damaged', 'Depleted']
 
 const EMPTY_BATCH_FORM = {
   productId: '',
@@ -720,6 +720,13 @@ export default function BatchesPage() {
                     rowClass = 'row-warning'
                     badgeVariant = 'expiring_soon'
                     badgeText = 'Expiring Soon'
+                  } else if (b.status === 'Quarantined' || b.status === 'Damaged') {
+                    rowClass = 'row-warning'
+                    badgeVariant = 'warning'
+                    badgeText = b.status
+                  } else if (b.status === 'Exhausted' || b.status === 'Depleted') {
+                    badgeVariant = 'default'
+                    badgeText = b.status
                   }
 
                   return (
