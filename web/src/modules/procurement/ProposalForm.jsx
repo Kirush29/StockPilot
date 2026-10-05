@@ -1,8 +1,9 @@
-// ProposalForm.jsx — shared line-item form used by both NewProposalPage and EditProposalPage
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { proposalsApi } from '../../api/procurementApi'
 import { productsApi, branchesApi } from '../../api/inventoryApi'
+import { supplierService } from '../suppliers/services/supplierService'
+import { quotationService } from '../suppliers/services/quotationService'
 import LineItemBuilder from './components/LineItemBuilder'
 import ErrorState from '../../components/ui/ErrorState'
 import { FormInput, SearchableDropdown } from '../../components/ui/FormControls'
@@ -22,6 +23,8 @@ export default function ProposalForm({ initial }) {
 
   const [products, setProducts] = useState([])
   const [branches, setBranches] = useState([])
+  const [suppliers, setSuppliers] = useState([])
+  const [quotations, setQuotations] = useState([])
   const [productsError, setProductsError] = useState(null)
 
   const [branchId, setBranchId] = useState(initial?.branchId ?? '')
@@ -40,12 +43,20 @@ export default function ProposalForm({ initial }) {
 
   const loadData = useCallback(async () => {
     try {
-      const [prodRes, brRes] = await Promise.all([
+      const [prodRes, brRes, suppRes, quotRes] = await Promise.all([
         productsApi.getAll(),
-        branchesApi.getAll().catch(() => ({ data: [] }))
+        branchesApi.getAll().catch(() => ({ data: [] })),
+        supplierService.getAllSuppliers().catch(() => []),
+        quotationService.getAllQuotations().catch(() => []),
       ])
       setProducts(prodRes.data?.data ?? prodRes.data ?? [])
       setBranches(brRes.data?.data ?? brRes.data ?? [])
+
+      const rawSuppliers = suppRes?.data ?? suppRes ?? []
+      setSuppliers(Array.isArray(rawSuppliers) ? rawSuppliers : [])
+
+      const rawQuotations = quotRes?.data ?? quotRes ?? []
+      setQuotations(Array.isArray(rawQuotations) ? rawQuotations : [])
     } catch {
       setProductsError('Could not load required catalogs (Products or Branches). Please refresh and try again.')
     }
@@ -138,6 +149,87 @@ export default function ProposalForm({ initial }) {
     }
   }
 
+  const handleSupplierSelect = (val) => {
+    setSupplierId(val)
+    const activeQ = quotations.find((q) => (q.id ?? q.Id) === quotationId)
+    if (activeQ && (activeQ.supplierId ?? activeQ.SupplierId) !== val) {
+      setQuotationId('')
+    }
+  }
+
+  const supplierQuotations = supplierId
+    ? quotations.filter((q) => {
+        const sid = q.supplierId ?? q.SupplierId
+        const status = q.status ?? q.Status
+        return sid === supplierId && status !== 'Rejected'
+      })
+    : quotations.filter((q) => {
+        const status = q.status ?? q.Status
+        return status !== 'Rejected'
+      })
+
+  const activeQuotation = quotations.find((q) => (q.id ?? q.Id) === quotationId.trim())
+
+  const applyQuotation = (q) => {
+    if (!q) return
+    const qSupplierId = q.supplierId ?? q.SupplierId
+    const qProductId = q.productId ?? q.ProductId
+    const qUnitPrice = q.unitPrice ?? q.UnitPrice
+    const qQuantity = q.quantity ?? q.Quantity
+
+    if (qSupplierId && supplierId !== qSupplierId) {
+      setSupplierId(qSupplierId)
+    }
+
+    setLineItems((prev) => {
+      if (prev.length === 0 || (prev.length === 1 && !prev[0].productId)) {
+        return [
+          {
+            productId: qProductId || '',
+            quantity: prev[0]?.quantity && prev[0].quantity !== '1' ? prev[0].quantity : (qQuantity ? String(qQuantity) : '1'),
+            unitPrice: qUnitPrice !== undefined && qUnitPrice !== null ? String(qUnitPrice) : '',
+          },
+        ]
+      }
+
+      const existingIndex = prev.findIndex((item) => item.productId === qProductId)
+      if (existingIndex >= 0) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
+            ? {
+                ...item,
+                unitPrice: String(qUnitPrice),
+                ...(item.quantity === '1' && qQuantity ? { quantity: String(qQuantity) } : {}),
+              }
+            : item
+        )
+      }
+
+      if (!prev[0].productId) {
+        return prev.map((item, idx) =>
+          idx === 0
+            ? {
+                productId: qProductId,
+                quantity: item.quantity && item.quantity !== '1' ? item.quantity : (qQuantity ? String(qQuantity) : '1'),
+                unitPrice: String(qUnitPrice),
+              }
+            : item
+        )
+      }
+
+      return prev
+    })
+  }
+
+  const handleQuotationSelect = (val) => {
+    setQuotationId(val)
+    if (!val) return
+    const q = quotations.find((x) => (x.id ?? x.Id) === val)
+    if (q) {
+      applyQuotation(q)
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -160,51 +252,103 @@ export default function ProposalForm({ initial }) {
       <div className="detail-card">
         <h3>Proposal Details</h3>
         <div className="form-row">
-          <div style={{ flex: 1 }}>
-            <SearchableDropdown
-              label={<span>Branch <span className="required">*</span></span>}
-              required
-              options={branches}
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="proposal-branch-select">
+              Branch <span className="required">*</span>
+            </label>
+            <select
+              id="proposal-branch-select"
+              className={`form-control ${errors.branchId || (errors.BranchId ? 'error' : '')}`}
               value={branchId}
-              onChange={setBranchId}
-              error={errors.branchId || (errors.BranchId ? errors.BranchId[0] : null)}
-              placeholder="— Select a branch —"
-              getOptionValue={(opt) => opt.id}
-              renderOption={(opt) => `${opt.name} (${opt.code})`}
+              onChange={(e) => setBranchId(e.target.value)}
               disabled={saving || isEdit}
-            />
+            >
+              <option value="">Select a branch…</option>
+              {branches.map((b) => {
+                const id = b.branchId ?? b.id
+                const code = b.branchCode ?? b.code
+                return (
+                  <option key={id} value={id}>
+                    {b.name} {code ? `(${code})` : ''}
+                  </option>
+                )
+              })}
+            </select>
+            {(errors.branchId || (errors.BranchId ? errors.BranchId[0] : null)) && (
+              <span className="form-error">{errors.branchId || errors.BranchId[0]}</span>
+            )}
             {isEdit && <span className="form-hint" style={{ display: 'block', marginTop: '4px' }}>Branch cannot be changed after a proposal is created.</span>}
           </div>
 
-          <div style={{ flex: 1 }}>
-            <FormInput
-              label={<span>Supplier ID <span className="required">*</span></span>}
-              required
-              type="text"
+          <div className="form-group" style={{ flex: 1 }}>
+            <label htmlFor="proposal-supplier-select">
+              Supplier <span className="required">*</span>
+            </label>
+            <select
+              id="proposal-supplier-select"
+              className={`form-control ${errors.supplierId || (errors.SupplierId ? 'error' : '')}`}
               value={supplierId}
-              onChange={(e) => setSupplierId(e.target.value)}
-              placeholder="e.g. 22222222-2222-2222-2222-222222222222"
+              onChange={(e) => handleSupplierSelect(e.target.value)}
               disabled={saving}
-              error={errors.supplierId || (errors.SupplierId ? errors.SupplierId[0] : null)}
-            />
+            >
+              <option value="">Select a supplier…</option>
+              {suppliers.map((s) => {
+                const id = s.id ?? s.Id
+                return (
+                  <option key={id} value={id}>
+                    {s.name ?? s.Name}
+                  </option>
+                )
+              })}
+            </select>
+            {(errors.supplierId || (errors.SupplierId ? errors.SupplierId[0] : null)) && (
+              <span className="form-error">{errors.supplierId || errors.SupplierId[0]}</span>
+            )}
           </div>
         </div>
 
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <FormInput
-            label={<span>Quotation ID <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span></span>}
-            type="text"
+        <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+          <label htmlFor="proposal-quotation-select">
+            Quotation <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85em', marginLeft: '4px' }}>(Optional)</span>
+          </label>
+          <select
+            id="proposal-quotation-select"
+            className={`form-control ${errors.quotationId || (errors.QuotationId ? 'error' : '')}`}
             value={quotationId}
-            onChange={(e) => setQuotationId(e.target.value)}
-            placeholder="Link to a supplier quotation, if one exists"
+            onChange={(e) => handleQuotationSelect(e.target.value)}
             disabled={saving}
-            error={errors.quotationId || (errors.QuotationId ? errors.QuotationId[0] : null)}
-          />
+          >
+            <option value="">
+              {!supplierId
+                ? 'Select a supplier first to view quotations…'
+                : supplierQuotations.length === 0
+                ? 'No active quotations for this supplier'
+                : 'Select quotation…'}
+            </option>
+            {supplierQuotations.map((q) => {
+              const id = q.id ?? q.Id
+              const prodId = q.productId ?? q.ProductId
+              const prod = products.find((p) => (p.productId ?? p.ProductId ?? p.id) === prodId)
+              const prodName = prod ? (prod.name ?? prod.Name) : 'Product'
+              const price = q.unitPrice ?? q.UnitPrice ?? 0
+              const days = q.deliveryDays ?? q.DeliveryDays
+              const daysText = days ? ` - ${days} days` : ''
+              return (
+                <option key={id} value={id}>
+                  {`${prodName} - Rs.${Number(price).toLocaleString()}${daysText}`}
+                </option>
+              )
+            })}
+          </select>
+          {(errors.quotationId || (errors.QuotationId ? errors.QuotationId[0] : null)) && (
+            <span className="form-error">{errors.quotationId || errors.QuotationId[0]}</span>
+          )}
         </div>
 
         <div style={{ marginTop: 'var(--space-4)' }}>
-          <label className="form-label">Justification</label>
+          <label className="form-label" htmlFor="proposal-justification">Justification</label>
           <textarea
+            id="proposal-justification"
             className="form-control"
             rows={3}
             maxLength={2000}
@@ -224,6 +368,10 @@ export default function ProposalForm({ initial }) {
           products={products}
           errors={errors.lineItems ?? {}}
           disabled={saving}
+          supplierId={supplierId}
+          quotationId={quotationId}
+          activeQuotation={activeQuotation}
+          quotations={quotations}
         />
       </div>
 

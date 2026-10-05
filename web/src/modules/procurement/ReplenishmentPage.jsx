@@ -26,6 +26,53 @@ export const replenishmentStatusMeta = {
 
 const stepVariant = { Completed: 'success', Failed: 'danger', Skipped: 'neutral', Running: 'info', Pending: 'neutral' }
 
+const RULE_METADATA = {
+  ObjectiveMatchesContract: {
+    title: 'Workflow Input Schema',
+    category: 'Input Contract',
+  },
+  ForecastMatchesContract: {
+    title: 'Demand Forecast Contract',
+    category: 'Agent Boundary',
+  },
+  SupplierMatchesContract: {
+    title: 'Supplier Evaluation Contract',
+    category: 'Procurement Policy',
+  },
+  ProcurementObjectiveMatchesContract: {
+    title: 'Procurement Proposal Contract',
+    category: 'Policy Guardrail',
+  },
+  UntrustedContentScreening: {
+    title: 'Content & Injection Defense',
+    category: 'AI Security',
+  },
+  PromptInjectionDefense: {
+    title: 'Prompt Injection Defense',
+    category: 'AI Security',
+  },
+  NonNegativeDemandConstraint: {
+    title: 'Non-Negative Demand Constraint',
+    category: 'Business Invariant',
+  },
+  InputSchema: {
+    title: 'Input Schema Validation',
+    category: 'Schema Contract',
+  },
+  LlmJustificationGrounding: {
+    title: 'AI Rationale Grounding',
+    category: 'Audit Guardrail',
+  },
+}
+
+function formatRuleMeta(rule) {
+  if (RULE_METADATA[rule]) return RULE_METADATA[rule]
+  return {
+    title: rule.replace(/([a-z])([A-Z])/g, '$1 $2'),
+    category: 'Contract Rule',
+  }
+}
+
 function RunForm({ onStarted }) {
   // ?branchId=&productId= prefill the form, e.g. from the Sales dashboard's "Dispatch to Procurement Agent".
   const [searchParams] = useSearchParams()
@@ -232,15 +279,51 @@ function RunResult({ detail, onApproved }) {
             <dt>Approval</dt><dd>{detail.approvalStatus}</dd>
           </dl>
         </div>
+
         <div className="detail-card">
-          <h3>Contract checks</h3>
-          <ul aria-label="Contract checks" style={{ listStyle: 'none', padding: 0 }}>
-            {detail.validationResults.map((v) => (
-              <li key={v.rule} title={v.details} style={{ marginBottom: 'var(--space-2)' }}>
-                {v.passed ? <CheckCircleIcon style={{ color: 'var(--color-success)' }} /> : <AlertCircleIcon style={{ color: 'var(--color-danger)' }} />}{' '}
-                {v.rule}
-              </li>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+            <h3 style={{ margin: 0 }}>Contract checks</h3>
+            {detail.validationResults?.length > 0 && (
+              <Badge variant={detail.validationResults.every((v) => v.passed) ? 'success' : 'danger'}>
+                {detail.validationResults.filter((v) => v.passed).length}/{detail.validationResults.length} Passed
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted" style={{ fontSize: 'var(--font-size-xs)', marginTop: 0, marginBottom: 'var(--space-3)' }}>
+            Deterministic schema guardrails and multi-agent contract verification.
+          </p>
+          <ul aria-label="Contract checks" className="contract-checks-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {detail.validationResults?.map((v) => {
+              const ruleMeta = formatRuleMeta(v.rule)
+              return (
+                <li key={v.rule} className={`contract-check-item ${v.passed ? 'passed' : 'failed'}`}>
+                  <div className="contract-check-status-icon">
+                    {v.passed ? (
+                      <CheckCircleIcon width={15} height={15} style={{ color: 'var(--color-success, #10b981)' }} />
+                    ) : (
+                      <AlertCircleIcon width={15} height={15} style={{ color: 'var(--color-danger, #ef4444)' }} />
+                    )}
+                  </div>
+                  <div className="contract-check-content">
+                    <div className="contract-check-top">
+                      <span className="contract-check-title">{ruleMeta.title}</span>
+                      <span className="contract-check-badge-wrap">
+                        <Badge variant={v.passed ? 'success' : 'danger'}>
+                          {v.passed ? 'Passed' : 'Failed'}
+                        </Badge>
+                      </span>
+                    </div>
+                    <div className="contract-check-rule-row">
+                      <code className="contract-check-code">{v.rule}</code>
+                      <span className="contract-check-category">{ruleMeta.category}</span>
+                    </div>
+                    {v.details && (
+                      <div className="contract-check-details">{v.details}</div>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </div>
       </div>

@@ -272,3 +272,130 @@
 .clickable-row:hover {
   background: var(--color-surface-hover);
 }
+
+.quotation-lock-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.line-item-price-locked {
+  background-color: var(--color-surface-subtle, #f8fafc) !important;
+  cursor: not-allowed !important;
+}
+
+/* ── Contract & Safety Guardrails ────────────────────────────────────────── */
+.contract-checks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.contract-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 12px);
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  background: var(--color-surface, #ffffff);
+  transition: all 0.15s ease-in-out;
+}
+
+.contract-check-item:hover {
+  border-color: var(--color-border, #cbd5e1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.contract-check-item.passed {
+  border-left: 3px solid var(--color-success, #10b981);
+}
+
+.contract-check-item.failed {
+  border-left: 3px solid var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.contract-check-status-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.contract-check-item.passed .contract-check-status-icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success, #10b981);
+}
+
+.contract-check-item.failed .contract-check-status-icon {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger, #ef4444);
+}
+
+.contract-check-status-icon svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-shrink: 0;
+}
+
+.contract-check-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.contract-check-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+}
+
+.contract-check-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text, #0f172a);
+}
+
+.contract-check-rule-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  margin-top: 2px;
+  margin-bottom: 3px;
+}
+
+.contract-check-code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.725rem;
+  color: var(--color-text-muted, #64748b);
+  background: var(--color-surface-subtle, #f1f5f9);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.contract-check-category {
+  font-size: 0.675rem;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.contract-check-details {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-secondary, #475569);
+  line-height: 1.4;
+}
