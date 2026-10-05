@@ -35,8 +35,8 @@ function BranchModal({ initial, onSave, onClose, saving, apiError, apiFieldError
     initial
       ? {
           name: initial.name ?? '',
-          code: initial.code ?? '',
-          location: initial.location ?? '',
+          code: initial.branchCode ?? initial.code ?? '',
+          location: initial.address ?? initial.location ?? '',
           city: initial.city ?? '',
           phoneNumber: initial.phoneNumber ?? '',
           email: initial.email ?? '',
@@ -49,30 +49,61 @@ function BranchModal({ initial, onSave, onClose, saving, apiError, apiFieldError
 
   useEffect(() => {
     if (apiFieldErrors) {
-      setErrors(prev => ({ ...prev, ...apiFieldErrors }))
+      const normalized = { ...apiFieldErrors }
+      if (apiFieldErrors.branchCode && !apiFieldErrors.code) {
+        normalized.code = apiFieldErrors.branchCode
+      }
+      if (apiFieldErrors.address && !apiFieldErrors.location) {
+        normalized.location = apiFieldErrors.address
+      }
+      setErrors(prev => ({ ...prev, ...normalized }))
     }
   }, [apiFieldErrors])
 
   const set = (field, value) => {
     setForm(f => ({ ...f, [field]: value }))
-    setErrors(e => ({ ...e, [field]: undefined }))
+    setErrors(e => ({ ...e, [field]: undefined, branchCode: undefined, address: undefined }))
   }
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim()) e.name = 'Branch name is required.'
-    if (!isEdit && !form.code.trim()) e.code = 'Branch code is required.'
+    if (!form.name.trim()) {
+      e.name = 'Please enter a branch name.'
+    } else if (form.name.trim().length < 3) {
+      e.name = 'Branch name must be at least 3 characters long.'
+    }
 
-    if (form.code && !/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(form.code)) {
-      e.code = 'Code must consist of uppercase letters, numbers, and single hyphens (e.g. CMB-001).'
+    if (!isEdit) {
+      if (!form.code.trim()) {
+        e.code = 'Please enter a branch code.'
+      } else if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(form.code.trim())) {
+        e.code = 'Branch code must consist of uppercase letters, numbers, and single hyphens (e.g., COL-01).'
+      } else if (form.code.trim().length < 2 || form.code.trim().length > 20) {
+        e.code = 'Branch code must be between 2 and 20 characters.'
+      }
     }
-    if (!form.location?.trim()) e.location = 'Address is required.'
-    if (!form.city?.trim()) e.city = 'City is required.'
-    if (!form.phoneNumber?.trim()) e.phoneNumber = 'Phone number is required.'
-    if (form.phoneNumber && !/^(?:\+94|0)7\d{8}$/.test(form.phoneNumber)) {
-      e.phoneNumber = 'Invalid Sri Lankan phone number.'
+
+    if (!form.location?.trim()) {
+      e.location = 'Please enter the branch address.'
+    } else if (form.location.trim().length < 5) {
+      e.location = 'Address must be at least 5 characters long.'
     }
-    if (!form.email?.trim()) e.email = 'Email address is required.'
+
+    if (!form.city?.trim()) {
+      e.city = 'Please enter the city.'
+    }
+
+    if (!form.phoneNumber?.trim()) {
+      e.phoneNumber = 'Please enter a contact phone number.'
+    } else if (!/^(?:\+94|0)7\d{8}$/.test(form.phoneNumber.trim())) {
+      e.phoneNumber = 'Please enter a valid Sri Lankan mobile number (e.g., 0771234567 or +94771234567).'
+    }
+
+    if (!form.email?.trim()) {
+      e.email = 'Please enter an email address.'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      e.email = 'Please enter a valid email address (e.g., branch@stockpilot.com).'
+    }
 
     return e
   }
@@ -84,9 +115,11 @@ function BranchModal({ initial, onSave, onClose, saving, apiError, apiFieldError
       setErrors(errs)
       return
     }
+    const finalCode = isEdit ? (initial.branchCode || initial.code || form.code.trim()) : form.code.trim()
     onSave({
       name: form.name.trim(),
-      code: isEdit ? initial.code : form.code.trim(),
+      branchCode: finalCode,
+      code: finalCode,
       address: form.location?.trim() || null,
       city: form.city?.trim() || null,
       phoneNumber: form.phoneNumber?.trim() || null,
@@ -135,14 +168,14 @@ function BranchModal({ initial, onSave, onClose, saving, apiError, apiFieldError
               <label>Branch Code <span className="required">*</span></label>
               <input
                 type="text"
-                className={`form-control ${errors.code ? 'error' : ''}`}
+                className={`form-control ${errors.code || errors.branchCode ? 'error' : ''}`}
                 value={form.code}
                 onChange={e => set('code', e.target.value.toUpperCase())}
                 placeholder="e.g. CMB-001"
                 maxLength={50}
                 disabled={saving || isEdit}
               />
-              {errors.code && <span className="form-error">{errors.code}</span>}
+              {(errors.code || errors.branchCode) && <span className="form-error">{errors.code || errors.branchCode}</span>}
             </div>
           </div>
 
@@ -298,7 +331,8 @@ export default function BranchesPage() {
     setModalError(null)
     try {
       if (modal?.mode === 'edit') {
-        await branchesApi.update(modal.data.id, payload)
+        const id = modal.data?.branchId ?? modal.data?.id
+        await branchesApi.update(id, payload)
         showToast(`Branch "${payload.name}" updated successfully.`)
       } else {
         await branchesApi.create(payload)
@@ -307,7 +341,7 @@ export default function BranchesPage() {
       setModal(null)
       load()
     } catch (err) {
-      setModalError(err.displayMessage ?? 'Failed to save branch.')
+      setModalError(err.displayMessage ?? 'Failed to save branch. Please check the details and try again.')
       if (err.fieldErrors) {
         setModal(m => ({ ...m, formErrors: err.fieldErrors }))
       }
@@ -319,12 +353,11 @@ export default function BranchesPage() {
   const filtered = branches.filter(b => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
-    return (
-      (b.name && b.name.toLowerCase().includes(q)) ||
-      (b.code && b.code.toLowerCase().includes(q)) ||
-      (b.city && b.city.toLowerCase().includes(q)) ||
-      (b.location && b.location.toLowerCase().includes(q))
-    )
+    const name = (b.name || '').toLowerCase()
+    const code = (b.branchCode || b.code || '').toLowerCase()
+    const city = (b.city || '').toLowerCase()
+    const address = (b.address || b.location || '').toLowerCase()
+    return name.includes(q) || code.includes(q) || city.includes(q) || address.includes(q)
   })
 
   return (
@@ -445,41 +478,45 @@ export default function BranchesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(branch => (
-                  <tr key={branch.id}>
-                    <td>
-                      <span className="sku-pill">{branch.code}</span>
-                    </td>
-                    <td>
-                      <strong style={{ color: 'var(--color-text)' }}>{branch.name}</strong>
-                    </td>
-                    <td>{branch.city || '—'}</td>
-                    <td>
-                      {branch.managerName ? (
-                        <span>{branch.managerName}<br/><small style={{ color: 'var(--color-text-muted)' }}>{branch.phoneNumber}</small></span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td>
-                      <Badge variant={branch.isActive ? 'active' : 'inactive'}>
-                        {branch.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => setModal({ mode: 'edit', data: branch })}
-                        >
-                          <EditIcon />
-                          Edit
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map(branch => {
+                  const id = branch.branchId ?? branch.id
+                  const code = branch.branchCode ?? branch.code
+                  return (
+                    <tr key={id}>
+                      <td>
+                        <span className="sku-pill">{code}</span>
+                      </td>
+                      <td>
+                        <strong style={{ color: 'var(--color-text)' }}>{branch.name}</strong>
+                      </td>
+                      <td>{branch.city || '—'}</td>
+                      <td>
+                        {branch.managerName ? (
+                          <span>{branch.managerName}<br/><small style={{ color: 'var(--color-text-muted)' }}>{branch.phoneNumber}</small></span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td>
+                        <Badge variant={branch.isActive ? 'active' : 'inactive'}>
+                          {branch.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setModal({ mode: 'edit', data: branch })}
+                          >
+                            <EditIcon />
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -495,7 +532,7 @@ export default function BranchesPage() {
           saving={saving}
           apiError={modalError}
           apiFieldErrors={modal.formErrors}
-          key={modal.mode + (modal.data?.id || 'new')}
+          key={modal.mode + (modal.data?.branchId || modal.data?.id || 'new')}
         />
       )}
     </div>
