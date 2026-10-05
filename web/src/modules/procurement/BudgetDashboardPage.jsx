@@ -66,9 +66,15 @@ function NewBudgetModal({ onSave, onClose, saving, apiError, branches }) {
               disabled={saving}
             >
               <option value="">Select a branch…</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
-              ))}
+              {branches.map(b => {
+                const id = b.branchId ?? b.id ?? ''
+                const code = b.branchCode ?? b.code ?? ''
+                return (
+                  <option key={id} value={id}>
+                    {b.name} {code ? `(${code})` : ''}
+                  </option>
+                )
+              })}
             </select>
             {errors.branchId && <span className="form-error">{errors.branchId}</span>}
           </div>
@@ -198,7 +204,7 @@ export default function BudgetDashboardPage() {
       ) : !loading ? (
         <div className="budget-dashboard-grid">
           {budgets.map((b) => {
-            const branch = branches.find(br => br.id === b.branchId)
+            const branch = branches.find(br => (br.branchId ?? br.id) === b.branchId)
             return (
               <div className="budget-dashboard-card" key={b.id}>
                 <div className="budget-dashboard-card-head">
