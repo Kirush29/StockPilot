@@ -10,22 +10,8 @@ interface TopSellingWidgetProps {
 export const TopSellingWidget: React.FC<TopSellingWidgetProps> = ({ products, slowMovers = [] }) => {
   const [activeTab, setActiveTab] = useState<'fast' | 'slow'>('fast');
 
-  // Fallback demo data if products empty
-  const defaultItems: TopSellingProduct[] = [
-    { productId: '1', productSku: 'SKU-PARACETAMOL-500', productName: 'Paracetamol 500mg', unitsSold: 280, totalRevenue: 6860, velocityCategory: 'Fast Moving' },
-    { productId: '2', productSku: 'SKU-AMOXICILLIN-250', productName: 'Amoxicillin 250mg', unitsSold: 180, totalRevenue: 8100, velocityCategory: 'High Value' },
-    { productId: '3', productSku: 'SKU-VITAMINC-1000', productName: 'Vitamin C 1000mg', unitsSold: 140, totalRevenue: 4480, velocityCategory: 'Fast Moving' },
-    { productId: '4', productSku: 'SKU-MASKS-SURG-50', productName: 'Surgical Masks (Box)', unitsSold: 120, totalRevenue: 1800, velocityCategory: 'Bulk Steady' },
-  ];
-
-  const defaultSlowMovers: SlowMovingProduct[] = [
-    { productId: '10', productSku: 'SKU-GAUZE-STERILE-10', productName: 'Sterile Gauze Pads 10pk', unitsSold: 4, totalRevenue: 96.0, currentStock: 180, daysSinceLastSale: 42 },
-    { productId: '11', productSku: 'SKU-IODINE-TINCTURE-100', productName: 'Iodine Tincture 100ml', unitsSold: 6, totalRevenue: 168.0, currentStock: 95, daysSinceLastSale: 35 },
-    { productId: '12', productSku: 'SKU-SYRINGE-5ML-50', productName: 'Disposable Syringes 5ml (50s)', unitsSold: 8, totalRevenue: 240.0, currentStock: 140, daysSinceLastSale: 28 },
-  ];
-
-  const displayFast = products && products.length > 0 ? products : defaultItems;
-  const displaySlow = slowMovers && slowMovers.length > 0 ? slowMovers : defaultSlowMovers;
+  const displayFast = products || [];
+  const displaySlow = slowMovers || [];
 
   const maxRevenue = Math.max(...displayFast.map((p) => p.totalRevenue), 1);
 
@@ -119,104 +105,120 @@ export const TopSellingWidget: React.FC<TopSellingWidgetProps> = ({ products, sl
       {/* Content */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflowY: 'auto' }}>
         {activeTab === 'fast' ? (
-          displayFast.slice(0, 4).map((item, idx) => {
-            const percent = Math.round((item.totalRevenue / maxRevenue) * 100);
+          displayFast.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
+              <Award size={32} style={{ opacity: 0.35, marginBottom: 8 }} />
+              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>No Fast-Moving Sales Yet</div>
+              <p style={{ fontSize: '0.78rem', marginTop: 4, margin: '4px 0 0' }}>Top performing products by revenue will appear here once sales transactions are recorded.</p>
+            </div>
+          ) : (
+            displayFast.slice(0, 4).map((item, idx) => {
+              const percent = Math.round((item.totalRevenue / maxRevenue) * 100);
 
-            return (
-              <div key={item.productId || idx} style={{
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: '#F8FAFC',
-                border: '1px solid var(--border-subtle)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      backgroundColor: idx === 0 ? '#FEF3C7' : '#F1F5F9',
-                      color: idx === 0 ? '#B45309' : '#64748B',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {idx + 1}
-                    </span>
+              return (
+                <div key={item.productId || idx} style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid var(--border-subtle)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        backgroundColor: idx === 0 ? '#FEF3C7' : '#F1F5F9',
+                        color: idx === 0 ? '#B45309' : '#64748B',
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {item.productName}
+                        </div>
+                        <code style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{item.productSku}</code>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
+                        Rs. {item.totalRevenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                        {item.unitsSold} units sold
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div style={{
+                    width: '100%',
+                    height: 5,
+                    backgroundColor: '#E2E8F0',
+                    borderRadius: 3,
+                    marginTop: 6,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${percent}%`,
+                      height: '100%',
+                      background: idx === 0 ? 'linear-gradient(90deg, #0068FF, #38BDF8)' : '#93C5FD',
+                      borderRadius: 3
+                    }} />
+                  </div>
+                </div>
+              );
+            })
+          )
+        ) : (
+          displaySlow.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
+              <AlertOctagon size={32} style={{ opacity: 0.35, marginBottom: 8 }} />
+              <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>No Slow-Moving Products Flagged</div>
+              <p style={{ fontSize: '0.78rem', marginTop: 4, margin: '4px 0 0' }}>Stagnant products with low turnover or high clearance risk will be identified here.</p>
+            </div>
+          ) : (
+            displaySlow.slice(0, 4).map((item, idx) => {
+              return (
+                <div key={item.productId || idx} style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#991B1B' }}>
                         {item.productName}
                       </div>
-                      <code style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{item.productSku}</code>
+                      <code style={{ fontSize: '0.68rem', color: '#B91C1C' }}>{item.productSku}</code>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#DC2626' }}>
+                        {item.unitsSold} units sold
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: '#7F1D1D' }}>
+                        Rs. {item.totalRevenue.toFixed(2)} invoiced
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
-                      Rs. {item.totalRevenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                      {item.unitsSold} units sold
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#B91C1C', marginTop: 4 }}>
+                    <span>Holding: <strong>{item.currentStock} units in stock</strong></span>
+                    <span className="badge badge-rose" style={{ fontSize: '0.65rem' }}>
+                      {item.daysSinceLastSale}d since last sale
+                    </span>
                   </div>
                 </div>
-
-                {/* Progress Bar */}
-                <div style={{
-                  width: '100%',
-                  height: 5,
-                  backgroundColor: '#E2E8F0',
-                  borderRadius: 3,
-                  marginTop: 6,
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${percent}%`,
-                    height: '100%',
-                    background: idx === 0 ? 'linear-gradient(90deg, #0068FF, #38BDF8)' : '#93C5FD',
-                    borderRadius: 3
-                  }} />
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          displaySlow.slice(0, 4).map((item, idx) => {
-            return (
-              <div key={item.productId || idx} style={{
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#991B1B' }}>
-                      {item.productName}
-                    </div>
-                    <code style={{ fontSize: '0.68rem', color: '#B91C1C' }}>{item.productSku}</code>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#DC2626' }}>
-                      {item.unitsSold} units sold
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: '#7F1D1D' }}>
-                      Rs. {item.totalRevenue.toFixed(2)} invoiced
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#B91C1C', marginTop: 4 }}>
-                  <span>Holding: <strong>{item.currentStock} units in stock</strong></span>
-                  <span className="badge badge-rose" style={{ fontSize: '0.65rem' }}>
-                    {item.daysSinceLastSale}d since last sale
-                  </span>
-                </div>
-              </div>
-            );
-          })
+              );
+            })
+          )
         )}
       </div>
     </div>

@@ -40,7 +40,7 @@ export default function Quotations() {
       setLoading(true);
       setError(null);
       const data = await quotationService.getAllQuotations();
-      setQuotations(data);
+      setQuotations(Array.isArray(data) ? data : (data as any)?.data ?? []);
     } catch (err: any) {
       setError(err.message || 'Failed to load quotations.');
     } finally {
@@ -60,9 +60,9 @@ export default function Quotations() {
           productService.getAllProducts()
         ]);
         if (isMounted) {
-          setQuotations(quotationsData);
-          setSuppliers(suppliersData);
-          setProducts(productsData);
+          setQuotations(Array.isArray(quotationsData) ? quotationsData : (quotationsData as any)?.data ?? []);
+          setSuppliers(Array.isArray(suppliersData) ? suppliersData : (suppliersData as any)?.data ?? []);
+          setProducts(Array.isArray(productsData) ? productsData : (productsData as any)?.data ?? []);
         }
       } catch (err: any) {
         if (isMounted) setError(err.message || 'Failed to load data.');
@@ -82,7 +82,7 @@ export default function Quotations() {
       setIsComparing(true);
       setError(null);
       const data = await quotationService.compareQuotations(productId);
-      setQuotations(data);
+      setQuotations(Array.isArray(data) ? data : (data as any)?.data ?? []);
       setHasCompared(true);
     } catch (err: any) {
       setError(err.message || 'Failed to compare quotations.');
@@ -448,7 +448,20 @@ export default function Quotations() {
                 </div>
               )}
               <p className="text-gray-600 text-sm">
-                Are you sure you want to <strong>{actionQuotation.action === 'Accepted' ? 'accept' : 'reject'}</strong> the quotation for Product ID <strong>{actionQuotation.quotation.productId}</strong> from Supplier ID <strong>{actionQuotation.quotation.supplierId}</strong>?
+                Are you sure you want to <strong>{actionQuotation.action === 'Accepted' ? 'accept' : 'reject'}</strong> the quotation {actionQuotation.quotation.quotationReference ? <span className="font-semibold text-gray-900">({actionQuotation.quotation.quotationReference})</span> : ''} for{' '}
+                <strong className="text-gray-900">
+                  {(() => {
+                    const prod = products.find(p => p.id === actionQuotation.quotation.productId);
+                    return prod ? `${prod.name} (${prod.sku})` : actionQuotation.quotation.productId;
+                  })()}
+                </strong>{' '}
+                from{' '}
+                <strong className="text-gray-900">
+                  {(() => {
+                    const supp = suppliers.find(s => s.id === actionQuotation.quotation.supplierId);
+                    return supp ? `${supp.name} (${supp.supplierCode})` : actionQuotation.quotation.supplierId;
+                  })()}
+                </strong>?
               </p>
             </div>
 

@@ -47,8 +47,8 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ analytics, forecastConfidenc
           Rs. {revenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: '#10B981' }}>
-          <span className="badge badge-emerald" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>+14.2%</span>
-          <span style={{ color: 'var(--text-dim)' }}>vs past 30-day baseline</span>
+          <span className="badge badge-emerald" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>Rolling 30D</span>
+          <span style={{ color: 'var(--text-dim)' }}>consolidated revenue</span>
         </div>
       </div>
 
@@ -107,13 +107,13 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ analytics, forecastConfidenc
           </div>
         </div>
         <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#FFF', letterSpacing: '-0.02em', marginBottom: 4 }}>
-          {(totalUnits > 0 ? (totalUnits / 30).toFixed(1) : '3.8')}{' '}
+          {(totalUnits / 30).toFixed(1)}{' '}
           <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>items / day</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-dim)' }}>
           <span>Top Velocity SKU:</span>
           <span className="badge badge-amber" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>
-            {analytics?.topSellingProducts?.[0]?.productSku || 'PARACETAMOL-500'}
+            {analytics?.topSellingProducts?.[0]?.productSku || 'None'}
           </span>
         </div>
       </div>

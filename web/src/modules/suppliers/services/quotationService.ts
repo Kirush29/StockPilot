@@ -33,8 +33,10 @@ export interface UpdateQuotationStatusRequest {
 const ENDPOINT = '/Quotations';
 
 export const quotationService = {
-  getAllQuotations: () => 
-    apiClient.get<Quotation[]>(ENDPOINT),
+  getAllQuotations: async (): Promise<Quotation[]> => {
+    const data = await apiClient.get<any>(ENDPOINT);
+    return (Array.isArray(data) ? data : data?.data ?? []) as Quotation[];
+  },
     
   getQuotationById: (id: string) => 
     apiClient.get<Quotation>(`${ENDPOINT}/${id}`),
@@ -45,12 +47,18 @@ export const quotationService = {
   updateQuotationStatus: (id: string, status: QuotationStatus) => 
     apiClient.put<void>(`${ENDPOINT}/${id}/status`, { status }),
     
-  getQuotationsByProduct: (productId: string) => 
-    apiClient.get<Quotation[]>(`${ENDPOINT}/product/${productId}`),
+  getQuotationsByProduct: async (productId: string): Promise<Quotation[]> => {
+    const data = await apiClient.get<any>(`${ENDPOINT}/product/${productId}`);
+    return (Array.isArray(data) ? data : data?.data ?? []) as Quotation[];
+  },
     
-  getQuotationsBySupplier: (supplierId: string) => 
-    apiClient.get<Quotation[]>(`${ENDPOINT}/supplier/${supplierId}`),
+  getQuotationsBySupplier: async (supplierId: string): Promise<Quotation[]> => {
+    const data = await apiClient.get<any>(`${ENDPOINT}/supplier/${supplierId}`);
+    return (Array.isArray(data) ? data : data?.data ?? []) as Quotation[];
+  },
     
-  compareQuotations: (productId: string) => 
-    apiClient.get<Quotation[]>(`${ENDPOINT}/compare?productId=${productId}`),
+  compareQuotations: async (productId: string): Promise<Quotation[]> => {
+    const data = await apiClient.get<any>(`${ENDPOINT}/compare?productId=${productId}`);
+    return (Array.isArray(data) ? data : data?.data ?? []) as Quotation[];
+  },
 };

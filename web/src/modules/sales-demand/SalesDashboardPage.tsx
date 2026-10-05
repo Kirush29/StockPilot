@@ -11,8 +11,8 @@ import { SalesLedgerTable } from './components/sales/SalesLedgerTable';
 import { RecordSaleModal } from './components/sales/RecordSaleModal';
 import { RunForecastModal } from './components/sales/RunForecastModal';
 import { AgentTraceDrawer } from './components/sales/AgentTraceDrawer';
-import { salesApi, demandApi, agentApi, branchApi } from './services/api';
-import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, WorkflowState, BranchOption } from './types/sales';
+import { salesApi, demandApi, agentApi, branchApi, productApi } from './services/api';
+import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, WorkflowState, BranchOption, ProductOption } from './types/sales';
 import { ShoppingCart, ArrowRight, X, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './sales.css';
@@ -29,6 +29,7 @@ export const SalesDashboardPage: React.FC = () => {
 
   // State
   const [availableBranches, setAvailableBranches] = useState<BranchOption[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<ProductOption[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [analytics, setAnalytics] = useState<SalesAnalyticsSummary | null>(null);
   const [activeForecast, setActiveForecast] = useState<DemandForecast | null>(null);
@@ -47,9 +48,13 @@ export const SalesDashboardPage: React.FC = () => {
   const loadDashboardData = useCallback(async (horizonDays: number = forecastHorizon) => {
     setIsRefreshing(true);
     try {
-      // 0. Load Branches
-      const branchList = await branchApi.getBranches();
+      // 0. Load Branches and Products
+      const [branchList, productList] = await Promise.all([
+        branchApi.getBranches(),
+        productApi.getProducts()
+      ]);
       setAvailableBranches(branchList);
+      setAvailableProducts(productList);
 
       // 1. Load Sales
       const salesData = await salesApi.getSales();
@@ -67,20 +72,29 @@ export const SalesDashboardPage: React.FC = () => {
       const forecastHistory = await demandApi.getForecastHistory();
       if (forecastHistory.length > 0 && forecastHistory[0].period === horizonDays) {
         setActiveForecast(forecastHistory[0]);
-      } else {
-        const initialResult = await agentApi.runForecastAgent({
-          productId: '18464716-8fa7-49da-b521-08b1dc057c28',
-          productSku: 'SKU-PARACETAMOL-500',
-          productName: 'Paracetamol 500mg (100 Tabs)',
-          forecastDays: horizonDays,
-          leadTimeDays: 7,
-          currentStockLevel: 45,
-          initiatedBy: 'SystemAutoInit'
-        });
-        if (initialResult.forecast) {
-          setActiveForecast(initialResult.forecast);
-          setCurrentWorkflowState(initialResult.workflowState);
+      } else if (forecastHistory.length > 0) {
+        setActiveForecast(forecastHistory[0]);
+      } else if (productList.length > 0) {
+        try {
+          const firstProduct = productList[0];
+          const initialResult = await agentApi.runForecastAgent({
+            productId: firstProduct.productId,
+            productSku: firstProduct.sku,
+            productName: firstProduct.name,
+            forecastDays: horizonDays,
+            leadTimeDays: 7,
+            currentStockLevel: 0,
+            initiatedBy: 'SystemAutoInit'
+          });
+          if (initialResult.forecast) {
+            setActiveForecast(initialResult.forecast);
+            setCurrentWorkflowState(initialResult.workflowState);
+          }
+        } catch {
+          setActiveForecast(null);
         }
+      } else {
+        setActiveForecast(null);
       }
 
       // 5. Load latest Agent Workflow Audit Trace
@@ -117,13 +131,21 @@ export const SalesDashboardPage: React.FC = () => {
     setForecastHorizon(days);
     setIsRefreshing(true);
     try {
+      const targetProduct = activeForecast
+        ? { productId: activeForecast.productId, sku: activeForecast.productSku, name: activeForecast.productName }
+        : availableProducts[0];
+      if (!targetProduct) {
+        setIsRefreshing(false);
+        return;
+      }
+
       const result = await agentApi.runForecastAgent({
-        productId: activeForecast?.productId || '18464716-8fa7-49da-b521-08b1dc057c28',
-        productSku: activeForecast?.productSku || 'SKU-PARACETAMOL-500',
-        productName: activeForecast?.productName || 'Paracetamol 500mg (100 Tabs)',
+        productId: targetProduct.productId,
+        productSku: targetProduct.sku,
+        productName: targetProduct.name,
         forecastDays: days,
         leadTimeDays: 7,
-        currentStockLevel: 45,
+        currentStockLevel: 0,
         initiatedBy: 'HorizonSelector'
       });
       if (result.forecast) {
@@ -302,6 +324,7 @@ export const SalesDashboardPage: React.FC = () => {
         onClose={() => setIsRecordSaleOpen(false)}
         onSaleCreated={handleSaleCreated}
         branches={availableBranches}
+        products={availableProducts}
       />
 
       {/* Run Forecast Agent Modal */}
@@ -310,6 +333,7 @@ export const SalesDashboardPage: React.FC = () => {
         onClose={() => setIsRunForecastOpen(false)}
         onForecastGenerated={handleForecastGenerated}
         branches={availableBranches}
+        products={availableProducts}
       />
 
       {/* Agent Workflow Execution Trace Drawer */}

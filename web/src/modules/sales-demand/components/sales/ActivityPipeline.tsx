@@ -23,9 +23,9 @@ export const ActivityPipeline: React.FC<ActivityPipelineProps> = ({
   reorderSuggestions,
   forecastConfidence
 }) => {
-  const totalSales = analytics?.totalTransactions ?? 50;
-  const totalRevenue = analytics?.totalRevenue ?? 14250.0;
-  const unitsSold = analytics?.totalUnitsSold ?? 720;
+  const totalSales = analytics?.totalTransactions ?? 0;
+  const totalRevenue = analytics?.totalRevenue ?? 0;
+  const unitsSold = analytics?.totalUnitsSold ?? 0;
 
   // Order fulfillment workflow pipeline
   const confirmedCount = Math.round(totalSales * 0.2);
@@ -175,7 +175,7 @@ export const ActivityPipeline: React.FC<ActivityPipelineProps> = ({
           <div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Est. Units In Hand</div>
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              {totalInHand > 0 ? `${totalInHand} units` : '1,840 units'}
+              {totalInHand.toLocaleString()} units
             </div>
           </div>
         </div>

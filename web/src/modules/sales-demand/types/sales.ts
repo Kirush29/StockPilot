@@ -241,3 +241,14 @@ export interface BranchOption {
   name: string;
   isActive?: boolean;
 }
+
+export interface ProductOption {
+  productId: string;
+  sku: string;
+  name: string;
+  category?: string;
+  price?: number;
+  costPrice?: number;
+  reorderLevel?: number;
+  isActive?: boolean;
+}

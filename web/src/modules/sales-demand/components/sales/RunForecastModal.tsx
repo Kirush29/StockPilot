@@ -1,31 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, BrainCircuit, ShieldAlert } from 'lucide-react';
 import { agentApi, demandApi } from '../../services/api';
-import type { DemandForecast, WorkflowState, BranchOption } from '../../types/sales';
+import type { DemandForecast, WorkflowState, BranchOption, ProductOption } from '../../types/sales';
 
 interface RunForecastModalProps {
   isOpen: boolean;
   onClose: () => void;
   onForecastGenerated: (forecast: DemandForecast, workflowState?: WorkflowState) => void;
   branches?: BranchOption[];
+  products?: ProductOption[];
 }
-
-const PRESET_PRODUCTS = [
-  { id: '18464716-8fa7-49da-b521-08b1dc057c28', sku: 'SKU-PARACETAMOL-500', name: 'Paracetamol 500mg (100 Tabs)' },
-  { id: '28464716-8fa7-49da-b521-08b1dc057c29', sku: 'SKU-AMOXICILLIN-250', name: 'Amoxicillin 250mg Capsules' },
-  { id: '38464716-8fa7-49da-b521-08b1dc057c30', sku: 'SKU-VITAMINC-1000', name: 'Vitamin C 1000mg Effervescent' },
-  { id: '48464716-8fa7-49da-b521-08b1dc057c31', sku: 'SKU-MASKS-SURG-50', name: '3-Ply Surgical Masks (Box of 50)' }
-];
 
 export const RunForecastModal: React.FC<RunForecastModalProps> = ({
   isOpen,
   onClose,
   onForecastGenerated,
-  branches = []
+  branches = [],
+  products = []
 }) => {
-  const [selectedProductId, setSelectedProductId] = useState(PRESET_PRODUCTS[0].id);
+  const [selectedProductId, setSelectedProductId] = useState(() => products[0]?.productId || '');
   const [selectedBranchId, setSelectedBranchId] = useState(() => branches[0]?.branchId || '');
-  const [branchName, setBranchName] = useState(() => branches[0]?.name || 'Colombo Central Branch');
+  const [branchName, setBranchName] = useState(() => branches[0]?.name || '');
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      if (!selectedProductId || !products.some(p => p.productId === selectedProductId)) {
+        setSelectedProductId(products[0].productId);
+      }
+    }
+  }, [products, selectedProductId]);
 
   useEffect(() => {
     if (branches && branches.length > 0) {
@@ -34,7 +37,7 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
         setBranchName(branches[0].name);
       }
     }
-  }, [branches]);
+  }, [branches, selectedBranchId]);
   const [period, setPeriod] = useState(30);
   const [leadTimeDays, setLeadTimeDays] = useState(7);
   const [currentStockLevel, setCurrentStockLevel] = useState(45);
@@ -53,12 +56,17 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
     e.preventDefault();
     setIsRunning(true);
 
-    const product = PRESET_PRODUCTS.find((p) => p.id === selectedProductId) || PRESET_PRODUCTS[0];
+    const product = products.find((p) => p.productId === selectedProductId) || products[0];
+    if (!product) {
+      alert('Please select an active product from inventory.');
+      setIsRunning(false);
+      return;
+    }
 
     try {
       // Execute the multi-step Demand Forecast Agent workflow
       const result = await agentApi.runForecastAgent({
-        productId: product.id,
+        productId: product.productId,
         productSku: product.sku,
         productName: product.name,
         branchId: selectedBranchId || undefined,
@@ -81,7 +89,7 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
       // Seamless fallback to baseline statistical service if needed
       try {
         const fallbackForecast = await demandApi.generateForecast({
-          productId: product.id,
+          productId: product.productId,
           productSku: product.sku,
           productName: product.name,
           branchId: selectedBranchId || undefined,
@@ -142,11 +150,15 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
                 fontSize: '0.875rem'
               }}
             >
-              {PRESET_PRODUCTS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.sku})
-                </option>
-              ))}
+              {products && products.length > 0 ? (
+                products.map((p) => (
+                  <option key={p.productId} value={p.productId}>
+                    {p.name} ({p.sku})
+                  </option>
+                ))
+              ) : (
+                <option value="">No products available</option>
+              )}
             </select>
           </div>
 
@@ -185,10 +197,7 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="Colombo Central Branch">Colombo Central Branch</option>
-                    <option value="Kandy City Branch">Kandy City Branch</option>
-                  </>
+                  <option value="">No branches configured</option>
                 )}
               </select>
             </div>

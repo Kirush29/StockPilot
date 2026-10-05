@@ -126,18 +126,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             }}
           >
             <option value="All Branches">All Branches (Consolidated)</option>
-            {branches && branches.length > 0 ? (
+            {branches && branches.length > 0 &&
               branches.map((b) => (
                 <option key={b.branchId} value={b.name}>
                   {b.name} ({b.branchCode})
                 </option>
-              ))
-            ) : (
-              <>
-                <option value="Colombo Central Branch">Colombo Central Branch</option>
-                <option value="Kandy City Branch">Kandy City Branch</option>
-              </>
-            )}
+              ))}
           </select>
         </div>
 
@@ -266,7 +260,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 <Package size={28} color="#64748B" style={{ marginBottom: 8 }} />
                 <div>No items or invoices matching "<strong>{searchQuery}</strong>"</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                  Try searching for Paracetamol, Amoxicillin, Masks, or an invoice number.
+                  Try searching for a product name, SKU, customer reference, or invoice number.
                 </div>
               </div>
             ) : (

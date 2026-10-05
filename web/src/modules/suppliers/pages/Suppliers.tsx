@@ -49,7 +49,7 @@ export default function Suppliers() {
       setLoading(true);
       setError(null);
       const data = await supplierService.getAllSuppliers();
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : (data as any)?.data ?? []);
     } catch (err: any) {
       setError(err.message || 'Failed to load suppliers.');
     } finally {
@@ -64,7 +64,7 @@ export default function Suppliers() {
         setLoading(true);
         setError(null);
         const data = await supplierService.getAllSuppliers();
-        if (isMounted) setSuppliers(data);
+        if (isMounted) setSuppliers(Array.isArray(data) ? data : (data as any)?.data ?? []);
       } catch (err: any) {
         if (isMounted) setError(err.message || 'Failed to load suppliers.');
       } finally {
@@ -83,7 +83,7 @@ export default function Suppliers() {
       setIsSearching(true);
       setError(null);
       const data = await supplierService.searchSuppliers(keyword);
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : (data as any)?.data ?? []);
       setHasSearched(true);
     } catch (err: any) {
       setError(err.message || 'Failed to search suppliers.');
@@ -286,7 +286,7 @@ export default function Suppliers() {
       await fetchRatings(ratingsOpenSupplier.id);
 
       const updatedList = await supplierService.getAllSuppliers();
-      setSuppliers(updatedList);
+      setSuppliers(Array.isArray(updatedList) ? updatedList : (updatedList as any)?.data ?? []);
 
     } catch (err: any) {
       setRatingFormError(err.message || 'Failed to add rating.');
@@ -458,7 +458,7 @@ export default function Suppliers() {
                       <div className="flex items-center gap-1.5">
                         <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                         <span className="text-sm font-medium text-slate-700">
-                          {supplier.rating.toFixed(1)}
+                          {(Number(supplier.rating || 0)).toFixed(1)}
                         </span>
                       </div>
                     </td>
@@ -566,7 +566,7 @@ export default function Suppliers() {
                     value={formData.name}
                     onChange={handleInputChange}
                     className={`w-full px-3 py-2 bg-white border ${formErrors.name ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
-                    placeholder="Acme Corp"
+                    placeholder="e.g. Lanka Supplies Ltd"
                     disabled={isSubmitting}
                   />
                   {formErrors.name && <p className="text-xs text-rose-600 mt-1">{formErrors.name}</p>}
@@ -580,7 +580,7 @@ export default function Suppliers() {
                     value={formData.contactEmail}
                     onChange={handleInputChange}
                     className={`w-full px-3 py-2 bg-white border ${formErrors.contactEmail ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
-                    placeholder="contact@example.com"
+                    placeholder="e.g. contact@supplier.com"
                     disabled={isSubmitting}
                   />
                   {formErrors.contactEmail && <p className="text-xs text-rose-600 mt-1">{formErrors.contactEmail}</p>}
@@ -594,7 +594,7 @@ export default function Suppliers() {
                     value={formData.contactPhone}
                     onChange={handleInputChange}
                     className={`w-full px-3 py-2 bg-white border ${formErrors.contactPhone ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors`}
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="+94 11 234 5678"
                     disabled={isSubmitting}
                   />
                   {formErrors.contactPhone && <p className="text-xs text-rose-600 mt-1">{formErrors.contactPhone}</p>}
@@ -608,7 +608,7 @@ export default function Suppliers() {
                     onChange={handleInputChange}
                     className={`w-full px-3 py-2 bg-white border ${formErrors.address ? 'border-rose-300 ring-rose-100 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-black focus:ring-black'} rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors resize-none`}
                     rows={3}
-                    placeholder="Full Business Address"
+                    placeholder="e.g. 123 Commercial Road, Colombo"
                     disabled={isSubmitting}
                   />
                   {formErrors.address && <p className="text-xs text-rose-600 mt-1">{formErrors.address}</p>}
@@ -788,7 +788,7 @@ export default function Suppliers() {
                       ratings.map(r => (
                         <div key={r.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex gap-4 items-start">
                           <div className="flex flex-col items-center justify-center bg-amber-50 text-amber-700 min-w-[3.5rem] py-2 rounded-lg border border-amber-100">
-                            <span className="text-lg font-bold leading-none">{r.rating.toFixed(1)}</span>
+                            <span className="text-lg font-bold leading-none">{(Number(r.rating || 0)).toFixed(1)}</span>
                             <div className="flex items-center mt-1 text-[10px] uppercase font-semibold">
                               <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500 mr-0.5" />
                               out of 5

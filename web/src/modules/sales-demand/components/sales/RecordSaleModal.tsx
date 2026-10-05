@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Check, ShoppingCart, AlertCircle } from 'lucide-react';
-import type { CreateSaleRequest, BranchOption } from '../../types/sales';
+import type { CreateSaleRequest, BranchOption, ProductOption } from '../../types/sales';
 import { salesApi } from '../../services/api';
 
 interface RecordSaleModalProps {
@@ -8,24 +8,18 @@ interface RecordSaleModalProps {
   onClose: () => void;
   onSaleCreated: () => void;
   branches?: BranchOption[];
+  products?: ProductOption[];
 }
-
-const PRESET_PRODUCTS = [
-  { id: '18464716-8fa7-49da-b521-08b1dc057c28', sku: 'SKU-PARACETAMOL-500', name: 'Paracetamol 500mg (100 Tabs)', category: 'Pharmaceuticals', price: 15.50 },
-  { id: '13738190-af11-4289-8ad0-bce865d59402', sku: 'SKU-AMOXICILLIN-250', name: 'Amoxicillin 250mg Capsules', category: 'Antibiotics', price: 28.00 },
-  { id: '78412e26-739f-4405-8e6c-a7858bea3817', sku: 'SKU-VITAMINC-1000', name: 'Vitamin C 1000mg Effervescent', category: 'Supplements', price: 22.00 },
-  { id: '91f24d1a-5b12-4cf0-863a-2395d82046a1', sku: 'SKU-IBUPROFEN-400', name: 'Ibuprofen 400mg Softgels', category: 'Pain Relief', price: 18.25 },
-  { id: '52c41829-9e81-42cb-bdfa-345091a18204', sku: 'SKU-OMEPRAZOLE-20', name: 'Omeprazole 20mg Delayed Release', category: 'Gastrointestinal', price: 34.00 }
-];
 
 export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   isOpen,
   onClose,
   onSaleCreated,
-  branches = []
+  branches = [],
+  products = []
 }) => {
   const [selectedBranchId, setSelectedBranchId] = useState(() => branches[0]?.branchId || '');
-  const [branchName, setBranchName] = useState(() => branches[0]?.name || 'Colombo Central Branch');
+  const [branchName, setBranchName] = useState(() => branches[0]?.name || '');
 
   useEffect(() => {
     if (branches && branches.length > 0) {
@@ -34,39 +28,64 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
         setBranchName(branches[0].name);
       }
     }
-  }, [branches]);
+  }, [branches, selectedBranchId]);
+
   const [paymentMethod, setPaymentMethod] = useState(1);
   const [customerReference, setCustomerReference] = useState('');
   const [notes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const [items, setItems] = useState([
-    {
-      productId: PRESET_PRODUCTS[0].id,
-      productSku: PRESET_PRODUCTS[0].sku,
-      productName: PRESET_PRODUCTS[0].name,
-      category: PRESET_PRODUCTS[0].category,
-      quantity: 5,
-      unitPrice: PRESET_PRODUCTS[0].price,
-      discountPercent: 0
+  const [items, setItems] = useState(() => {
+    const first = products[0];
+    return [
+      {
+        productId: first?.productId || '',
+        productSku: first?.sku || '',
+        productName: first?.name || '',
+        category: first?.category || 'General',
+        quantity: 1,
+        unitPrice: first?.price || 0,
+        discountPercent: 0
+      }
+    ];
+  });
+
+  useEffect(() => {
+    if (products.length > 0) {
+      setItems((curr) =>
+        curr.map((it) => {
+          if (!it.productId) {
+            const first = products[0];
+            return {
+              ...it,
+              productId: first.productId,
+              productSku: first.sku,
+              productName: first.name,
+              category: first.category || 'General',
+              unitPrice: first.price || 0
+            };
+          }
+          return it;
+        })
+      );
     }
-  ]);
+  }, [products]);
 
   if (!isOpen) return null;
 
   const handleAddItem = () => {
     setValidationError(null);
-    const defaultProduct = PRESET_PRODUCTS[items.length % PRESET_PRODUCTS.length];
+    const defaultProduct = products.length > 0 ? products[items.length % products.length] : null;
     setItems([
       ...items,
       {
-        productId: defaultProduct.id,
-        productSku: defaultProduct.sku,
-        productName: defaultProduct.name,
-        category: defaultProduct.category,
+        productId: defaultProduct?.productId || '',
+        productSku: defaultProduct?.sku || '',
+        productName: defaultProduct?.name || '',
+        category: defaultProduct?.category || 'General',
         quantity: 1,
-        unitPrice: defaultProduct.price,
+        unitPrice: defaultProduct?.price || 0,
         discountPercent: 0
       }
     ]);
@@ -81,17 +100,17 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
 
   const handleProductSelect = (index: number, productId: string) => {
     setValidationError(null);
-    const found = PRESET_PRODUCTS.find((p) => p.id === productId);
+    const found = products.find((p) => p.productId === productId);
     if (!found) return;
 
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
-      productId: found.id,
+      productId: found.productId,
       productSku: found.sku,
       productName: found.name,
-      category: found.category,
-      unitPrice: found.price
+      category: found.category || 'General',
+      unitPrice: found.price || 0
     };
     setItems(newItems);
   };
@@ -247,10 +266,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="Colombo Central Branch">Colombo Central Branch</option>
-                    <option value="Kandy City Branch">Kandy City Branch</option>
-                  </>
+                  <option value="">No branches configured</option>
                 )}
               </select>
             </div>
@@ -284,7 +300,7 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="e.g. Asiri Surgical Hospital"
+                placeholder="e.g. Walk-in Customer or Client Name"
                 value={customerReference}
                 onChange={(e) => setCustomerReference(e.target.value)}
                 style={{
@@ -349,9 +365,15 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                         fontSize: '0.8rem'
                       }}
                     >
-                      {PRESET_PRODUCTS.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {products && products.length > 0 ? (
+                        products.map((p) => (
+                          <option key={p.productId} value={p.productId}>
+                            {p.name} ({p.sku})
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No products available</option>
+                      )}
                     </select>
                   </div>
 

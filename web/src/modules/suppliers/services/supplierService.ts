@@ -45,8 +45,9 @@ const ENDPOINT = '/Suppliers';
 
 export const supplierService = {
   getAllSuppliers: async () => {
-    const data = await apiClient.get<Supplier[]>(ENDPOINT);
-    return data.sort((a, b) => a.supplierCode.localeCompare(b.supplierCode));
+    const data = await apiClient.get<any>(ENDPOINT);
+    const list: Supplier[] = Array.isArray(data) ? data : data?.data ?? [];
+    return [...list].sort((a, b) => (a.supplierCode || '').localeCompare(b.supplierCode || ''));
   },
   
   getSupplierById: (id: string) => apiClient.get<Supplier>(`${ENDPOINT}/${id}`),
@@ -61,13 +62,16 @@ export const supplierService = {
     apiClient.delete<void>(`${ENDPOINT}/${id}`),
     
   searchSuppliers: async (keyword: string) => {
-    const data = await apiClient.get<Supplier[]>(`${ENDPOINT}/search?keyword=${encodeURIComponent(keyword)}`);
-    return data.sort((a, b) => a.supplierCode.localeCompare(b.supplierCode));
+    const data = await apiClient.get<any>(`${ENDPOINT}/search?keyword=${encodeURIComponent(keyword)}`);
+    const list: Supplier[] = Array.isArray(data) ? data : data?.data ?? [];
+    return [...list].sort((a, b) => (a.supplierCode || '').localeCompare(b.supplierCode || ''));
   },
     
   addSupplierRating: (supplierId: string, data: CreateSupplierRatingRequest) => 
     apiClient.post<SupplierRating>(`${ENDPOINT}/${supplierId}/ratings`, data),
     
-  getSupplierRatings: (supplierId: string) => 
-    apiClient.get<SupplierRating[]>(`${ENDPOINT}/${supplierId}/ratings`),
+  getSupplierRatings: async (supplierId: string) => {
+    const data = await apiClient.get<any>(`${ENDPOINT}/${supplierId}/ratings`);
+    return (Array.isArray(data) ? data : data?.data ?? []) as SupplierRating[];
+  },
 };

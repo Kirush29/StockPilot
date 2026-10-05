@@ -23,23 +23,13 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
 }) => {
   const [activeView, setActiveView] = useState<'seasonality' | 'spikes'>('seasonality');
 
-  // Fallback demo seasonality if not loaded yet
-  const defaultSeasonality: DayOfWeekPattern[] = [
-    { dayName: 'Monday', dayIndex: 1, averageQuantity: 28.4, averageRevenue: 695.8, totalDaysObserved: 4 },
-    { dayName: 'Tuesday', dayIndex: 2, averageQuantity: 24.1, averageRevenue: 590.5, totalDaysObserved: 4 },
-    { dayName: 'Wednesday', dayIndex: 3, averageQuantity: 36.8, averageRevenue: 901.6, totalDaysObserved: 4 },
-    { dayName: 'Thursday', dayIndex: 4, averageQuantity: 26.2, averageRevenue: 641.9, totalDaysObserved: 4 },
-    { dayName: 'Friday', dayIndex: 5, averageQuantity: 39.5, averageRevenue: 967.7, totalDaysObserved: 4 },
-    { dayName: 'Saturday', dayIndex: 6, averageQuantity: 19.3, averageRevenue: 472.8, totalDaysObserved: 4 },
-    { dayName: 'Sunday', dayIndex: 0, averageQuantity: 12.0, averageRevenue: 294.0, totalDaysObserved: 4 },
-  ];
+  const seasonalityData = dayOfWeekPatterns || [];
+  const hasSeasonality = seasonalityData.length > 0 && seasonalityData.some((d) => d.averageQuantity > 0);
 
-  const seasonalityData = dayOfWeekPatterns.length > 0 ? dayOfWeekPatterns : defaultSeasonality;
-
-  // Find peak day of week
-  const peakDay = seasonalityData.reduce((prev, curr) => 
-    (curr.averageQuantity > prev.averageQuantity) ? curr : prev
-  , seasonalityData[0]);
+  // Find peak day of week if seasonality data exists
+  const peakDay = hasSeasonality
+    ? seasonalityData.reduce((prev, curr) => (curr.averageQuantity > prev.averageQuantity ? curr : prev), seasonalityData[0])
+    : null;
 
   // Identify spikes from daily trends
   const spikes = dailyTrends.filter((d) => d.isSpike);
@@ -133,35 +123,44 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
 
       {/* Main Content Area */}
       {activeView === 'seasonality' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-          {/* Seasonality Quick Highlight */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            backgroundColor: '#EFF6FF',
-            borderRadius: 6,
-            border: '1px solid #BFDBFE',
-            marginBottom: 12,
-            fontSize: '0.75rem',
-            color: '#1E40AF'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Info size={14} color="#0068FF" />
-              <span>
-                Peak Demand Day: <strong>{peakDay.dayName}</strong> (~{peakDay.averageQuantity.toFixed(1)} units/day)
-              </span>
-            </div>
-            <span style={{ fontWeight: 600, color: '#0068FF' }}>
-              Rs. {peakDay.averageRevenue.toFixed(0)} avg revenue
-            </span>
+        !hasSeasonality ? (
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
+            <CalendarDays size={32} style={{ opacity: 0.35, marginBottom: 8 }} />
+            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>No Weekly Seasonality Data</div>
+            <p style={{ fontSize: '0.78rem', marginTop: 4, margin: '4px 0 0' }}>Daily demand fluctuations and peak shopping days will appear once sales transactions are recorded across weekdays.</p>
           </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            {/* Seasonality Quick Highlight */}
+            {peakDay && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: '#EFF6FF',
+                borderRadius: 6,
+                border: '1px solid #BFDBFE',
+                marginBottom: 12,
+                fontSize: '0.75rem',
+                color: '#1E40AF'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Info size={14} color="#0068FF" />
+                  <span>
+                    Peak Demand Day: <strong>{peakDay.dayName}</strong> (~{peakDay.averageQuantity.toFixed(1)} units/day)
+                  </span>
+                </div>
+                <span style={{ fontWeight: 600, color: '#0068FF' }}>
+                  Rs. {peakDay.averageRevenue.toFixed(0)} avg revenue
+                </span>
+              </div>
+            )}
 
-          {/* Bar Chart of Seasonality */}
-          <div style={{ width: '100%', height: 210, flex: 1 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={seasonalityData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
+            {/* Bar Chart of Seasonality */}
+            <div style={{ width: '100%', height: 210, flex: 1 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={seasonalityData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                 <XAxis
                   dataKey="dayName"
@@ -204,7 +203,7 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
                   {seasonalityData.map((entry) => (
                     <Cell
                       key={entry.dayName}
-                      fill={entry.dayName === peakDay.dayName ? '#0068FF' : '#93C5FD'}
+                      fill={peakDay && entry.dayName === peakDay.dayName ? '#0068FF' : '#93C5FD'}
                     />
                   ))}
                 </Bar>
@@ -212,6 +211,7 @@ export const DemandTrendsWidget: React.FC<DemandTrendsWidgetProps> = ({
             </ResponsiveContainer>
           </div>
         </div>
+      )
       ) : (
         /* Demand Spikes View */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto', maxHeight: 270 }}>

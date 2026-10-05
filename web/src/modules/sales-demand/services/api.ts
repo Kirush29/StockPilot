@@ -139,3 +139,28 @@ export const branchApi = {
   },
 };
 
+export const productApi = {
+  // Load real catalog products from the central backend API
+  getProducts: async (): Promise<import('../types/sales').ProductOption[]> => {
+    try {
+      const response = await shellClient.get<any>('/api/products');
+      const list = response.data?.data ?? response.data ?? [];
+      return (Array.isArray(list) ? list : [])
+        .filter((p: any) => p.isActive !== false)
+        .map((p: any) => ({
+          productId: p.productId ?? p.id ?? '',
+          sku: p.sku ?? p.SKU ?? '',
+          name: p.name ?? '',
+          category: p.categoryName ?? p.category ?? 'General',
+          price: Number(p.sellingPrice ?? p.price ?? 0),
+          costPrice: Number(p.costPrice ?? 0),
+          reorderLevel: Number(p.reorderLevel ?? 0),
+          isActive: p.isActive !== false,
+        }));
+    } catch (e) {
+      console.warn('Failed to load products for Sales & Demand, falling back to empty list:', e);
+      return [];
+    }
+  },
+};
+

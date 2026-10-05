@@ -114,6 +114,9 @@ export default function Evaluation() {
             disabled={loading}
           >
             <option value="">Select a product to evaluate...</option>
+            {products.length === 0 && (
+              <option value="" disabled>No products available</option>
+            )}
             {products.map(p => {
               const pid = p.id ?? (p as any).productId;
               return <option key={pid} value={pid}>{p.name} ({p.sku})</option>;
