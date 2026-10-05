@@ -24,19 +24,28 @@ interface SalesLedgerTableProps {
 export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoading, externalSearch, branches = [] }) => {
   const [internalSearch, setInternalSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'cash' | 'card'>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'live' | 'historical'>('all');
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d'>('all');
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
 
   const effectiveSearch = externalSearch || internalSearch;
 
-  // Multi-dimensional filtering: Search, Branch, Date Range, Payment Method
+  const liveCount = useMemo(() => sales.filter((s) => !s.invoiceNumber.toUpperCase().startsWith('INV-HIST')).length, [sales]);
+  const historicalCount = useMemo(() => sales.filter((s) => s.invoiceNumber.toUpperCase().startsWith('INV-HIST')).length, [sales]);
+
+  // Multi-dimensional filtering: Search, Branch, Date Range, Payment Method, Source
   const filteredSales = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
 
     return sales.filter((sale) => {
+      // 0. Source Filter (Live POS vs Historical AI Training Dataset)
+      const isHistorical = sale.invoiceNumber.toUpperCase().startsWith('INV-HIST');
+      if (sourceFilter === 'live' && isHistorical) return false;
+      if (sourceFilter === 'historical' && !isHistorical) return false;
+
       // 1. Text Search
       const searchMatch = !effectiveSearch.trim() ||
         sale.invoiceNumber.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
@@ -65,7 +74,7 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
 
       return true;
     });
-  }, [sales, effectiveSearch, paymentFilter, branchFilter, dateFilter]);
+  }, [sales, effectiveSearch, paymentFilter, sourceFilter, branchFilter, dateFilter]);
 
   const toggleExpand = (id: string) => {
     setExpandedSaleId(expandedSaleId === id ? null : id);
@@ -75,9 +84,10 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
   const handleExportCsv = () => {
     if (filteredSales.length === 0) return;
 
-    const headers = ['InvoiceNumber', 'Branch', 'DateUtc', 'Customer', 'PaymentMethod', 'ItemCount', 'SubTotal', 'Discount', 'Tax', 'TotalAmount'];
+    const headers = ['InvoiceNumber', 'Type', 'Branch', 'DateUtc', 'Customer', 'PaymentMethod', 'ItemCount', 'SubTotal', 'Discount', 'Tax', 'TotalAmount'];
     const rows = filteredSales.map((s) => [
       s.invoiceNumber,
+      s.invoiceNumber.toUpperCase().startsWith('INV-HIST') ? 'Historical Dataset' : 'Live POS',
       `"${s.branchName}"`,
       s.saleDateUtc,
       `"${s.customerReference || 'Walk-in'}"`,
@@ -135,12 +145,44 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
             </span>
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-            Audited history of recorded branch sales transactions and line-item allocations
+            Audited history of recorded branch sales transactions and line-item allocations ({liveCount} Live POS, {historicalCount} AI Training Baseline)
           </p>
         </div>
 
         {/* Action Controls & Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Source Filter Tabs (All / Live POS / Historical Dataset) */}
+          <div style={{
+            display: 'flex',
+            backgroundColor: '#F1F5F9',
+            padding: 3,
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            {[
+              { id: 'all', label: `All (${sales.length})` },
+              { id: 'live', label: `Live POS (${liveCount})` },
+              { id: 'historical', label: `AI Training (${historicalCount})` },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setSourceFilter(tab.id as any)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 4,
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: sourceFilter === tab.id ? 'var(--primary-color)' : 'transparent',
+                  color: sourceFilter === tab.id ? '#FFFFFF' : 'var(--text-muted)'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Branch Filter Dropdown */}
           <div style={{
             display: 'flex',
@@ -166,18 +208,11 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
               }}
             >
               <option value="all">All Branches</option>
-              {branches && branches.length > 0 ? (
-                branches.map((b) => (
-                  <option key={b.branchId} value={b.branchId}>
-                    {b.name}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="colombo">Colombo Central</option>
-                  <option value="kandy">Kandy City</option>
-                </>
-              )}
+              {branches?.map((b) => (
+                <option key={b.branchId} value={b.branchId}>
+                  {b.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -340,7 +375,42 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
                         {isExpanded ? <ChevronUp size={15} color="var(--primary-color)" /> : <ChevronDown size={15} color="#64748B" />}
                       </td>
                       <td>
-                        <strong style={{ color: 'var(--primary-color)', fontSize: '0.82rem' }}>{sale.invoiceNumber}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <strong style={{ color: 'var(--primary-color)', fontSize: '0.82rem' }}>{sale.invoiceNumber}</strong>
+                          {sale.invoiceNumber.toUpperCase().startsWith('INV-HIST') ? (
+                            <span
+                              style={{
+                                fontSize: '0.62rem',
+                                padding: '2px 5px',
+                                borderRadius: 3,
+                                backgroundColor: '#F1F5F9',
+                                color: '#64748B',
+                                fontWeight: 600,
+                                border: '1px solid #E2E8F0',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title="Pre-seeded historical data used as AI training baseline"
+                            >
+                              AI Baseline
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '0.62rem',
+                                padding: '2px 5px',
+                                borderRadius: 3,
+                                backgroundColor: '#ECFDF5',
+                                color: '#059669',
+                                fontWeight: 700,
+                                border: '1px solid #A7F3D0',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title="Live recorded Point-of-Sale transaction"
+                            >
+                              Live POS
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{sale.branchName}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{saleDate}</td>
