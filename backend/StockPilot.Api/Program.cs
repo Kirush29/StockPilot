@@ -118,7 +118,7 @@ var openAiKey = builder.Configuration["OpenAI:ApiKey"]
 
 if (!string.IsNullOrEmpty(geminiKey))
 {
-    var modelId = builder.Configuration["Gemini:ModelId"] ?? builder.Configuration["GEMINI_MODEL"] ?? "gemini-2.5-flash";
+    var modelId = builder.Configuration["Gemini:ModelId"] ?? builder.Configuration["GEMINI_MODEL"] ?? "gemini-3.8-flash";
     var skBuilder = builder.Services.AddKernel();
     skBuilder.AddOpenAIChatCompletion(
         modelId: modelId,

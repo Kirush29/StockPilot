@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using StockPilot.Infrastructure.Data;
@@ -278,19 +278,37 @@ Output ONLY valid JSON:
         try
         {
             var response = await chatService.GetChatMessageContentAsync(prompt);
-            var jsonContent = response.Content?.Trim() ?? "{}";
+            var raw = response.Content?.Trim() ?? "{}";
 
-            if (jsonContent.StartsWith("```json"))
-                jsonContent = jsonContent.Replace("```json", "").Replace("```", "").Trim();
+            var firstBrace = raw.IndexOf('{');
+            var lastBrace = raw.LastIndexOf('}');
+            var jsonContent = (firstBrace >= 0 && lastBrace > firstBrace)
+                ? raw.Substring(firstBrace, lastBrace - firstBrace + 1)
+                : raw;
 
             using var doc = JsonDocument.Parse(jsonContent);
-            var reasoning = doc.RootElement.GetProperty("reasoning").GetString() ?? "Good transfer opportunity.";
-            var confidence = doc.RootElement.GetProperty("confidenceScore").GetDecimal();
+
+            var reasoning = "Transfer recommended based on inventory shortage and stock balancing.";
+            if (doc.RootElement.TryGetProperty("reasoning", out var reasonProp))
+            {
+                reasoning = reasonProp.GetString() ?? reasoning;
+            }
+
+            decimal confidence = 0.85m;
+            if (doc.RootElement.TryGetProperty("confidenceScore", out var confProp) ||
+                doc.RootElement.TryGetProperty("confidence", out confProp))
+            {
+                if (confProp.ValueKind == JsonValueKind.Number && confProp.TryGetDecimal(out var c))
+                    confidence = c;
+                else if (confProp.ValueKind == JsonValueKind.String && decimal.TryParse(confProp.GetString(), out var cStr))
+                    confidence = cStr;
+            }
+
             return (reasoning, confidence);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to parse AI response.");
+            logger.LogError(ex, "Failed to execute AI analysis: {Message}", ex.Message);
             return ($"AI Analysis failed. Deterministic fallback: Transfer from {sourceInv.Branch.Name}.", 0.50m);
         }
     }
