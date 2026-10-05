@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supplierEvaluationService, type SupplierEvaluationResponseDto, type SupplierEvaluationCandidateDto } from '../services/supplierEvaluationService';
 import { quotationService, type QuotationStatus } from '../services/quotationService';
 import { productService, type Product } from '../services/productService';
@@ -22,8 +22,10 @@ export default function Evaluation() {
           productService.getAllProducts(),
           supplierService.getAllSuppliers()
         ]);
-        setProducts(prods);
-        setSuppliers(supps);
+        const prodList = (Array.isArray(prods) ? prods : (prods as any)?.data ?? []).filter((p: any) => p.isActive !== false);
+        const suppList = Array.isArray(supps) ? supps : (supps as any)?.data ?? [];
+        setProducts(prodList);
+        setSuppliers(suppList);
       } catch (err) {
         console.error("Failed to fetch initial data", err);
       }
@@ -112,9 +114,10 @@ export default function Evaluation() {
             disabled={loading}
           >
             <option value="">Select a product to evaluate...</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-            ))}
+            {products.map(p => {
+              const pid = p.id ?? (p as any).productId;
+              return <option key={pid} value={pid}>{p.name} ({p.sku})</option>;
+            })}
           </select>
           <button
             type="submit"

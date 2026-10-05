@@ -40,8 +40,27 @@ function RunForm({ onStarted }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    branchesApi.getAll().then((r) => setBranches((r.data?.data ?? r.data ?? []).filter((b) => b.isActive !== false))).catch(() => {})
-    productsApi.getAll(false).then((r) => setProducts(r.data?.data ?? r.data ?? [])).catch(() => {})
+    branchesApi.getAll().then((r) => {
+      const active = (r.data?.data ?? r.data ?? []).filter((b) => b.isActive !== false)
+      setBranches(active)
+      setForm((f) => {
+        if (f.branchId && active.length > 0 && !active.some((b) => (b.branchId ?? b.id) === f.branchId)) {
+          return { ...f, branchId: '' }
+        }
+        return f
+      })
+    }).catch(() => {})
+
+    productsApi.getAll(false).then((r) => {
+      const active = (r.data?.data ?? r.data ?? []).filter((p) => p.isActive !== false)
+      setProducts(active)
+      setForm((f) => {
+        if (f.productId && active.length > 0 && !active.some((p) => (p.productId ?? p.id) === f.productId)) {
+          return { ...f, productId: '' }
+        }
+        return f
+      })
+    }).catch(() => {})
   }, [])
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
@@ -65,7 +84,11 @@ function RunForm({ onStarted }) {
       // 422/503 still return the run's result, so the trace can be shown.
       if (err.response?.data?.workflowId) onStarted(err.response.data)
       else if (err.response?.status === 403) setError('Your role cannot run the replenishment agents.')
-      else setError(err.response?.data?.detail ?? 'The replenishment run could not be started.')
+      else {
+        const d = err.response?.data
+        const msg = d?.detail || d?.message || (Array.isArray(d?.errors) ? d.errors.join(' ') : null) || 'The replenishment run could not be started.'
+        setError(msg)
+      }
     } finally {
       setRunning(false)
     }
@@ -83,14 +106,21 @@ function RunForm({ onStarted }) {
         <label htmlFor="replenishment-branch">Branch <span className="required">*</span></label>
         <select id="replenishment-branch" className="form-control" value={form.branchId} onChange={(e) => set('branchId', e.target.value)} disabled={running}>
           <option value="">Select a branch…</option>
-          {branches.map((b) => <option key={b.branchId} value={b.branchId}>{b.name}</option>)}
+          {branches.map((b) => {
+            const bid = b.branchId ?? b.id
+            return <option key={bid} value={bid}>{b.name}</option>
+          })}
         </select>
       </div>
       <div className="form-group">
         <label htmlFor="replenishment-product">Product <span className="required">*</span></label>
         <select id="replenishment-product" className="form-control" value={form.productId} onChange={(e) => set('productId', e.target.value)} disabled={running}>
           <option value="">Select a product…</option>
-          {products.map((p) => <option key={p.productId} value={p.productId}>{p.name} ({p.sku})</option>)}
+          {products.map((p) => {
+            const pid = p.productId ?? p.id
+            const sku = p.sku ?? p.SKU ?? ''
+            return <option key={pid} value={pid}>{p.name}{sku ? ` (${sku})` : ''}</option>
+          })}
         </select>
       </div>
       <FormInput

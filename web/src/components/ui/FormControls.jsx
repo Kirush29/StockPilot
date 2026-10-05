@@ -3,6 +3,7 @@ import { SearchIcon } from './Icons';
 
 export function FormInput({
   label,
+  id,
   type = 'text',
   value,
   onChange,
@@ -17,10 +18,11 @@ export function FormInput({
   className = '',
   ...props
 }) {
+  const inputId = id || (typeof label === 'string' ? `input-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined);
   return (
     <div className={`form-group ${className}`}>
       {label && (
-        <label>
+        <label htmlFor={inputId}>
           {label}{' '}
           {required && <span className="required">*</span>}
           {!required && optionalText && (
@@ -33,6 +35,7 @@ export function FormInput({
       <div className="input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         {prefix && <span className="input-prefix" style={{ position: 'absolute', left: 12, color: 'var(--color-text-muted)' }}>{prefix}</span>}
         <input
+          id={inputId}
           type={type}
           className={`form-control ${error ? 'error' : ''}`}
           value={value ?? ''}

@@ -12,9 +12,19 @@ export default function ErrorState({
     typeof error === 'string' &&
     (error.includes('401') || error.includes('Authentication required') || error.includes('AUTH-INTEGRATION-POINT') || error.includes('Access denied'))
 
+  const isValidationError =
+    typeof error === 'string' &&
+    (error.includes('required') || error.includes('highlighted') || error.includes('must be') || error.includes('already exists') || error.includes('invalid') || error.includes('Invalid') || error.includes('cannot') || error.includes('greater than') || error.includes('Please'))
+
+  const errorTitle = isAuthError
+    ? 'Authentication Required'
+    : isValidationError
+    ? 'Validation Error'
+    : 'Notice'
+
   const message = typeof error === 'string'
     ? error
-    : error?.response?.data?.message || error?.message || 'An unexpected error occurred while communicating with the inventory service.'
+    : error?.response?.data?.message || error?.message || 'An unexpected error occurred while communicating with the service.'
 
   if (inline) {
     return (
@@ -22,7 +32,7 @@ export default function ErrorState({
         <div className="error-banner-content">
           <AlertCircleIcon />
           <div>
-            <strong>{isAuthError ? 'Authentication Required' : 'Connection Error'}: </strong>
+            <strong>{errorTitle}: </strong>
             {message}
           </div>
         </div>

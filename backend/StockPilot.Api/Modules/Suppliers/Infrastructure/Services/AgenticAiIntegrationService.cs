@@ -37,7 +37,25 @@ public class AgenticAiIntegrationService : IAgenticAiIntegrationService
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
         });
 
-        var resolvedWorkingDirectory = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), _settings.WorkingDirectory));
+        var resolvedWorkingDirectory = Path.IsPathRooted(_settings.WorkingDirectory)
+            ? _settings.WorkingDirectory
+            : Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), _settings.WorkingDirectory));
+
+        if (!Directory.Exists(resolvedWorkingDirectory) && !_settings.EntryPoint.StartsWith("-c"))
+        {
+            foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+            {
+                for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
+                {
+                    var candidate = Path.Combine(dir.FullName, "agentic-ai");
+                    if (Directory.Exists(candidate))
+                    {
+                        resolvedWorkingDirectory = candidate;
+                        break;
+                    }
+                }
+            }
+        }
 
         var processInfo = new ProcessStartInfo
         {
@@ -57,8 +75,15 @@ public class AgenticAiIntegrationService : IAgenticAiIntegrationService
         {
             process.Start();
 
-            await process.StandardInput.WriteAsync(inputJson);
-            process.StandardInput.Close();
+            try
+            {
+                await process.StandardInput.WriteAsync(inputJson);
+                process.StandardInput.Close();
+            }
+            catch (IOException)
+            {
+                // Process may have exited early before reading standard input
+            }
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.TimeoutSeconds));
             var exitTask = process.WaitForExitAsync(cts.Token);

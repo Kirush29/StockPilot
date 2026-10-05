@@ -54,19 +54,40 @@ apiClient.interceptors.response.use(
       const data = error.response.data;
 
       // ValidationProblemDetails (ASP.NET Core standard)
-      if (data.errors && typeof data.errors === 'object' && !Array.isArray(data.errors)) {
-        // Map camelCase or PascalCase keys (and strip JSON-path prefixes like "$.") to standard camelCase for the frontend
-        error.fieldErrors = {};
-        for (const [key, messages] of Object.entries(data.errors)) {
-          const cleanKey = key.replace(/^\$\.?/, '').replace(/^\[['"]?/, '').replace(/['"]?\]$/, '');
-          const camelKey = cleanKey ? (cleanKey.charAt(0).toLowerCase() + cleanKey.slice(1)) : key;
-          error.fieldErrors[camelKey] = Array.isArray(messages) ? messages[0] : messages;
+      if (data.errors && typeof data.errors === 'object') {
+        if (!Array.isArray(data.errors)) {
+          // Map camelCase or PascalCase keys (and strip JSON-path prefixes like "$.") to standard camelCase for the frontend
+          error.fieldErrors = {};
+          for (const [key, messages] of Object.entries(data.errors)) {
+            const cleanKey = key.replace(/^\$\.?/, '').replace(/^\[['"]?/, '').replace(/['"]?\]$/, '');
+            const camelKey = cleanKey ? (cleanKey.charAt(0).toLowerCase() + cleanKey.slice(1)) : key;
+            let rawMsg = Array.isArray(messages) ? messages[0] : messages;
+            if (typeof rawMsg === 'string') {
+              if (rawMsg.includes('could not be converted to System.Guid')) {
+                rawMsg = 'Invalid selection. Please choose a valid item from the list.';
+              } else if (rawMsg.includes('could not be converted to System.DateTime') || rawMsg.includes('Nullable`1[System.DateTime]') || rawMsg.includes('Nullable<System.DateTime>')) {
+                rawMsg = 'Please enter a valid date.';
+              } else if (rawMsg.includes('could not be converted to System.Decimal') || rawMsg.includes('could not be converted to System.Double') || rawMsg.includes('System.Int32')) {
+                rawMsg = 'Please enter a valid number.';
+              }
+            }
+            error.fieldErrors[camelKey] = rawMsg;
+          }
         }
       }
 
-      // Determine best generic display message
+      // Determine best human-readable display message
+      const firstErrorMessage =
+        data.errors && typeof data.errors === 'object'
+          ? (Array.isArray(data.errors)
+              ? data.errors.filter(Boolean).join(' ')
+              : Object.values(data.errors).flat().filter(Boolean).join(' '))
+          : null;
+
       error.displayMessage =
+        data.detail ? data.detail :
         data.title && data.status === 400 ? 'Please correct the highlighted errors.' :
+        firstErrorMessage ? firstErrorMessage :
         data.message ? data.message :
         data.title ? data.title :
         'An unexpected error occurred.';

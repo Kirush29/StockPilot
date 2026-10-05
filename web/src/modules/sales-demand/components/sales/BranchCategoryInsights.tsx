@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Building2, PieChart, Layers } from 'lucide-react';
-import type { BranchSalesComparison, CategorySalesShare } from '../../types/sales';
+import type { BranchSalesComparison, CategorySalesShare, BranchOption } from '../../types/sales';
 
 interface BranchCategoryInsightsProps {
   branches: BranchSalesComparison[];
   categories: CategorySalesShare[];
+  allBranches?: BranchOption[];
 }
 
 export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
   branches = [],
-  categories = []
+  categories = [],
+  allBranches = []
 }) => {
   const [activeTab, setActiveTab] = useState<'branches' | 'categories'>('branches');
 
@@ -26,10 +28,34 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
     { category: 'Medical Supplies', unitsSold: 100, revenue: 1980.5, percentage: 8.3 },
   ];
 
-  const branchList = branches.length > 0 ? branches : defaultBranches;
+  const branchList = useMemo(() => {
+    if (allBranches && allBranches.length > 0) {
+      return allBranches.map((ab) => {
+        const found = branches.find(
+          (b) => b.branchId === ab.branchId || (b.branchName && b.branchName.toLowerCase() === ab.name.toLowerCase())
+        );
+        if (found) {
+          return {
+            ...found,
+            branchName: ab.name,
+          };
+        }
+        return {
+          branchId: ab.branchId,
+          branchName: ab.name,
+          revenue: 0,
+          unitsSold: 0,
+          orderCount: 0,
+          percentageOfTotal: 0
+        };
+      });
+    }
+    return branches.length > 0 ? branches : defaultBranches;
+  }, [allBranches, branches]);
+
   const categoryList = categories.length > 0 ? categories : defaultCategories;
 
-  const totalBranchRevenue = branchList.reduce((acc, b) => acc + b.revenue, 0);
+  const totalBranchRevenue = branchList.reduce((acc, b) => acc + (b.revenue || 0), 0);
 
   return (
     <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -122,6 +148,8 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
       {activeTab === 'branches' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
           {branchList.map((branch, idx) => {
+            const branchColors = ['#0068FF', '#059669', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#14B8A6'];
+            const branchColor = branchColors[idx % branchColors.length];
             const pct = totalBranchRevenue > 0
               ? Math.round((branch.revenue / totalBranchRevenue) * 100)
               : branch.percentageOfTotal;
@@ -142,7 +170,7 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
                       width: 10,
                       height: 10,
                       borderRadius: '50%',
-                      backgroundColor: idx === 0 ? '#0068FF' : '#059669'
+                      backgroundColor: branchColor
                     }} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {branch.branchName}
@@ -165,7 +193,7 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
                   <div style={{
                     width: `${pct}%`,
                     height: '100%',
-                    backgroundColor: idx === 0 ? '#0068FF' : '#059669',
+                    backgroundColor: branchColor,
                     borderRadius: 3,
                     transition: 'width 0.4s ease'
                   }} />

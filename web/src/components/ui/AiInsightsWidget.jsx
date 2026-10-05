@@ -16,10 +16,13 @@ export default function AiInsightsWidget() {
   const fetchBranches = useCallback(async () => {
     try {
       const res = await branchesApi.getAll()
-      const list = res.data?.data ?? []
+      const list = (res.data?.data ?? res.data ?? []).filter(b => b.isActive !== false)
       setBranches(list)
       if (list.length > 0) {
-        setSelectedBranch(list[0].branchId)
+        setSelectedBranch(prev => {
+          if (prev && list.some(b => (b.branchId ?? b.id) === prev)) return prev
+          return list[0].branchId ?? list[0].id
+        })
       }
     } catch (err) {
       setError('Failed to load branches.')
@@ -115,9 +118,10 @@ export default function AiInsightsWidget() {
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
           >
-            {branches.map(b => (
-              <option key={b.branchId} value={b.branchId}>{b.name}</option>
-            ))}
+            {branches.map(b => {
+              const bid = b.branchId ?? b.id;
+              return <option key={bid} value={bid}>{b.name}</option>;
+            })}
           </select>
           <button 
             type="button" 

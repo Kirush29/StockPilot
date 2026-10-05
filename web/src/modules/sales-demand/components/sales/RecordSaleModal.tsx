@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Check, ShoppingCart, AlertCircle } from 'lucide-react';
-import type { CreateSaleRequest } from '../../types/sales';
+import type { CreateSaleRequest, BranchOption } from '../../types/sales';
 import { salesApi } from '../../services/api';
 
 interface RecordSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaleCreated: () => void;
+  branches?: BranchOption[];
 }
 
 const PRESET_PRODUCTS = [
@@ -20,9 +21,20 @@ const PRESET_PRODUCTS = [
 export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
   isOpen,
   onClose,
-  onSaleCreated
+  onSaleCreated,
+  branches = []
 }) => {
-  const [branchName, setBranchName] = useState('Colombo Central Branch');
+  const [selectedBranchId, setSelectedBranchId] = useState(() => branches[0]?.branchId || '');
+  const [branchName, setBranchName] = useState(() => branches[0]?.name || 'Colombo Central Branch');
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      if (!selectedBranchId || !branches.some(b => b.branchId === selectedBranchId)) {
+        setSelectedBranchId(branches[0].branchId);
+        setBranchName(branches[0].name);
+      }
+    }
+  }, [branches]);
   const [paymentMethod, setPaymentMethod] = useState(1);
   const [customerReference, setCustomerReference] = useState('');
   const [notes] = useState('');
@@ -143,7 +155,8 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
 
     try {
       const payload: CreateSaleRequest = {
-        branchName,
+        branchId: selectedBranchId || undefined,
+        branchName: branchName || (branches.find(b => b.branchId === selectedBranchId)?.name ?? 'Main Branch'),
         paymentMethod,
         customerReference: customerReference.trim() || undefined,
         notes: notes || undefined,
@@ -206,8 +219,17 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                 Branch Location
               </label>
               <select
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
+                value={selectedBranchId || branchName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const found = branches.find((b) => b.branchId === val || b.name === val);
+                  if (found) {
+                    setSelectedBranchId(found.branchId);
+                    setBranchName(found.name);
+                  } else {
+                    setBranchName(val);
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '9px 12px',
@@ -218,8 +240,18 @@ export const RecordSaleModal: React.FC<RecordSaleModalProps> = ({
                   fontSize: '0.85rem'
                 }}
               >
-                <option value="Colombo Central Branch">Colombo Central Branch</option>
-                <option value="Kandy City Branch">Kandy City Branch</option>
+                {branches && branches.length > 0 ? (
+                  branches.map((b) => (
+                    <option key={b.branchId} value={b.branchId}>
+                      {b.name} ({b.branchCode})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Colombo Central Branch">Colombo Central Branch</option>
+                    <option value="Kandy City Branch">Kandy City Branch</option>
+                  </>
+                )}
               </select>
             </div>
 

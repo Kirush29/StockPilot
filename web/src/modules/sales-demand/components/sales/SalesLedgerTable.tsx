@@ -12,15 +12,16 @@ import {
   Calendar,
   Building2
 } from 'lucide-react';
-import type { Sale } from '../../types/sales';
+import type { Sale, BranchOption } from '../../types/sales';
 
 interface SalesLedgerTableProps {
   sales: Sale[];
   isLoading: boolean;
   externalSearch?: string;
+  branches?: BranchOption[];
 }
 
-export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoading, externalSearch }) => {
+export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoading, externalSearch, branches = [] }) => {
   const [internalSearch, setInternalSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'cash' | 'card'>('all');
   const [branchFilter, setBranchFilter] = useState<string>('all');
@@ -50,8 +51,11 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
       if (paymentFilter === 'card' && sale.paymentMethod !== 2) return false;
 
       // 3. Branch Filter
-      if (branchFilter !== 'all' && !sale.branchName.toLowerCase().includes(branchFilter.toLowerCase())) {
-        return false;
+      if (branchFilter !== 'all') {
+        const matchesBranch =
+          (sale.branchId && sale.branchId.toLowerCase() === branchFilter.toLowerCase()) ||
+          (sale.branchName && sale.branchName.toLowerCase().includes(branchFilter.toLowerCase()));
+        if (!matchesBranch) return false;
       }
 
       // 4. Date Range Filter
@@ -162,8 +166,18 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
               }}
             >
               <option value="all">All Branches</option>
-              <option value="colombo">Colombo Central</option>
-              <option value="kandy">Kandy City</option>
+              {branches && branches.length > 0 ? (
+                branches.map((b) => (
+                  <option key={b.branchId} value={b.branchId}>
+                    {b.name}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="colombo">Colombo Central</option>
+                  <option value="kandy">Kandy City</option>
+                </>
+              )}
             </select>
           </div>
 

@@ -12,9 +12,10 @@ import {
   FileText,
   ArrowRight
 } from 'lucide-react';
-import type { Sale, ReorderSuggestion } from '../../types/sales';
+import type { Sale, ReorderSuggestion, BranchOption } from '../../types/sales';
 
 interface TopHeaderProps {
+  branches?: BranchOption[];
   selectedBranch: string;
   setSelectedBranch: (branch: string) => void;
   onRecordSaleClick: () => void;
@@ -30,6 +31,7 @@ interface TopHeaderProps {
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
+  branches = [],
   selectedBranch,
   setSelectedBranch,
   onRecordSaleClick,
@@ -124,8 +126,18 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             }}
           >
             <option value="All Branches">All Branches (Consolidated)</option>
-            <option value="Colombo Central Branch">Colombo Central Branch</option>
-            <option value="Kandy City Branch">Kandy City Branch</option>
+            {branches && branches.length > 0 ? (
+              branches.map((b) => (
+                <option key={b.branchId} value={b.name}>
+                  {b.name} ({b.branchCode})
+                </option>
+              ))
+            ) : (
+              <>
+                <option value="Colombo Central Branch">Colombo Central Branch</option>
+                <option value="Kandy City Branch">Kandy City Branch</option>
+              </>
+            )}
           </select>
         </div>
 

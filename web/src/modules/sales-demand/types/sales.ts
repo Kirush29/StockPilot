@@ -234,3 +234,10 @@ export interface DemandForecastWorkflowRequest {
   expectedUpliftPercent?: number;
   initiatedBy?: string;
 }
+
+export interface BranchOption {
+  branchId: string;
+  branchCode: string;
+  name: string;
+  isActive?: boolean;
+}

@@ -118,3 +118,24 @@ export const agentApi = {
   },
 };
 
+export const branchApi = {
+  // Load all system branches from the central backend API
+  getBranches: async (): Promise<import('../types/sales').BranchOption[]> => {
+    try {
+      const response = await shellClient.get<any>('/api/branches');
+      const list = response.data?.data ?? response.data ?? [];
+      return (Array.isArray(list) ? list : [])
+        .filter((b: any) => b.isActive !== false)
+        .map((b: any) => ({
+          branchId: b.branchId ?? b.id,
+          branchCode: b.branchCode ?? b.code ?? '',
+          name: b.name,
+          isActive: b.isActive !== false,
+        }));
+    } catch (e) {
+      console.warn('Failed to load branches for Sales & Demand, falling back to empty list:', e);
+      return [];
+    }
+  },
+};
+

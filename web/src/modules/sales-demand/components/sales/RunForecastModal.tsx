@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Sparkles, BrainCircuit, ShieldAlert } from 'lucide-react';
 import { agentApi, demandApi } from '../../services/api';
-import type { DemandForecast, WorkflowState } from '../../types/sales';
+import type { DemandForecast, WorkflowState, BranchOption } from '../../types/sales';
 
 interface RunForecastModalProps {
   isOpen: boolean;
   onClose: () => void;
   onForecastGenerated: (forecast: DemandForecast, workflowState?: WorkflowState) => void;
+  branches?: BranchOption[];
 }
 
 const PRESET_PRODUCTS = [
@@ -19,10 +20,21 @@ const PRESET_PRODUCTS = [
 export const RunForecastModal: React.FC<RunForecastModalProps> = ({
   isOpen,
   onClose,
-  onForecastGenerated
+  onForecastGenerated,
+  branches = []
 }) => {
   const [selectedProductId, setSelectedProductId] = useState(PRESET_PRODUCTS[0].id);
-  const [branchName, setBranchName] = useState('Colombo Central Branch');
+  const [selectedBranchId, setSelectedBranchId] = useState(() => branches[0]?.branchId || '');
+  const [branchName, setBranchName] = useState(() => branches[0]?.name || 'Colombo Central Branch');
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      if (!selectedBranchId || !branches.some(b => b.branchId === selectedBranchId)) {
+        setSelectedBranchId(branches[0].branchId);
+        setBranchName(branches[0].name);
+      }
+    }
+  }, [branches]);
   const [period, setPeriod] = useState(30);
   const [leadTimeDays, setLeadTimeDays] = useState(7);
   const [currentStockLevel, setCurrentStockLevel] = useState(45);
@@ -49,6 +61,7 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
         productId: product.id,
         productSku: product.sku,
         productName: product.name,
+        branchId: selectedBranchId || undefined,
         branchName,
         forecastDays: period,
         leadTimeDays,
@@ -71,6 +84,7 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
           productId: product.id,
           productSku: product.sku,
           productName: product.name,
+          branchId: selectedBranchId || undefined,
           branchName,
           period,
           leadTimeDays,
@@ -143,8 +157,17 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
                 Branch Location
               </label>
               <select
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
+                value={selectedBranchId || branchName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const found = branches.find((b) => b.branchId === val || b.name === val);
+                  if (found) {
+                    setSelectedBranchId(found.branchId);
+                    setBranchName(found.name);
+                  } else {
+                    setBranchName(val);
+                  }
+                }}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -155,8 +178,18 @@ export const RunForecastModal: React.FC<RunForecastModalProps> = ({
                   fontSize: '0.875rem'
                 }}
               >
-                <option value="Colombo Central Branch">Colombo Central Branch</option>
-                <option value="Kandy City Branch">Kandy City Branch</option>
+                {branches && branches.length > 0 ? (
+                  branches.map((b) => (
+                    <option key={b.branchId} value={b.branchId}>
+                      {b.name} ({b.branchCode})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Colombo Central Branch">Colombo Central Branch</option>
+                    <option value="Kandy City Branch">Kandy City Branch</option>
+                  </>
+                )}
               </select>
             </div>
 

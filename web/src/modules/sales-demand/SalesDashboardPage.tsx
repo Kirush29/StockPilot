@@ -11,8 +11,8 @@ import { SalesLedgerTable } from './components/sales/SalesLedgerTable';
 import { RecordSaleModal } from './components/sales/RecordSaleModal';
 import { RunForecastModal } from './components/sales/RunForecastModal';
 import { AgentTraceDrawer } from './components/sales/AgentTraceDrawer';
-import { salesApi, demandApi, agentApi } from './services/api';
-import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, WorkflowState } from './types/sales';
+import { salesApi, demandApi, agentApi, branchApi } from './services/api';
+import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, WorkflowState, BranchOption } from './types/sales';
 import { ShoppingCart, ArrowRight, X, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './sales.css';
@@ -28,6 +28,7 @@ export const SalesDashboardPage: React.FC = () => {
   const [forecastHorizon, setForecastHorizon] = useState(30);
 
   // State
+  const [availableBranches, setAvailableBranches] = useState<BranchOption[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [analytics, setAnalytics] = useState<SalesAnalyticsSummary | null>(null);
   const [activeForecast, setActiveForecast] = useState<DemandForecast | null>(null);
@@ -46,6 +47,10 @@ export const SalesDashboardPage: React.FC = () => {
   const loadDashboardData = useCallback(async (horizonDays: number = forecastHorizon) => {
     setIsRefreshing(true);
     try {
+      // 0. Load Branches
+      const branchList = await branchApi.getBranches();
+      setAvailableBranches(branchList);
+
       // 1. Load Sales
       const salesData = await salesApi.getSales();
       setSales(salesData);
@@ -134,16 +139,27 @@ export const SalesDashboardPage: React.FC = () => {
     }
   };
 
+  const selectedBranchObj = useMemo(() => {
+    if (selectedBranch === 'All Branches') return null;
+    return availableBranches.find((b) => b.name === selectedBranch || b.branchId === selectedBranch) || null;
+  }, [selectedBranch, availableBranches]);
+
   // Branch filter helper
   const branchFilteredSales = useMemo(() => {
     if (selectedBranch === 'All Branches') return sales;
-    return sales.filter((s) => s.branchName.toLowerCase().includes(selectedBranch.toLowerCase()));
-  }, [sales, selectedBranch]);
+    return sales.filter((s) =>
+      (selectedBranchObj && s.branchId === selectedBranchObj.branchId) ||
+      s.branchName.toLowerCase().includes(selectedBranch.toLowerCase())
+    );
+  }, [sales, selectedBranch, selectedBranchObj]);
 
   const branchFilteredSuggestions = useMemo(() => {
     if (selectedBranch === 'All Branches') return reorderSuggestions;
-    return reorderSuggestions.filter((s) => s.branchName.toLowerCase().includes(selectedBranch.toLowerCase()));
-  }, [reorderSuggestions, selectedBranch]);
+    return reorderSuggestions.filter((s) =>
+      (selectedBranchObj && s.branchId === selectedBranchObj.branchId) ||
+      s.branchName.toLowerCase().includes(selectedBranch.toLowerCase())
+    );
+  }, [reorderSuggestions, selectedBranch, selectedBranchObj]);
 
   // Search filtered suggestions
   const searchedSuggestions = useMemo(() => {
@@ -160,6 +176,7 @@ export const SalesDashboardPage: React.FC = () => {
   return (
     <div className="sales-module">
         <TopHeader
+          branches={availableBranches}
           selectedBranch={selectedBranch}
           setSelectedBranch={setSelectedBranch}
           onRecordSaleClick={() => setIsRecordSaleOpen(true)}
@@ -251,6 +268,7 @@ export const SalesDashboardPage: React.FC = () => {
                   <BranchCategoryInsights
                     branches={analytics?.branchComparisons || []}
                     categories={analytics?.categoryShares || []}
+                    allBranches={availableBranches}
                   />
                 </div>
               </div>
@@ -274,6 +292,7 @@ export const SalesDashboardPage: React.FC = () => {
                   sales={branchFilteredSales}
                   isLoading={isLoading}
                   externalSearch={searchQuery}
+                  branches={availableBranches}
                 />
               </div>
 
@@ -282,6 +301,7 @@ export const SalesDashboardPage: React.FC = () => {
         isOpen={isRecordSaleOpen}
         onClose={() => setIsRecordSaleOpen(false)}
         onSaleCreated={handleSaleCreated}
+        branches={availableBranches}
       />
 
       {/* Run Forecast Agent Modal */}
@@ -289,6 +309,7 @@ export const SalesDashboardPage: React.FC = () => {
         isOpen={isRunForecastOpen}
         onClose={() => setIsRunForecastOpen(false)}
         onForecastGenerated={handleForecastGenerated}
+        branches={availableBranches}
       />
 
       {/* Agent Workflow Execution Trace Drawer */}

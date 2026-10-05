@@ -1,6 +1,6 @@
 // BatchesPage.jsx — Polished SaaS Batch & Expiry Management
 import React, { useState, useEffect, useCallback } from 'react'
-import { batchesApi, productsApi } from '../../../api/inventoryApi'
+import { batchesApi, productsApi, branchesApi } from '../../../api/inventoryApi'
 import Modal from '../../../components/ui/Modal'
 import StatCard from '../../../components/ui/StatCard'
 import Badge from '../../../components/ui/Badge'
@@ -15,6 +15,7 @@ import {
   CloseIcon,
   ClockIcon,
   BatchesIcon,
+  AlertCircleIcon,
 } from '../../../components/ui/Icons'
 import { FormInput } from '../../../components/ui/FormControls'
 import { formatCurrency } from '../../../utils/currencyFormatter'
@@ -49,6 +50,16 @@ function toInputDate(dateStr) {
   }
 }
 
+function toIsoDate(dateStr) {
+  if (!dateStr) return null
+  try {
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  } catch {
+    return null
+  }
+}
+
 function getExpiryNotice(expiryDateStr, isExpired) {
   if (!expiryDateStr) return null
   const now = new Date()
@@ -65,49 +76,109 @@ function getExpiryNotice(expiryDateStr, isExpired) {
 }
 
 // ── Add / Edit Batch Modal ──────────────────────────────────────────────────
-function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }) {
+function BatchModal({
+  batch,
+  products = [],
+  branches = [],
+  onClose,
+  onSaved,
+  apiError,
+  fieldErrors = {},
+}) {
   const isEdit = !!batch
   const [form, setForm] = useState(() =>
     isEdit
       ? {
-          productId: batch.productId,
-          branchId: batch.branchId,
-          batchNumber: batch.batchNumber,
-          quantity: String(batch.quantity),
+          productId: batch.productId ?? batch.id ?? '',
+          branchId: batch.branchId ?? '',
+          batchNumber: batch.batchNumber ?? '',
+          quantity: String(batch.quantity ?? ''),
           unitCost: String(batch.unitCost ?? ''),
           manufacturingDate: toInputDate(batch.manufacturingDate),
           expiryDate: toInputDate(batch.expiryDate),
           receivedDate: toInputDate(batch.receivedDate),
-          status: batch.status,
+          status: batch.status || 'Active',
         }
-      : { ...EMPTY_BATCH_FORM, status: 'Active' }
+      : {
+          ...EMPTY_BATCH_FORM,
+          branchId: branches.length === 1 ? (branches[0].branchId ?? branches[0].id) : '',
+          status: 'Active',
+        }
   )
-  const [localErrors, setLocalErrors]   = useState({})
-  const [saving, setSaving]   = useState(false)
+  const [localErrors, setLocalErrors] = useState({})
+  const [activeFieldErrors, setActiveFieldErrors] = useState(fieldErrors || {})
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setActiveFieldErrors(fieldErrors || {})
+  }, [fieldErrors])
+
+  const getFieldError = (f) => localErrors[f] || activeFieldErrors[f]
 
   const set = (f, v) => {
     setForm(p => ({ ...p, [f]: v }))
     setLocalErrors(e => ({ ...e, [f]: undefined }))
+    setActiveFieldErrors(e => ({ ...e, [f]: undefined }))
   }
 
   function validate() {
     const e = {}
-    if (!form.productId) e.productId = 'Please select a product.'
-    if (!form.branchId) e.branchId = 'Branch ID is required.'
-    if (!form.batchNumber.trim()) e.batchNumber = 'Batch number is required.'
-    if (form.quantity === '' || isNaN(Number(form.quantity)) || Number(form.quantity) < 0) {
-      e.quantity = 'Quantity must be a valid number (0 or greater).'
+    if (!form.productId) {
+      e.productId = 'Please select a product.'
     }
-    if (form.unitCost !== '' && (isNaN(Number(form.unitCost)) || Number(form.unitCost) < 0)) {
-      e.unitCost = 'Unit cost must be a valid amount in Rs. (0 or greater).'
+    if (!form.branchId) {
+      e.branchId = 'Please select a branch.'
     }
+    if (!form.batchNumber?.trim()) {
+      e.batchNumber = 'Batch / Lot number is required.'
+    } else if (form.batchNumber.trim().length > 100) {
+      e.batchNumber = 'Batch number cannot exceed 100 characters.'
+    }
+
+    const qty = Number(form.quantity)
+    if (form.quantity === '' || isNaN(qty) || qty <= 0) {
+      e.quantity = 'Quantity must be greater than zero.'
+    }
+
+    if (form.unitCost !== '') {
+      const cost = Number(form.unitCost)
+      if (isNaN(cost) || cost < 0) {
+        e.unitCost = 'Unit cost must be a valid amount in Rs. (0 or greater).'
+      }
+    }
+
+    if (form.manufacturingDate) {
+      const mfg = new Date(form.manufacturingDate)
+      if (isNaN(mfg.getTime())) {
+        e.manufacturingDate = 'Please enter a valid manufacturing date.'
+      } else {
+        const tomorrow = new Date()
+        tomorrow.setHours(23, 59, 59, 999)
+        if (mfg > tomorrow) {
+          e.manufacturingDate = 'Manufacturing date cannot be in the future.'
+        }
+      }
+    }
+
     if (!form.expiryDate) {
       e.expiryDate = 'Expiry date is required.'
     } else if (isNaN(new Date(form.expiryDate).getTime())) {
       e.expiryDate = 'Please enter a valid expiry date.'
     } else if (form.manufacturingDate && new Date(form.manufacturingDate) > new Date(form.expiryDate)) {
       e.expiryDate = 'Expiry date cannot be earlier than manufacturing date.'
+    } else if (!isEdit) {
+      const exp = new Date(form.expiryDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (exp <= today) {
+        e.expiryDate = 'Expiry date must be in the future for a new batch.'
+      }
     }
+
+    if (form.receivedDate && isNaN(new Date(form.receivedDate).getTime())) {
+      e.receivedDate = 'Please enter a valid received date.'
+    }
+
     return e
   }
 
@@ -125,25 +196,26 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
         branchId: form.branchId,
         batchNumber: form.batchNumber.trim(),
         quantity: Number(form.quantity),
-        unitCost: Number(form.unitCost) || 0,
-        manufacturingDate: form.manufacturingDate || null,
-        expiryDate: form.expiryDate || null,
-        receivedDate: form.receivedDate || null,
+        unitCost: form.unitCost !== '' ? Number(form.unitCost) : 0,
+        manufacturingDate: toIsoDate(form.manufacturingDate),
+        expiryDate: toIsoDate(form.expiryDate),
+        receivedDate: toIsoDate(form.receivedDate),
       }
 
       let resultMsg = ''
       if (isEdit) {
-        await batchesApi.update(batch.batchId, {
+        const id = batch.batchId ?? batch.id
+        await batchesApi.update(id, {
           quantity: payload.quantity,
           unitCost: payload.unitCost,
           manufacturingDate: payload.manufacturingDate,
           expiryDate: payload.expiryDate,
           status: form.status,
         })
-        resultMsg = 'Batch updated successfully.'
+        resultMsg = `Batch #${batch.batchNumber} updated successfully.`
       } else {
         await batchesApi.create(payload)
-        resultMsg = 'Batch created successfully.'
+        resultMsg = `Batch #${payload.batchNumber} created successfully.`
       }
       onSaved(resultMsg)
     } catch (err) {
@@ -160,50 +232,101 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
       onClose={onClose}
       maxWidth="600px"
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {apiError && <ErrorState error={apiError} inline />}
+
+          {/* Read-only overview when editing */}
+          {isEdit && (
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Product</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={batch.productName ? `${batch.productName} (${batch.sku || 'SKU'})` : 'Selected Product'}
+                  disabled
+                  readOnly
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Branch</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={batch.branchName || branches.find(b => (b.branchId ?? b.id) === batch.branchId)?.name || 'Assigned Branch'}
+                  disabled
+                  readOnly
+                />
+              </div>
+            </div>
+          )}
 
           {!isEdit && (
             <>
               {/* Product */}
               <div className="form-group">
-                <label>Product <span className="required">*</span></label>
+                <label htmlFor="batch-product-select">Product <span className="required">*</span></label>
                 <select
-                  className={`form-control ${localErrors.productId || fieldErrors?.productId ? 'error' : ''}`}
+                  id="batch-product-select"
+                  className={`form-control ${getFieldError('productId') ? 'error' : ''}`}
                   value={form.productId}
                   onChange={e => set('productId', e.target.value)}
                   disabled={saving}
                 >
                   <option value="">Select a product…</option>
-                  {products.map(p => (
-                    <option key={p.productId} value={p.productId}>{p.name} ({p.sku})</option>
-                  ))}
+                  {products.map(p => {
+                    const id = p.productId ?? p.id
+                    return (
+                      <option key={id} value={id}>
+                        {p.name} {p.sku ? `(${p.sku})` : ''}
+                      </option>
+                    )
+                  })}
                 </select>
-                {(localErrors.productId || fieldErrors?.productId) && <span className="form-error">{localErrors.productId || fieldErrors?.productId}</span>}
+                {getFieldError('productId') && (
+                  <span className="form-error">{getFieldError('productId')}</span>
+                )}
               </div>
 
               {/* Branch & Batch Number */}
               <div className="form-row">
-                <FormInput
-                  label="Branch ID / UUID"
-                  value={form.branchId}
-                  onChange={e => set('branchId', e.target.value)}
-                  error={localErrors.branchId || fieldErrors?.branchId}
-                  placeholder="Enter or paste branch UUID…"
-                  disabled={saving}
-                  required
-                />
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="batch-branch-select">Branch <span className="required">*</span></label>
+                  <select
+                    id="batch-branch-select"
+                    className={`form-control ${getFieldError('branchId') ? 'error' : ''}`}
+                    value={form.branchId}
+                    onChange={e => set('branchId', e.target.value)}
+                    disabled={saving}
+                  >
+                    <option value="">Select a branch…</option>
+                    {branches.map(b => {
+                      const id = b.branchId ?? b.id
+                      const code = b.branchCode ?? b.code
+                      return (
+                        <option key={id} value={id}>
+                          {b.name} {code ? `(${code})` : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  {getFieldError('branchId') && (
+                    <span className="form-error">{getFieldError('branchId')}</span>
+                  )}
+                </div>
 
-                <FormInput
-                  label="Batch / Lot #"
-                  value={form.batchNumber}
-                  onChange={e => set('batchNumber', e.target.value)}
-                  error={localErrors.batchNumber || fieldErrors?.batchNumber}
-                  placeholder="e.g. LOT-2026-001"
-                  disabled={saving}
-                  required
-                />
+                <div style={{ flex: 1 }}>
+                  <FormInput
+                    label="Batch / Lot #"
+                    value={form.batchNumber}
+                    onChange={e => set('batchNumber', e.target.value)}
+                    error={getFieldError('batchNumber')}
+                    placeholder="e.g. LOT-2026-001"
+                    disabled={saving}
+                    required
+                  />
+                </div>
               </div>
             </>
           )}
@@ -213,11 +336,11 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
             <FormInput
               label="Quantity"
               type="number"
-              min="0"
+              min="0.01"
               step="any"
               value={form.quantity}
               onChange={e => set('quantity', e.target.value)}
-              error={localErrors.quantity || fieldErrors?.quantity}
+              error={getFieldError('quantity')}
               placeholder="0"
               disabled={saving}
               required
@@ -230,7 +353,7 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
               step="0.01"
               value={form.unitCost}
               onChange={e => set('unitCost', e.target.value)}
-              error={localErrors.unitCost || fieldErrors?.unitCost}
+              error={getFieldError('unitCost')}
               placeholder="0.00"
               disabled={saving}
               optionalText
@@ -244,7 +367,7 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
               type="date"
               value={form.manufacturingDate}
               onChange={e => set('manufacturingDate', e.target.value)}
-              error={localErrors.manufacturingDate || fieldErrors?.manufacturingDate}
+              error={getFieldError('manufacturingDate')}
               disabled={saving}
               optionalText
             />
@@ -254,7 +377,7 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
               type="date"
               value={form.expiryDate}
               onChange={e => set('expiryDate', e.target.value)}
-              error={localErrors.expiryDate || fieldErrors?.expiryDate}
+              error={getFieldError('expiryDate')}
               disabled={saving}
               required
             />
@@ -266,7 +389,7 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
               type="date"
               value={form.receivedDate}
               onChange={e => set('receivedDate', e.target.value)}
-              error={localErrors.receivedDate || fieldErrors?.receivedDate}
+              error={getFieldError('receivedDate')}
               disabled={saving}
               optionalText
             />
@@ -274,14 +397,14 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
             <div className="form-group">
               <label>Batch Status</label>
               <select
-                className={`form-control ${fieldErrors?.status ? 'error' : ''}`}
+                className={`form-control ${getFieldError('status') ? 'error' : ''}`}
                 value={form.status}
                 onChange={e => set('status', e.target.value)}
                 disabled={saving}
               >
                 {BATCH_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              {fieldErrors?.status && <span className="form-error">{fieldErrors.status}</span>}
+              {getFieldError('status') && <span className="form-error">{getFieldError('status')}</span>}
             </div>
           )}
         </div>
@@ -303,6 +426,7 @@ function BatchModal({ batch, products, onClose, onSaved, apiError, fieldErrors }
 export default function BatchesPage() {
   const [batches, setBatches]       = useState([])
   const [products, setProducts]     = useState([])
+  const [branches, setBranches]     = useState([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
@@ -334,7 +458,8 @@ export default function BatchesPage() {
   }, [filter])
 
   useEffect(() => {
-    productsApi.getAll(false).then(r => setProducts(r.data?.data ?? [])).catch(() => {})
+    productsApi.getAll(false).then(r => setProducts(r.data?.data ?? r.data ?? [])).catch(() => {})
+    branchesApi.getAll().then(r => setBranches((r.data?.data ?? r.data ?? []).filter(b => b.isActive !== false))).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -369,11 +494,12 @@ export default function BatchesPage() {
   const visible = batches.filter(b => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
+    const branchName = b.branchName || branches.find(br => (br.branchId ?? br.id) === b.branchId)?.name || ''
     return (
       (b.batchNumber && b.batchNumber.toLowerCase().includes(q)) ||
       (b.productName && b.productName.toLowerCase().includes(q)) ||
       (b.sku && b.sku.toLowerCase().includes(q)) ||
-      (b.branchName && b.branchName.toLowerCase().includes(q))
+      branchName.toLowerCase().includes(q)
     )
   })
 
@@ -607,7 +733,7 @@ export default function BatchesPage() {
                         <strong style={{ color: 'var(--color-text)' }}>{b.productName}</strong>
                         {b.sku && <div><small style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{b.sku}</small></div>}
                       </td>
-                      <td>{b.branchName}</td>
+                      <td>{b.branchName || branches.find(br => (br.branchId ?? br.id) === b.branchId)?.name || '—'}</td>
                       <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                         <strong>{Number(b.quantity).toLocaleString()}</strong>
                       </td>
@@ -650,6 +776,7 @@ export default function BatchesPage() {
         <BatchModal
           batch={modal.batch ?? null}
           products={products}
+          branches={branches}
           onClose={() => { setModal(null); setModalError(null); setModalFieldErrors({}); }}
           onSaved={handleSaved}
           apiError={modalError}
