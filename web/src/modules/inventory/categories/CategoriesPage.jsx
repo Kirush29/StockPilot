@@ -19,6 +19,16 @@ import '../../../shared/theme/inventory.css'
 
 const EMPTY_CATEGORY_FORM = { name: '', description: '', isActive: true }
 
+// Inventory endpoints currently return ApiResponse<T>, but accepting a raw array here
+// keeps the page resilient if the API client or a future gateway unwraps the envelope.
+function extractCategoryList(response) {
+  const payload = response?.data
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.Data)) return payload.Data
+  return []
+}
+
 // ── Add / Edit Category Modal ───────────────────────────────────────────────
 function CategoryModal({ initial, onSave, onClose, saving, apiError, fieldErrors }) {
   const isEdit = !!initial
@@ -41,6 +51,8 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError, fieldErrors
   const validate = () => {
     const e = {}
     if (!form.name.trim()) e.name = 'Category name is required.'
+    if (form.name.trim().length > 100) e.name = 'Category name cannot exceed 100 characters.'
+    if ((form.description?.trim() || '').length > 500) e.description = 'Description cannot exceed 500 characters.'
     return e
   }
 
@@ -77,7 +89,7 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError, fieldErrors
             onChange={e => set('name', e.target.value)}
             error={localErrors.name || fieldErrors?.name}
             placeholder="e.g. Perishables, Electronics, Packaging"
-            maxLength={200}
+            maxLength={100}
             disabled={saving}
             required
           />
@@ -95,6 +107,7 @@ function CategoryModal({ initial, onSave, onClose, saving, apiError, fieldErrors
               onChange={e => set('description', e.target.value)}
               placeholder="Optional notes or description regarding this category…"
               rows={3}
+              maxLength={500}
               disabled={saving}
             />
             {fieldErrors?.description && <span className="form-error">{fieldErrors.description}</span>}
@@ -144,13 +157,13 @@ export default function CategoriesPage() {
     setError(null)
     try {
       const res = await categoriesApi.getAll()
-      setCategories(res.data?.data ?? [])
+      setCategories(extractCategoryList(res))
     } catch (err) {
       const status = err.response?.status
       if (status === 401 || status === 403) {
         setError('Access denied. Authentication required. (AUTH-INTEGRATION-POINT)')
       } else {
-        setError(err.response?.data?.message ?? 'Failed to load categories.')
+        setError(err.displayMessage || err.response?.data?.message || err.response?.data?.title || 'Failed to load categories.')
       }
     } finally {
       setLoading(false)
@@ -179,7 +192,7 @@ export default function CategoriesPage() {
         showToast(`Category "${payload.name}" created successfully.`)
       }
       setModal(null)
-      load()
+      await load()
     } catch (err) {
       setModalError(err.displayMessage || 'Failed to save category.')
       if (err.fieldErrors) {
