@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CheckBudgetToolOutput",
+  "description": "Superset of the minimal contract { allowed, remaining, reason? }. allocated and spent are included so the workflow output can report them without the agent doing any arithmetic.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["allowed", "remaining", "allocated", "spent"],
+  "properties": {
+    "allowed": { "type": "boolean" },
+    "remaining": { "type": "number" },
+    "allocated": { "type": "number", "minimum": 0 },
+    "spent": { "type": "number", "minimum": 0 },
+    "budgetId": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+        { "type": "null" }
+      ]
+    },
+    "reason": { "type": ["string", "null"], "maxLength": 500 }
+  }
+}

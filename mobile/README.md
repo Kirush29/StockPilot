@@ -17,6 +17,31 @@ StockPilot Mobile provides fast point-of-sale store transactions, stock count en
    - Urgency status color-coding: `Critical` (Rose), `Warning` (Amber), `Normal` (Emerald).
    - Shows days-of-supply remaining and Reorder Point (ROP) threshold.
 
+## Implemented Features (Procurement Component)
+
+Calls the same `/api/procurement/...` and `/api/auth/...` endpoints as the React app (`web/`)
+(no `/api/v1` prefix on these — that prefix is Sales/Demand-specific). Requires signing in
+first via the placeholder `LoginScreen` (no shared auth UI exists yet in this repo).
+
+1. **Purchase Order Status (`purchase_order_status_screen.dart`)**: read-only "where's my
+   order" list with a status filter, for anyone the backend's `ProcurementRoles.ViewOrders`
+   policy allows (`StoreEmployee`, `BranchManager`, `ProcurementManager`, `BusinessOwner`).
+   The API doesn't expose branch on `PurchaseOrder` yet, so this can't be scoped to "my
+   branch" client-side — it shows everything the caller's role can see.
+2. **Delivery Receiving (`delivery_receiving_screen.dart`)**: lets a Store Employee confirm
+   full/partial receipt of an `Ordered`/`PartiallyReceived` order, checking scanned or typed
+   product codes off against the order's line items. Backend limitation: there's no per-line
+   `ReceivedQuantity` field on `UpdateOrderStatusRequest`, so per-item counts decide whether
+   the submitted status is `PartiallyReceived` or `Received` and get folded into the
+   free-text `notes` for an audit trail, but aren't queryable as structured data server-side.
+3. **Proposal decision notifications (`proposal_decision_watcher.dart` +
+   `procurement_notification_service.dart`)**: polls the signed-in user's own proposals
+   every 45s and fires a local notification the first time one flips to Approved/Rejected.
+   This is a stub, not real push — it only works while the app is open and polling.
+4. **Shared scan input (`shared/widgets/scan_input_field.dart`)**: placeholder for the
+   camera-based scanner the Inventory module owns — coordinate before shipping this to
+   production. Currently accepts keyboard-wedge scanner input or manual typing.
+
 ---
 
 ## Directory Structure
@@ -24,7 +49,25 @@ StockPilot Mobile provides fast point-of-sale store transactions, stock count en
 ```
 mobile/
 ├── lib/
-│   ├── main.dart                               # App shell & bottom navigation bar
+│   ├── main.dart                               # App shell, session gate, bottom nav
+│   ├── shared/
+│   │   ├── models/app_user.dart                # Decoded /api/auth/login user info
+│   │   ├── services/
+│   │   │   ├── auth_service.dart               # Secure token storage + session state
+│   │   │   ├── auth_api_service.dart           # POST /api/auth/login
+│   │   │   └── procurement_notification_service.dart  # Local-notification stub
+│   │   ├── screens/login_screen.dart           # Placeholder sign-in UI
+│   │   └── widgets/scan_input_field.dart       # Placeholder for shared scan widget
+│   ├── procurement/
+│   │   ├── models/
+│   │   │   ├── purchase_order.dart             # PurchaseOrder(Summary|Detail) DTOs
+│   │   │   └── proposal_summary.dart           # ProposalSummaryResponse DTO
+│   │   ├── screens/
+│   │   │   ├── purchase_order_status_screen.dart
+│   │   │   └── delivery_receiving_screen.dart
+│   │   └── services/
+│   │       ├── procurement_api_service.dart    # GET/PATCH /api/procurement/orders
+│   │       └── proposal_decision_watcher.dart  # Polls proposals for decisions
 │   └── sales/
 │       ├── models/
 │       │   ├── sale_transaction.dart           # Sale and item DTOs
@@ -37,13 +80,32 @@ mobile/
 └── pubspec.yaml                                # Flutter package manifest
 ```
 
+**Note:** this repo has no `android/`/`ios/` platform folders committed yet — run
+`flutter create .` inside `mobile/` first if you haven't, then `flutter pub get`. The
+procurement code above was written and reviewed by hand but not run through
+`flutter analyze`/`flutter run`, since no Flutter SDK was available in the environment
+that wrote it — please verify on your machine before merging.
+
 ---
 
-## Running the App
+## Code layout
+
+```
+lib/
+  modules/inventory/      Student 1 screens (inventory, products, batches, stock movements, transfers, scanner, AI insights)
+  modules/sales_demand/   Student 2 (POS sale, demand alerts)
+  modules/procurement/    Student 4 (purchase orders, receiving, Replenishment Agent)
+  shared/theme/           app theme
+  shared/navigation/      router and role dashboards
+  shared/auth/            login, session, profile
+  core/                   API client, errors, secure storage, common widgets
+```
+
+## Running & Building the App
 
 1. Ensure the ASP.NET Core API is running:
    ```bash
-   cd backend && dotnet run --project src/StockPilot.Api
+   cd backend && dotnet run --project StockPilot.Api --launch-profile http
    ```
 2. Run Flutter app on emulator or device:
    ```bash
@@ -51,3 +113,23 @@ mobile/
    flutter pub get
    flutter run
    ```
+
+### Configuring API Base URL
+
+The mobile client reads its API endpoint via `--dart-define=API_BASE_URL`, defaulting to `http://10.0.2.2:5004` (Android Emulator loopback to host).
+
+To specify a custom backend URL:
+```bash
+# Local development against iOS simulator or LAN IP:
+flutter run --dart-define=API_BASE_URL=http://localhost:5004
+flutter run --dart-define=API_BASE_URL=http://192.168.1.100:5004
+
+# Production Android APK build:
+flutter build apk --release --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+
+# Production Android AppBundle build:
+flutter build appbundle --release --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+
+# Production iOS build:
+flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://api.stockpilot.example.com
+```

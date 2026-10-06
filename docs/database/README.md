@@ -179,5 +179,5 @@ Persistent, auditable trace of every agent execution adhering to `workflow-state
    ```
    Apply migrations:
    ```bash
-   dotnet ef database update --project src/StockPilot.Infrastructure --startup-project src/StockPilot.Api
+   cd backend && dotnet ef database update --project StockPilot.Api --context AppDbContext   # the API also applies it on startup
    ```

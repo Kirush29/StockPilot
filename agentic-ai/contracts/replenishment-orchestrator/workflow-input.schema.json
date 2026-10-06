@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReplenishmentOrchestratorWorkflowInput",
+  "description": "Objective for POST /api/agent-workflows/replenishment/start: check one product at one branch and, if needed, take it through the four StockPilot agents up to human approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["branchId", "productId"],
+  "properties": {
+    "branchId": { "$ref": "#/$defs/uuid" },
+    "productId": { "$ref": "#/$defs/uuid" },
+    "forecastDays": { "type": "integer", "minimum": 7, "maximum": 90, "description": "Horizon passed to the Demand Forecast Agent. Default 30." },
+    "leadTimeDays": { "type": "integer", "minimum": 1, "maximum": 60, "description": "Supplier lead time passed to the Demand Forecast Agent. Default 7." }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "not": { "const": "00000000-0000-0000-0000-000000000000" }
+    }
+  }
+}

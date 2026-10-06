@@ -1,0 +1,194 @@
+import '../../../../core/api/api_envelope.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/widgets/common_widgets.dart';
+import '../../../../shared/auth/providers/auth_provider.dart';
+
+class StockAdjustmentScreen extends ConsumerStatefulWidget {
+  const StockAdjustmentScreen({super.key});
+
+  @override
+  ConsumerState<StockAdjustmentScreen> createState() =>
+      _StockAdjustmentScreenState();
+}
+
+class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _quantityController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  List<dynamic> _products = [];
+  List<dynamic> _branches = [];
+  bool _isLoadingDropdowns = true;
+
+  String? _selectedProductId;
+  String? _selectedBranchId;
+  int _movementType = 1; // MovementType.Adjustment
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDropdownData();
+  }
+
+  Future<void> _loadDropdownData() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final pRes = await apiClient.get('/api/products');
+      final bRes = await apiClient.get('/api/branches');
+
+      setState(() {
+        _products = unwrapList(pRes);
+        _branches = unwrapList(bRes);
+        _isLoadingDropdowns = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingDropdowns = false);
+    }
+  }
+
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please correct the validation errors in the adjustment form.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final payload = {
+        'productId': _selectedProductId,
+        'branchId': _selectedBranchId,
+        'quantity': double.parse(_quantityController.text.trim()),
+        'movementType': _movementType,
+        'reason': _notesController.text.trim(),
+      };
+
+      await apiClient.post('/api/stock-movements/adjustment', data: payload);
+
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Stock adjustment logged successfully!'),
+            backgroundColor: Colors.green),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to log stock adjustment. Please verify connection and try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Stock Count Adjustment'),
+      ),
+      body: _isLoadingDropdowns
+          ? const LoadingView(message: 'Loading products & branches...')
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedProductId,
+                      decoration: const InputDecoration(labelText: 'Product'),
+                      items: _products.map<DropdownMenuItem<String>>((p) {
+                        return DropdownMenuItem<String>(
+                          value: p['productId'].toString(),
+                          child: Text('${p['name']} (${p['sku']})'),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => _selectedProductId = v),
+                      validator: (v) => v == null ? 'Please select a product' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedBranchId,
+                      decoration: const InputDecoration(labelText: 'Branch'),
+                      items: _branches.map<DropdownMenuItem<String>>((b) {
+                        return DropdownMenuItem<String>(
+                          value: b['branchId'].toString(),
+                          child: Text(b['name'].toString()),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => _selectedBranchId = v),
+                      validator: (v) => v == null ? 'Please select a branch' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      initialValue: _movementType,
+                      decoration:
+                          const InputDecoration(labelText: 'Adjustment Type'),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 1,
+                            child: Text('Adjustment (decrease / correction)')),
+                        DropdownMenuItem(
+                            value: 4,
+                            // Inventory only allows decreasing manual adjustments; stock increases come
+                            // from receiving batches (Receive Batch, or a received purchase order).
+                            child: Text('Write-off')),
+                      ],
+                      onChanged: (v) => setState(() => _movementType = v ?? 1),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Quantity'),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Please enter quantity';
+                        final qty = double.tryParse(v.trim());
+                        if (qty == null || qty <= 0) {
+                          return 'Quantity must be a valid number greater than 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                          labelText: 'Audit Notes / Reason'),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: _isSubmitting
+                          ? const LoadingView(message: '')
+                          : const Text('Submit Adjustment'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}
