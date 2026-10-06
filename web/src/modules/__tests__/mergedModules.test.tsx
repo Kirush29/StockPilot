@@ -81,6 +81,7 @@ describe('Sales & Demand pages in the shell', () => {
     server.use(
       http.get(`${API}/api/branches`, () => HttpResponse.json({ success: true, data: [{ branchId: BRANCH, name: 'Colombo Central Branch' }] })),
       http.get(`${API}/api/products`, () => HttpResponse.json({ success: true, data: [{ productId: PRODUCT, name: 'Paracetamol 500mg (100 Tabs)', sku: 'SKU-PARACETAMOL-500' }] })),
+      http.get(`${API}/api/categories`, () => HttpResponse.json({ success: true, data: [{ categoryId: 'cat-pharmacy', name: 'Pharmacy', isActive: true }] })),
     )
     const user = renderIn({ '/sales/reorder': <ReorderAlertsPage />, '/procurement/replenishment': <ReplenishmentPage /> }, '/sales/reorder')
 

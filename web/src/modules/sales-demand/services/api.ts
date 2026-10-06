@@ -152,3 +152,26 @@ export const productApi = {
   },
 };
 
+
+export const categoryApi = {
+  // Load the canonical category master list from Inventory. This is the authority
+  // for which categories exist; Sales analytics only supplies metrics for them.
+  getCategories: async (): Promise<import('../types/sales').CategoryOption[]> => {
+    try {
+      const response = await shellClient.get<any>('/api/categories');
+      const list = response.data?.data ?? response.data ?? [];
+      return (Array.isArray(list) ? list : [])
+        .filter((c: any) => c.isActive !== false)
+        .map((c: any) => ({
+          categoryId: c.categoryId ?? c.id ?? '',
+          name: c.name ?? '',
+          description: c.description ?? undefined,
+          isActive: c.isActive !== false,
+        }))
+        .filter((c: import('../types/sales').CategoryOption) => Boolean(c.categoryId && c.name));
+    } catch (e) {
+      console.warn('Failed to load categories for Sales & Demand, falling back to analytics-only categories:', e);
+      return [];
+    }
+  },
+};
