@@ -51,6 +51,7 @@ export default function SalesOverviewPage() {
           branches={data.analytics?.branchComparisons || []}
           categories={data.analytics?.categoryShares || []}
           allBranches={data.availableBranches}
+          allCategories={data.availableCategories}
         />
         <CustomerBehaviorWidget behavior={data.analytics?.customerBehavior || null} />
       </div>

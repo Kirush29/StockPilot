@@ -125,6 +125,13 @@ export interface CategorySalesShare {
 // Alias for backwards compatibility
 export type CategorySalesDistribution = CategorySalesShare;
 
+export interface CategoryOption {
+  categoryId: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 export interface BranchSalesComparison {
   branchId: string;
   branchName: string;

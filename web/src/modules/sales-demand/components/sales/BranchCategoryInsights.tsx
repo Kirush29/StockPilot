@@ -1,17 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { Building2, PieChart, Layers } from 'lucide-react';
-import type { BranchSalesComparison, CategorySalesShare, BranchOption } from '../../types/sales';
+import type { BranchSalesComparison, CategorySalesShare, BranchOption, CategoryOption } from '../../types/sales';
 
 interface BranchCategoryInsightsProps {
   branches: BranchSalesComparison[];
   categories: CategorySalesShare[];
   allBranches?: BranchOption[];
+  allCategories?: CategoryOption[];
 }
 
 export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
   branches = [],
   categories = [],
-  allBranches = []
+  allBranches = [],
+  allCategories = []
 }) => {
   const [activeTab, setActiveTab] = useState<'branches' | 'categories'>('branches');
 
@@ -40,7 +42,39 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
     return branches || [];
   }, [allBranches, branches]);
 
-  const categoryList = categories || [];
+  const categoryList = useMemo(() => {
+    // /api/categories is the source of truth for which categories exist. Analytics
+    // contributes revenue/units only when its category name exactly matches a
+    // current category. Historical/free-text analytics labels are intentionally
+    // not rendered as new categories.
+    if (allCategories && allCategories.length > 0) {
+      const analyticsByName = new Map(
+        categories.map((category) => [category.category.trim().toLowerCase(), category] as const),
+      );
+
+      return allCategories
+        .filter((category) => category.isActive !== false)
+        .map((category) => {
+          const analytics = analyticsByName.get(category.name.trim().toLowerCase());
+          return {
+            categoryId: category.categoryId,
+            category: category.name,
+            revenue: analytics?.revenue ?? 0,
+            unitsSold: analytics?.unitsSold ?? 0,
+            percentage: analytics?.percentage ?? 0,
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue || a.category.localeCompare(b.category));
+    }
+
+    return categories || [];
+  }, [allCategories, categories]);
+
+  const unmatchedAnalyticsCategories = useMemo(() => {
+    if (!allCategories || allCategories.length === 0) return [];
+    const masterNames = new Set(allCategories.map((category) => category.name.trim().toLowerCase()));
+    return categories.filter((category) => !masterNames.has(category.category.trim().toLowerCase()));
+  }, [allCategories, categories]);
 
   const totalBranchRevenue = branchList.reduce((acc, b) => acc + (b.revenue || 0), 0);
 
@@ -218,7 +252,7 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
 
               return (
                 <div
-                  key={cat.category || idx}
+                  key={'categoryId' in cat && cat.categoryId ? cat.categoryId : cat.category || idx}
                   style={{
                     padding: '10px 12px',
                     borderRadius: 'var(--radius-sm)',
@@ -263,6 +297,22 @@ export const BranchCategoryInsights: React.FC<BranchCategoryInsightsProps> = ({
                 </div>
               );
             })}
+            {unmatchedAnalyticsCategories.length > 0 && (
+              <div
+                role="note"
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: '#FFF7ED',
+                  border: '1px solid #FED7AA',
+                  color: '#9A3412',
+                  fontSize: '0.7rem',
+                  lineHeight: 1.45,
+                }}
+              >
+                {unmatchedAnalyticsCategories.length} historical sales categor{unmatchedAnalyticsCategories.length === 1 ? 'y is' : 'ies are'} not in the current category master list and {unmatchedAnalyticsCategories.length === 1 ? 'is' : 'are'} excluded from this view.
+              </div>
+            )}
           </div>
         )
       )}
