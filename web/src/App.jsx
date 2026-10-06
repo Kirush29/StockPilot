@@ -23,9 +23,12 @@ import BudgetDashboardPage from './modules/procurement/BudgetDashboardPage'
 import ReplenishmentPage from './modules/procurement/ReplenishmentPage'
 import { TableSkeleton } from './components/ui/Skeleton'
 
-// Modules merged from web/src (TSX + Tailwind, themed by styles/tailwind.css). Loaded on demand: the Sales
-// dashboard's charting library is large and not needed by the rest of the app.
-const SalesDashboardPage = lazy(() => import('./modules/sales-demand/SalesDashboardPage'))
+// Modules merged from web/src (TSX + Tailwind, themed by styles/tailwind.css). Sales & Demand now uses
+// page-level routes so each sidebar item opens its own workspace instead of scrolling one dashboard.
+const SalesOverviewPage = lazy(() => import('./modules/sales-demand/pages/SalesOverviewPage'))
+const ForecastingPage = lazy(() => import('./modules/sales-demand/pages/ForecastingPage'))
+const ReorderAlertsPage = lazy(() => import('./modules/sales-demand/pages/ReorderAlertsPage'))
+const SalesRecordsPage = lazy(() => import('./modules/sales-demand/pages/SalesRecordsPage'))
 const SupplierOverviewPage = lazy(() => import('./modules/suppliers/pages/Home'))
 const SuppliersPage = lazy(() => import('./modules/suppliers/pages/Suppliers'))
 const QuotationsPage = lazy(() => import('./modules/suppliers/pages/Quotations'))
@@ -75,10 +78,10 @@ export default function App() {
                 <Route path="/inventory/transfers"  element={<TransfersPage />} />
 
                 {/* Sales & Demand — reads and POS sales for every signed-in role; forecast runs are role-checked by the API (D13) */}
-                <Route path="/sales"          element={page(SalesDashboardPage)} />
-                <Route path="/sales/forecast" element={page(SalesDashboardPage)} />
-                <Route path="/sales/reorder"  element={page(SalesDashboardPage)} />
-                <Route path="/sales/records"  element={page(SalesDashboardPage)} />
+                <Route path="/sales"          element={page(SalesOverviewPage)} />
+                <Route path="/sales/forecast" element={page(ForecastingPage)} />
+                <Route path="/sales/reorder"  element={page(ReorderAlertsPage)} />
+                <Route path="/sales/records"  element={page(SalesRecordsPage)} />
 
                 {/* Supplier Management — reads for every signed-in role; writes need ProcurementManage (D3) */}
                 <Route path="/suppliers/overview" element={page(SupplierOverviewPage)} />

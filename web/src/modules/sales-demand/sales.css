@@ -278,3 +278,120 @@
 .sales-scroll-section {
   scroll-margin-top: 88px;
 }
+
+/* Page-level Sales & Demand navigation */
+.sales-page-intro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.sales-page-intro-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--primary-color);
+  background: rgba(0, 104, 255, 0.09);
+  border: 1px solid rgba(0, 104, 255, 0.13);
+}
+
+.sales-page-intro-copy { min-width: 0; flex: 1; }
+.sales-page-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--primary-color);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.sales-page-intro h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.sales-page-intro p {
+  margin: 5px 0 0;
+  max-width: 780px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.sales-page-intro-meta {
+  display: flex;
+  min-width: 130px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding-left: 18px;
+  border-left: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.sales-page-intro-meta strong { color: var(--text-primary); font-size: 1.35rem; line-height: 1.1; }
+
+.sales-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.sales-dashboard-grid--wide { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+
+.sales-search-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+.sales-search-banner button {
+  padding: 4px 9px;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.sales-proposal-heading, .sales-proposal-title, .sales-modal-actions { display: flex; align-items: center; }
+.sales-proposal-heading { justify-content: space-between; gap: 14px; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--border-subtle); }
+.sales-proposal-title { gap: 10px; }
+.sales-proposal-title h3 { margin: 0; color: var(--text-primary); font-size: 1.05rem; }
+.sales-proposal-title p { margin: 2px 0 0; color: var(--text-muted); font-size: 0.72rem; }
+.sales-proposal-icon { display: grid; place-items: center; padding: 8px; border-radius: 8px; color: #d97706; background: rgba(245, 158, 11, 0.14); }
+.sales-icon-button { display: grid; place-items: center; padding: 6px; color: var(--text-muted); background: transparent; border: 0; cursor: pointer; }
+.sales-proposal-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; margin-bottom: 16px; background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: 8px; }
+.sales-proposal-summary div { display: flex; flex-direction: column; gap: 3px; color: var(--text-muted); font-size: 0.72rem; }
+.sales-proposal-summary strong { color: var(--text-primary); font-size: 0.82rem; }
+.sales-value-danger { color: #dc2626 !important; }
+.sales-value-success { color: #059669 !important; }
+.sales-human-approval-note { padding: 11px 12px; margin-bottom: 18px; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 7px; font-size: 0.78rem; line-height: 1.45; }
+.sales-modal-actions { justify-content: flex-end; gap: 10px; }
+
+@media (max-width: 900px) {
+  .sales-dashboard-grid,
+  .sales-dashboard-grid--wide { grid-template-columns: 1fr; }
+  .sales-page-intro { align-items: flex-start; }
+  .sales-page-intro-meta { display: none; }
+}
+
+@media (max-width: 640px) {
+  .sales-page-intro { padding: 16px; }
+  .sales-proposal-summary { grid-template-columns: 1fr; }
+}

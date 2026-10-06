@@ -26,6 +26,8 @@ interface TopHeaderProps {
   reorderSuggestions?: ReorderSuggestion[];
   sales?: Sale[];
   onSelectProduct?: (productSku: string, productName: string) => void;
+  onOpenSalesRecords?: () => void;
+  pageLabel?: string;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -40,7 +42,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   setSearchQuery,
   reorderSuggestions = [],
   sales = [],
-  onSelectProduct
+  onSelectProduct,
+  onOpenSalesRecords,
+  pageLabel = 'Overview'
 }) => {
   const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -133,7 +137,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          Sales & Demand / <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Overview & Agent Analytics</span>
+          Sales & Demand / <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pageLabel}</span>
         </div>
       </div>
 
@@ -348,10 +352,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                         key={sale.id}
                         onClick={() => {
                           setIsSearchOpen(false);
-                          const ledgerElem = document.getElementById('sales-ledger-section');
-                          if (ledgerElem) {
-                            ledgerElem.scrollIntoView({ behavior: 'smooth' });
-                          }
+                          onOpenSalesRecords?.();
                         }}
                         style={{
                           display: 'flex',
