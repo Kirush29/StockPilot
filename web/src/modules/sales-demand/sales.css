@@ -272,3 +272,9 @@
   flex-wrap: wrap;
   gap: 12px;
 }
+
+
+/* Deep-linked Sales & Demand sections should clear the sticky shell header. */
+.sales-scroll-section {
+  scroll-margin-top: 88px;
+}

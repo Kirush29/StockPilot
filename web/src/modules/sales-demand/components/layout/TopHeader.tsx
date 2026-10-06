@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Sparkles,
   Receipt,
-  Bot,
   X,
   Package,
   FileText,
@@ -22,7 +21,6 @@ interface TopHeaderProps {
   onRunForecastClick: () => void;
   onRefreshData: () => void;
   isRefreshing: boolean;
-  onOpenAgentTrace: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   reorderSuggestions?: ReorderSuggestion[];
@@ -38,7 +36,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onRunForecastClick,
   onRefreshData,
   isRefreshing,
-  onOpenAgentTrace,
   searchQuery,
   setSearchQuery,
   reorderSuggestions = [],
@@ -431,7 +428,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
       </div>
 
-      {/* Right: Refresh, Agent Trace, + Quick Action Dropdown */}
+      {/* Right: Refresh + Quick Action Dropdown */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
         <button
           onClick={onRefreshData}
@@ -449,26 +446,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           }}
         >
           <RefreshCw size={15} className={isRefreshing ? 'spin-animation' : ''} />
-        </button>
-
-        <button
-          onClick={onOpenAgentTrace}
-          style={{
-            background: '#F5F3FF',
-            border: '1px solid #DDD6FE',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 12px',
-            color: '#6D28D9',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
-        >
-          <Bot size={15} color="#7C3AED" />
-          <span>Agent Trace</span>
         </button>
 
         {/* Modern '+ New' Quick Action Button */}
@@ -525,30 +502,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 <span>Record New Sale</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setShowQuickMenu(false);
-                  onRunForecastClick();
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '9px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <Sparkles size={15} color="#7C3AED" />
-                <span>Run Forecast Agent</span>
-              </button>
             </div>
           )}
         </div>

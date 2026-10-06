@@ -10,11 +10,10 @@ import { ReorderTable } from './components/sales/ReorderTable';
 import { SalesLedgerTable } from './components/sales/SalesLedgerTable';
 import { RecordSaleModal } from './components/sales/RecordSaleModal';
 import { RunForecastModal } from './components/sales/RunForecastModal';
-import { AgentTraceDrawer } from './components/sales/AgentTraceDrawer';
 import { salesApi, demandApi, agentApi, branchApi, productApi } from './services/api';
-import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, WorkflowState, BranchOption, ProductOption } from './types/sales';
+import type { Sale, DemandForecast, ReorderSuggestion, SalesAnalyticsSummary, BranchOption, ProductOption } from './types/sales';
 import { ShoppingCart, ArrowRight, X, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './sales.css';
 
 // Sales & Demand dashboard (Student 2), ported from the module's standalone App.tsx into the shell.
@@ -23,6 +22,7 @@ import './sales.css';
 
 export const SalesDashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [searchQuery, setSearchQuery] = useState('');
   const [forecastHorizon, setForecastHorizon] = useState(30);
@@ -34,14 +34,12 @@ export const SalesDashboardPage: React.FC = () => {
   const [analytics, setAnalytics] = useState<SalesAnalyticsSummary | null>(null);
   const [activeForecast, setActiveForecast] = useState<DemandForecast | null>(null);
   const [reorderSuggestions, setReorderSuggestions] = useState<ReorderSuggestion[]>([]);
-  const [currentWorkflowState, setCurrentWorkflowState] = useState<WorkflowState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals & Drawers
   const [isRecordSaleOpen, setIsRecordSaleOpen] = useState(false);
   const [isRunForecastOpen, setIsRunForecastOpen] = useState(false);
-  const [isAgentTraceOpen, setIsAgentTraceOpen] = useState(false);
   const [proposalItem, setProposalItem] = useState<ReorderSuggestion | null>(null);
 
   // Load all Sales & Demand data
@@ -88,7 +86,6 @@ export const SalesDashboardPage: React.FC = () => {
           });
           if (initialResult.forecast) {
             setActiveForecast(initialResult.forecast);
-            setCurrentWorkflowState(initialResult.workflowState);
           }
         } catch {
           setActiveForecast(null);
@@ -97,11 +94,6 @@ export const SalesDashboardPage: React.FC = () => {
         setActiveForecast(null);
       }
 
-      // 5. Load latest Agent Workflow Audit Trace
-      const audits = await agentApi.getAudits(1);
-      if (audits.length > 0) {
-        setCurrentWorkflowState(audits[0]);
-      }
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -114,16 +106,33 @@ export const SalesDashboardPage: React.FC = () => {
     loadDashboardData(forecastHorizon);
   }, [loadDashboardData, forecastHorizon]);
 
+  // Sales & Demand sidebar sub-navigation keeps one dashboard while deep-linking
+  // to the relevant section. This avoids duplicating data-fetching logic across pages.
+  useEffect(() => {
+    const sectionByPath: Record<string, string> = {
+      '/sales': 'sales-overview-section',
+      '/sales/forecast': 'sales-forecast-section',
+      '/sales/reorder': 'sales-reorder-section',
+      '/sales/records': 'sales-ledger-section',
+    };
+
+    const sectionId = sectionByPath[pathname];
+    if (!sectionId) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
   const handleSaleCreated = () => {
     loadDashboardData();
   };
 
-  const handleForecastGenerated = (forecast: DemandForecast, workflowState?: WorkflowState) => {
+  const handleForecastGenerated = (forecast: DemandForecast) => {
     setActiveForecast(forecast);
     setForecastHorizon(forecast.period);
-    if (workflowState) {
-      setCurrentWorkflowState(workflowState);
-    }
     demandApi.getReorderSuggestions().then(setReorderSuggestions);
   };
 
@@ -150,9 +159,6 @@ export const SalesDashboardPage: React.FC = () => {
       });
       if (result.forecast) {
         setActiveForecast(result.forecast);
-        if (result.workflowState) {
-          setCurrentWorkflowState(result.workflowState);
-        }
       }
     } catch (err) {
       console.error('Error adjusting horizon:', err);
@@ -205,7 +211,6 @@ export const SalesDashboardPage: React.FC = () => {
           onRunForecastClick={() => setIsRunForecastOpen(true)}
           onRefreshData={() => loadDashboardData(forecastHorizon)}
           isRefreshing={isRefreshing}
-          onOpenAgentTrace={() => setIsAgentTraceOpen(true)}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           reorderSuggestions={branchFilteredSuggestions}
@@ -243,14 +248,16 @@ export const SalesDashboardPage: React.FC = () => {
               )}
 
               {/* 1. Sales Activity Pipeline & Stock Counters */}
+              <div id="sales-overview-section" className="sales-scroll-section">
               <ActivityPipeline
                 analytics={analytics}
                 reorderSuggestions={branchFilteredSuggestions}
                 forecastConfidence={activeForecast?.confidenceScore}
               />
+              </div>
 
               {/* 2. Dual Section: Forecast Curve (Horizon + Shaded Bands) & Top Selling / Slow Movers */}
-              <div style={{
+              <div id="sales-forecast-section" className="sales-scroll-section" style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1.85fr) minmax(0, 1.15fr)',
                 gap: 20
@@ -259,7 +266,6 @@ export const SalesDashboardPage: React.FC = () => {
                   <ForecastChart
                     forecast={activeForecast}
                     onTriggerNewForecast={() => setIsRunForecastOpen(true)}
-                    onInspectAgentTrace={() => setIsAgentTraceOpen(true)}
                     selectedHorizon={forecastHorizon}
                     onHorizonChange={handleHorizonChange}
                   />
@@ -303,13 +309,15 @@ export const SalesDashboardPage: React.FC = () => {
               </div>
 
               {/* 5. Reorder Point & Replenishment Alerts Table */}
+              <div id="sales-reorder-section" className="sales-scroll-section">
               <ReorderTable
                 suggestions={searchedSuggestions}
                 onDraftPurchaseProposal={(item) => setProposalItem(item)}
               />
+              </div>
 
               {/* 6. Sales Invoices Ledger Table (Filters: Branch, Date, Payment + CSV / PDF Export) */}
-              <div id="sales-ledger-section">
+              <div id="sales-ledger-section" className="sales-scroll-section">
                 <SalesLedgerTable
                   sales={branchFilteredSales}
                   isLoading={isLoading}
@@ -336,12 +344,6 @@ export const SalesDashboardPage: React.FC = () => {
         products={availableProducts}
       />
 
-      {/* Agent Workflow Execution Trace Drawer */}
-      <AgentTraceDrawer
-        isOpen={isAgentTraceOpen}
-        onClose={() => setIsAgentTraceOpen(false)}
-        workflowState={currentWorkflowState}
-      />
 
       {/* Purchase Proposal Handoff Modal (Architecture Rule 3 & 4) */}
       {proposalItem && (

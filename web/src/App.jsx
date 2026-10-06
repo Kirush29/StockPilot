@@ -75,7 +75,10 @@ export default function App() {
                 <Route path="/inventory/transfers"  element={<TransfersPage />} />
 
                 {/* Sales & Demand — reads and POS sales for every signed-in role; forecast runs are role-checked by the API (D13) */}
-                <Route path="/sales" element={page(SalesDashboardPage)} />
+                <Route path="/sales"          element={page(SalesDashboardPage)} />
+                <Route path="/sales/forecast" element={page(SalesDashboardPage)} />
+                <Route path="/sales/reorder"  element={page(SalesDashboardPage)} />
+                <Route path="/sales/records"  element={page(SalesDashboardPage)} />
 
                 {/* Supplier Management — reads for every signed-in role; writes need ProcurementManage (D3) */}
                 <Route path="/suppliers/overview" element={page(SupplierOverviewPage)} />
