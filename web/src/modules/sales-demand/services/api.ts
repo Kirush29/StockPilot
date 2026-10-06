@@ -99,18 +99,6 @@ export const agentApi = {
     return response.data;
   },
 
-  // Get Workflow Audits
-  getAudits: async (take: number = 20): Promise<import('../types/sales').WorkflowState[]> => {
-    const response = await apiClient.get<import('../types/sales').WorkflowState[]>('/agent/audits', { params: { take } });
-    return response.data;
-  },
-
-  // Get Workflow Audit by ID
-  getAuditById: async (workflowId: string): Promise<import('../types/sales').WorkflowState> => {
-    const response = await apiClient.get<import('../types/sales').WorkflowState>(`/agent/audits/${workflowId}`);
-    return response.data;
-  },
-
   // Evaluate Golden Benchmark Cases
   evaluateGoldenCases: async () => {
     const response = await apiClient.post('/agent/golden-cases/evaluate');

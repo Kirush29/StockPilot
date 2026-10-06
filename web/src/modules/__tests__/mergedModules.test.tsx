@@ -8,7 +8,7 @@ import { http, HttpResponse } from 'msw'
 import { AuthProvider } from '../../shared/auth/AuthContext'
 import { ProcurementProvider } from '../procurement/ProcurementContext'
 import { API, server } from '../../test/server'
-import SalesDashboardPage from '../sales-demand/SalesDashboardPage'
+import ReorderAlertsPage from '../sales-demand/pages/ReorderAlertsPage'
 import SuppliersPage from '../suppliers/pages/Suppliers'
 import UsersPage from '../inventory/users/pages/Users'
 import ReplenishmentPage from '../procurement/ReplenishmentPage'
@@ -50,7 +50,7 @@ function renderIn(routes: Record<string, React.ReactNode>, route: string, role =
   return user
 }
 
-describe('Sales & Demand dashboard in the shell', () => {
+describe('Sales & Demand pages in the shell', () => {
   const suggestion = {
     productId: PRODUCT, productSku: 'SKU-PARACETAMOL-500', productName: 'Paracetamol 500mg (100 Tabs)',
     branchId: BRANCH, branchName: 'Colombo Central Branch', currentStock: 40, averageDailySales: 18, leadTimeDays: 7,
@@ -82,7 +82,7 @@ describe('Sales & Demand dashboard in the shell', () => {
       http.get(`${API}/api/branches`, () => HttpResponse.json({ success: true, data: [{ branchId: BRANCH, name: 'Colombo Central Branch' }] })),
       http.get(`${API}/api/products`, () => HttpResponse.json({ success: true, data: [{ productId: PRODUCT, name: 'Paracetamol 500mg (100 Tabs)', sku: 'SKU-PARACETAMOL-500' }] })),
     )
-    const user = renderIn({ '/sales': <SalesDashboardPage />, '/procurement/replenishment': <ReplenishmentPage /> }, '/sales')
+    const user = renderIn({ '/sales/reorder': <ReorderAlertsPage />, '/procurement/replenishment': <ReplenishmentPage /> }, '/sales/reorder')
 
     await user.click(await screen.findByRole('button', { name: /Draft Proposal/ }))
     await user.click(screen.getByRole('button', { name: /Dispatch to Procurement Agent/ }))
@@ -93,7 +93,9 @@ describe('Sales & Demand dashboard in the shell', () => {
     expect(await screen.findByRole('option', { name: /Paracetamol 500mg/ })).toBeInTheDocument()
     expect(screen.getByLabelText(/Product/)).toHaveValue(PRODUCT)
 
-    expect(seenAuth.length).toBeGreaterThanOrEqual(5)
+    // Verify the Sales & Demand API requests use the shell JWT. Do not assert an arbitrary
+    // request count: page-level routes intentionally load only the data they need.
+    expect(seenAuth.length).toBeGreaterThanOrEqual(2)
     expect(new Set(seenAuth)).toEqual(new Set(['Bearer shell-token']))
   })
 })
