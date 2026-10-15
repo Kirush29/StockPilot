@@ -1,4 +1,4 @@
-import '../../../shared/theme/app_theme.dart';
+﻿import '../../../shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/auth/providers/auth_provider.dart';
@@ -15,7 +15,6 @@ class DemandAlertsScreen extends ConsumerStatefulWidget {
 class _DemandAlertsScreenState extends ConsumerState<DemandAlertsScreen> {
   late SalesApiService _apiService;
   late Future<List<ReorderAlertItem>> _alertsFuture;
-  final Set<String> _reorderedProductIds = {};
 
   @override
   void initState() {
@@ -27,7 +26,6 @@ class _DemandAlertsScreenState extends ConsumerState<DemandAlertsScreen> {
 
   void _refresh() {
     setState(() {
-      _reorderedProductIds.clear();
       _alertsFuture = _apiService.getReorderAlerts();
     });
   }
@@ -65,11 +63,9 @@ class _DemandAlertsScreenState extends ConsumerState<DemandAlertsScreen> {
                   child: CircularProgressIndicator());
             }
 
-            final items = (snapshot.hasData ? snapshot.data! : <ReorderAlertItem>[])
-                .where((item) => item.needsReorder && !_reorderedProductIds.contains(item.productId))
-                .toList();
-
-            if (snapshot.hasError || items.isEmpty) {
+            if (snapshot.hasError ||
+                !snapshot.hasData ||
+                snapshot.data!.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -95,6 +91,8 @@ class _DemandAlertsScreenState extends ConsumerState<DemandAlertsScreen> {
                 ),
               );
             }
+
+            final items = snapshot.data!;
 
             return ListView.builder(
               itemCount: items.length,
@@ -166,31 +164,6 @@ class _DemandAlertsScreenState extends ConsumerState<DemandAlertsScreen> {
                                     color: AppTokens.warning,
                                     fontWeight: FontWeight.bold)),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTokens.primary,
-                              side: const BorderSide(color: AppTokens.primary),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                            icon: const Icon(Icons.shopping_cart_checkout, size: 16),
-                            label: Text('Reorder ${item.recommendedOrderQuantity.toInt()} Units'),
-                            onPressed: () {
-                              setState(() {
-                                _reorderedProductIds.add(item.productId);
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Reorder initiated for ${item.productName}. Removed from active alerts.'),
-                                  backgroundColor: Colors.teal,
-                                  duration: const Duration(seconds: 3),
-                                ),
-                              );
-                            },
-                          ),
                         ),
                       ],
                     ),
