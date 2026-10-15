@@ -157,7 +157,12 @@ export default function CategoriesPage() {
     setError(null)
     try {
       const res = await categoriesApi.getAll()
-      setCategories(extractCategoryList(res))
+      const categoryList = extractCategoryList(res)
+      // Deduplicate categories by categoryId to prevent display issues
+      const uniqueCategories = Array.from(
+        new Map(categoryList.map(item => [item.categoryId, item])).values()
+      )
+      setCategories(uniqueCategories)
     } catch (err) {
       const status = err.response?.status
       if (status === 401 || status === 403) {

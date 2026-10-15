@@ -176,14 +176,65 @@ public class DemandForecastService : IDemandForecastService
 
         foreach (var forecast in latestForecasts)
         {
-            // Compute simulated current stock or fetch from metrics
-            var currentStock = forecast.RecommendedSafetyStock * 1.2m; // Default demo stock
             var leadTime = 7;
+            var ropThreshold = (forecast.AverageDailyDemand * leadTime) + forecast.RecommendedSafetyStock;
+
+            // Compute actual on-hand stock and in-flight reorders
+            decimal currentStock = 0m;
+            decimal onOrderStock = 0m;
+
+            if (_context is StockPilot.Shared.Data.AppDbContext platformDb)
+            {
+                // Check actual active batch inventory if available
+                var batchStock = await platformDb.Batches
+                    .AsNoTracking()
+                    .Where(b => b.ProductId == forecast.ProductId &&
+                               (!branchId.HasValue || b.BranchId == branchId.Value) &&
+                               b.Status == StockPilot.Domain.Enums.BatchStatus.Active)
+                    .SumAsync(b => (decimal?)b.Quantity, cancellationToken) ?? 0m;
+
+                currentStock = batchStock;
+
+                // Check pending purchase orders (Ordered status)
+                var pendingPoQty = await platformDb.PurchaseOrders
+                    .AsNoTracking()
+                    .Where(po => po.Status == StockPilot.Procurement.Domain.Enums.PurchaseOrderStatus.Ordered)
+                    .SelectMany(po => po.LineItems)
+                    .Where(li => li.ProductId == forecast.ProductId)
+                    .SumAsync(li => (decimal?)li.Quantity, cancellationToken) ?? 0m;
+
+                // Check active proposals in progress (Draft, PendingApproval, or Approved)
+                var activeProposalQty = await platformDb.Proposals
+                    .AsNoTracking()
+                    .Where(p => p.Status == StockPilot.Procurement.Domain.Enums.ProposalStatus.Draft ||
+                                p.Status == StockPilot.Procurement.Domain.Enums.ProposalStatus.PendingApproval ||
+                                p.Status == StockPilot.Procurement.Domain.Enums.ProposalStatus.Approved)
+                    .SelectMany(p => p.LineItems)
+                    .Where(li => li.ProductId == forecast.ProductId)
+                    .SumAsync(li => (decimal?)li.Quantity, cancellationToken) ?? 0m;
+
+                onOrderStock = pendingPoQty + activeProposalQty;
+            }
+
+            if (currentStock == 0m && onOrderStock == 0m)
+            {
+                // Baseline demo stock if no batches or orders exist yet
+                currentStock = forecast.RecommendedSafetyStock * 1.2m;
+            }
+
+            var effectiveStock = currentStock + onOrderStock;
+            var needsReorder = effectiveStock <= ropThreshold && onOrderStock == 0m;
+
+            // If an order has already been placed or stock is sufficient, exclude from active alerts
+            if (!needsReorder)
+            {
+                continue;
+            }
+
             var daysRemaining = forecast.AverageDailyDemand > 0 
                 ? (int)(currentStock / forecast.AverageDailyDemand) 
                 : 15;
 
-            var needsReorder = currentStock <= (forecast.AverageDailyDemand * leadTime + forecast.RecommendedSafetyStock);
             var urgency = daysRemaining <= leadTime ? "Critical" : daysRemaining <= (leadTime + 3) ? "Warning" : "Normal";
 
             suggestions.Add(new ReorderSuggestionDto
@@ -197,7 +248,7 @@ public class DemandForecastService : IDemandForecastService
                 AverageDailySales = forecast.AverageDailyDemand,
                 LeadTimeDays = leadTime,
                 SafetyStock = forecast.RecommendedSafetyStock,
-                ReorderPoint = (forecast.AverageDailyDemand * leadTime) + forecast.RecommendedSafetyStock,
+                ReorderPoint = ropThreshold,
                 RecommendedOrderQuantity = forecast.RecommendedReorderQuantity,
                 NeedsReorder = needsReorder,
                 DaysOfSupplyRemaining = daysRemaining,
