@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Fix applied: resolved syntax error causing empty screen
+// Additional fix: corrected brace count in button onClick handler
 import { AlertTriangle, ArrowRight, ShoppingCart, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SalesPageHeader } from '../components/layout/SalesPageHeader';
@@ -12,9 +14,88 @@ import '../sales.css';
 export default function ReorderAlertsPage() {
   const navigate = useNavigate();
   const data = useSalesDemandData();
+
+  // Handle case where data is null or undefined (hook error)
+  if (data == null) {
+    return (
+      <div className="sales-module">
+        <div className="alert alert-error">
+          <h3>Error Loading Data</h3>
+          <p>Unable to load reorder alerts data. Please try again.</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [proposalItem, setProposalItem] = useState<ReorderSuggestion | null>(null);
   const [isRecordSaleOpen, setIsRecordSaleOpen] = useState(false);
-  const critical = data.filteredSuggestions.filter((item) => item.urgencyLevel === 'Critical').length;
+  const [dispatchedIds, setDispatchedIds] = useState<string[]>(() => {
+    try {
+      const item = localStorage.getItem('stockpilot_dispatched_reorders');
+      if (item !== null && item !== undefined) {
+        const parsed = JSON.parse(item);
+        if (Array.isArray(parsed)) {
+          // Filter to only include strings and trim whitespace
+          return parsed
+            .filter((id): id is string => typeof id === 'string')
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0);
+        }
+      }
+      return [];
+    } catch (error) {
+      console.warn('Failed to parse dispatched IDs from localStorage:', error);
+      return [];
+    }
+  });
+
+  // Sync with localStorage changes from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'stockpilot_dispatched_reorders') {
+        try {
+          const newValue = e.newValue;
+          if (newValue !== null) {
+            const parsed = JSON.parse(newValue);
+            if (Array.isArray(parsed)) {
+              const filtered = parsed
+                .filter((id): id is string => typeof id === 'string')
+                .map((id) => id.trim())
+                .filter((id) => id.length > 0);
+              setDispatchedIds(filtered);
+            }
+          } else {
+            setDispatchedIds([]);
+          }
+        } catch (error) {
+          console.warn('Failed to parse dispatched IDs from storage event:', error);
+          setDispatchedIds([]);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Ensure searchedSuggestions is an array before filtering
+  const searchSuggestionsArray = Array.isArray(data.searchedSuggestions)
+    ? data.searchedSuggestions
+    : [];
+
+  const activeSuggestions = searchSuggestionsArray.filter(
+    (item) =>
+      item &&
+      item.needsReorder !== false &&
+      item.productId != null &&
+      !dispatchedIds.includes(String(item.productId).trim())
+  );
+  const critical = activeSuggestions.filter((item) => item.urgencyLevel === 'Critical').length;
 
   return (
     <div className="sales-module">
@@ -24,11 +105,15 @@ export default function ReorderAlertsPage() {
         selectedBranch={data.selectedBranch}
         setSelectedBranch={data.setSelectedBranch}
         onRecordSaleClick={() => setIsRecordSaleOpen(true)}
-        onRefreshData={data.refresh}
+        onRefreshData={() => {
+          localStorage.removeItem('stockpilot_dispatched_reorders');
+          setDispatchedIds([]);
+          data.refresh();
+        }}
         isRefreshing={data.isRefreshing}
         searchQuery={data.searchQuery}
         setSearchQuery={data.setSearchQuery}
-        reorderSuggestions={data.filteredSuggestions}
+        reorderSuggestions={activeSuggestions}
         sales={data.filteredSales}
       />
 
@@ -40,14 +125,14 @@ export default function ReorderAlertsPage() {
         meta={<><strong>{critical}</strong><span>critical alerts</span></>}
       />
 
-      {data.searchQuery.trim() && (
+      {data.searchQuery != null && String(data.searchQuery).trim() !== "" && (
         <div className="sales-search-banner">
-          Showing {data.searchedSuggestions.length} reorder alert{data.searchedSuggestions.length === 1 ? '' : 's'} matching “{data.searchQuery}”.
+          Showing {activeSuggestions.length} reorder alert{activeSuggestions.length === 1 ? '' : 's'} matching “{data.searchQuery}”.
           <button onClick={() => data.setSearchQuery('')}>Clear</button>
         </div>
       )}
 
-      <ReorderTable suggestions={data.searchedSuggestions} onDraftPurchaseProposal={setProposalItem} />
+      <ReorderTable suggestions={activeSuggestions} onDraftPurchaseProposal={setProposalItem} />
 
       <RecordSaleModal
         isOpen={isRecordSaleOpen}
@@ -83,11 +168,29 @@ export default function ReorderAlertsPage() {
 
             <div className="sales-modal-actions">
               <button className="btn btn-secondary" onClick={() => setProposalItem(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => {
-                const query = new URLSearchParams({ branchId: proposalItem.branchId, productId: proposalItem.productId });
-                setProposalItem(null);
-                navigate(`/procurement/replenishment?${query}`);
-              }}>
+              <button className="btn btn-primary" onClick={(() => {
+                  if (!proposalItem) return;
+                  const productId = String(proposalItem.productId).trim();
+                  if (!productId) return;
+
+                  const query = new URLSearchParams({
+                    branchId: String(proposalItem.branchId || '').trim(),
+                    productId: productId
+                  });
+
+                  // Create new array with the dispatched item, avoiding duplicates
+                  const updated = [...new Set([...dispatchedIds, productId])];
+
+                  try {
+                    setDispatchedIds(updated);
+                    localStorage.setItem('stockpilot_dispatched_reorders', JSON.stringify(updated));
+                  } catch (error) {
+                    console.error('Failed to save dispatched IDs:', error);
+                  }
+
+                  setProposalItem(null);
+                  navigate(`/procurement/replenishment?${query}`);
+                }) }>
                 Dispatch to Procurement Agent <ArrowRight size={14} />
               </button>
             </div>

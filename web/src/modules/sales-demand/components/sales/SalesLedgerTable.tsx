@@ -111,7 +111,93 @@ export const SalesLedgerTable: React.FC<SalesLedgerTableProps> = ({ sales, isLoa
 
   // Print / PDF Report
   const handlePrint = () => {
-    window.print();
+    // Create print-friendly content
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sales Ledger Report - StockPilot</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { color: #2563eb; text-align: center; }
+          h2 { color: #1e40af; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+          .meta { color: #6b7280; font-size: 0.9em; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 0.85em; }
+          th { background-color: #f3f4f6; font-weight: bold; }
+          .total-amount { font-weight: bold; color: #059669; }
+          .footer { margin-top: 30px; text-align: center; color: #6b7280; font-size: 0.8em; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Sales Ledger Report</h1>
+        <div class="meta">
+          Generated on: ${new Date().toLocaleString()}<br/>
+          Total Transactions: ${filteredSales.length}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Date</th>
+              <th>Branch</th>
+              <th>Customer</th>
+              <th>Payment</th>
+              <th>Items</th>
+              <th>Subtotal</th>
+              <th>Discount</th>
+              <th>Tax</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredSales.map(sale => `
+              <tr>
+                <td>${sale.invoiceNumber}</td>
+                <td>${new Date(sale.saleDateUtc).toLocaleDateString()}</td>
+                <td>${sale.branchName}</td>
+                <td>${sale.customerReference || 'Walk-in'}</td>
+                <td>${sale.paymentMethod === 1 ? 'Cash' : sale.paymentMethod === 2 ? 'Card' : 'Bank'}</td>
+                <td>${sale.items.length}</td>
+                <td>Rs. ${sale.subTotal.toFixed(2)}</td>
+                <td>${sale.discountAmount > 0 ? '-Rs. ' + sale.discountAmount.toFixed(2) : ''}</td>
+                <td>${sale.taxAmount > 0 ? '+Rs. ' + sale.taxAmount.toFixed(2) : ''}</td>
+                <td class="text-right">Rs. ${sale.totalAmount.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="9">TOTAL</th>
+              <th class="text-right">Rs. ${filteredSales.reduce((sum, sale) => sum + sale.totalAmount, 0).toFixed(2)}</th>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="footer">
+          StockPilot Sales Management System
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+
+      // Optional: close window after print (uncomment if desired)
+      // printWindow.onafterprint = () => printWindow.close();
+    } else {
+      alert('Unable to open print window. Please disable pop-up blockers.');
+    }
   };
 
   const renderPaymentIcon = (method: number) => {
