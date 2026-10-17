@@ -21,7 +21,10 @@ import '../layout/layout.css'
 
 // Modules merged from web/src: Sales & Demand (Student 2), Supplier Management (Student 3), Users (Student 1).
 const salesLinks = [
-  { to: '/sales', label: 'Sales & Forecasts', icon: StockIcon },
+  { to: '/sales',          label: 'Overview',       icon: DashboardIcon },
+  { to: '/sales/forecast', label: 'Forecasting',    icon: StockIcon },
+  { to: '/sales/reorder',  label: 'Reorder Alerts', icon: ProductsIcon },
+  { to: '/sales/records',  label: 'Sales Records',  icon: HistoryIcon },
 ]
 
 const supplierLinks = [

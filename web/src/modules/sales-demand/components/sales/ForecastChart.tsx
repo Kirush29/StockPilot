@@ -9,13 +9,12 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { Sparkles, ShieldCheck, Bot, DollarSign, Layers, Calendar, BarChart2, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ShieldCheck, DollarSign, Layers, Calendar, BarChart2, TrendingUp, CheckCircle2 } from 'lucide-react';
 import type { DemandForecast } from '../../types/sales';
 
 interface ForecastChartProps {
   forecast: DemandForecast | null;
   onTriggerNewForecast: () => void;
-  onInspectAgentTrace?: () => void;
   selectedHorizon?: number;
   onHorizonChange?: (horizon: number) => void;
 }
@@ -23,7 +22,6 @@ interface ForecastChartProps {
 export const ForecastChart: React.FC<ForecastChartProps> = ({
   forecast,
   onTriggerNewForecast,
-  onInspectAgentTrace,
   selectedHorizon = 30,
   onHorizonChange
 }) => {
@@ -200,16 +198,6 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
             </button>
           </div>
 
-          {onInspectAgentTrace && (
-            <button
-              className="btn btn-secondary"
-              onClick={onInspectAgentTrace}
-              style={{ fontSize: '0.75rem', padding: '5px 10px' }}
-            >
-              <Bot size={13} color="#6366F1" />
-              <span>Trace</span>
-            </button>
-          )}
 
           <button
             className="btn btn-secondary"
@@ -433,23 +421,6 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
               <strong>AI Reasoning:</strong> {forecast.agentReasoning}
             </div>
           </div>
-          {onInspectAgentTrace && (
-            <button
-              onClick={onInspectAgentTrace}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#0068FF',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                textDecoration: 'underline'
-              }}
-            >
-              View Trace &rarr;
-            </button>
-          )}
         </div>
       )}
     </div>

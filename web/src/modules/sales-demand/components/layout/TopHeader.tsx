@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Sparkles,
   Receipt,
-  Bot,
   X,
   Package,
   FileText,
@@ -22,12 +21,13 @@ interface TopHeaderProps {
   onRunForecastClick: () => void;
   onRefreshData: () => void;
   isRefreshing: boolean;
-  onOpenAgentTrace: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   reorderSuggestions?: ReorderSuggestion[];
   sales?: Sale[];
   onSelectProduct?: (productSku: string, productName: string) => void;
+  onOpenSalesRecords?: () => void;
+  pageLabel?: string;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -38,12 +38,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onRunForecastClick,
   onRefreshData,
   isRefreshing,
-  onOpenAgentTrace,
   searchQuery,
   setSearchQuery,
   reorderSuggestions = [],
   sales = [],
-  onSelectProduct
+  onSelectProduct,
+  onOpenSalesRecords,
+  pageLabel = 'Overview'
 }) => {
   const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -136,7 +137,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          Sales & Demand / <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Overview & Agent Analytics</span>
+          Sales & Demand / <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pageLabel}</span>
         </div>
       </div>
 
@@ -351,10 +352,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                         key={sale.id}
                         onClick={() => {
                           setIsSearchOpen(false);
-                          const ledgerElem = document.getElementById('sales-ledger-section');
-                          if (ledgerElem) {
-                            ledgerElem.scrollIntoView({ behavior: 'smooth' });
-                          }
+                          onOpenSalesRecords?.();
                         }}
                         style={{
                           display: 'flex',
@@ -431,7 +429,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
       </div>
 
-      {/* Right: Refresh, Agent Trace, + Quick Action Dropdown */}
+      {/* Right: Refresh + Quick Action Dropdown */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
         <button
           onClick={onRefreshData}
@@ -449,26 +447,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           }}
         >
           <RefreshCw size={15} className={isRefreshing ? 'spin-animation' : ''} />
-        </button>
-
-        <button
-          onClick={onOpenAgentTrace}
-          style={{
-            background: '#F5F3FF',
-            border: '1px solid #DDD6FE',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 12px',
-            color: '#6D28D9',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
-        >
-          <Bot size={15} color="#7C3AED" />
-          <span>Agent Trace</span>
         </button>
 
         {/* Modern '+ New' Quick Action Button */}
@@ -525,30 +503,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
                 <span>Record New Sale</span>
               </button>
 
-              <button
-                onClick={() => {
-                  setShowQuickMenu(false);
-                  onRunForecastClick();
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '9px 14px',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <Sparkles size={15} color="#7C3AED" />
-                <span>Run Forecast Agent</span>
-              </button>
             </div>
           )}
         </div>
