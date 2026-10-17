@@ -17,6 +17,14 @@ public class InMemoryUnitOfWork : IUnitOfWork
         // navigation collection, with no real change tracker to reconcile.
     }
 
+    public void Remove<TEntity>(TEntity entity) where TEntity : class
+    {
+    }
+
+    public void RemoveRange<TEntity>(IEnumerable<TEntity> entities) where TEntity : class
+    {
+    }
+
     public Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken = default) =>
         operation(cancellationToken);
 }

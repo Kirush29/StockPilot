@@ -25,6 +25,16 @@ public class EfUnitOfWork(IProcurementDbContext context) : IUnitOfWork
 
     public void Add<TEntity>(TEntity entity) where TEntity : class => context.Add(entity);
 
+    public void Remove<TEntity>(TEntity entity) where TEntity : class => context.Remove(entity);
+
+    public void RemoveRange<TEntity>(IEnumerable<TEntity> entities) where TEntity : class
+    {
+        foreach (var entity in entities)
+        {
+            context.Remove(entity);
+        }
+    }
+
     public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken = default)
     {
         // The in-memory provider (used for local dev without Postgres) doesn't support explicit

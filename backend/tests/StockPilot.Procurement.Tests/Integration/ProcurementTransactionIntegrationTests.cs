@@ -499,6 +499,23 @@ public class OrderNumberingIntegrationTests(PostgresProcurementFixture db)
         }
     }
 
+    [PostgresFact]
+    public async Task UpdateProposal_ReplacesLineItems_Succeeds()
+    {
+        var (branchId, _) = await NewBranchWithBudget(10_000m);
+        var proposalId = await NewProposal(branchId, ProposalStatus.Draft, (SeedIds.ProductPaper, 1, 10m));
+
+        await using (var context = Db.NewContext())
+        {
+            var service = Db.ProposalService(context, SeedIds.UserBranchManager, StockPilot.Procurement.Domain.Common.ProcurementRoles.BranchManager);
+            var result = await service.UpdateAsync(proposalId, new UpdateProposalRequest(
+                SeedIds.Supplier, SeedIds.Quotation, "Updated justification",
+                [new ProposalLineItemRequest(SeedIds.ProductPaper, 2, 10m)], false));
+            result.LineItems.Should().HaveCount(1);
+            result.LineItems[0].Quantity.Should().Be(2);
+        }
+    }
+
     private static async Task<int> HighestNumberBefore(Guid excludedProposal, AppDbContext context)
     {
         var prefix = $"PO-{DateTimeOffset.UtcNow.Year}-";

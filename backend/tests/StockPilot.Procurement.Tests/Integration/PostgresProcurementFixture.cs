@@ -78,6 +78,7 @@ public sealed class PostgresProcurementFixture : IAsyncLifetime
     public AppDbContext NewContext() => new(
         new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString)
+            .LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information)
             .Options);
 
     public ProcurementProposalService ProposalService(AppDbContext context, Guid userId, params string[] roles) => new(

@@ -97,7 +97,17 @@ public class ProcurementProposalService(
         proposal.QuotationId = request.QuotationId;
         proposal.Justification = request.Justification;
         proposal.TotalEstimatedCost = total;
-        proposal.LineItems = lineItems;
+
+        unitOfWork.RemoveRange(proposal.LineItems);
+        proposal.LineItems.Clear();
+
+        foreach (var item in lineItems)
+        {
+            item.ProposalId = proposal.Id;
+            proposal.LineItems.Add(item);
+            unitOfWork.Add(item);
+        }
+
         proposal.UpdatedAt = DateTimeOffset.UtcNow;
         if (request.SubmitForApproval)
         {

@@ -13,6 +13,10 @@ public interface IUnitOfWork
     /// </summary>
     void Add<TEntity>(TEntity entity) where TEntity : class;
 
+    void Remove<TEntity>(TEntity entity) where TEntity : class;
+
+    void RemoveRange<TEntity>(IEnumerable<TEntity> entities) where TEntity : class;
+
     /// <summary>
     /// Runs <paramref name="operation"/> and its <see cref="SaveChangesAsync"/> call(s) inside a
     /// single database transaction, so a multi-step write (e.g. decision -> status change ->

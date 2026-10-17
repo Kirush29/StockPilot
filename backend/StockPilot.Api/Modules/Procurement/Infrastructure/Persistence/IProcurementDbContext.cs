@@ -32,5 +32,7 @@ public interface IProcurementDbContext
 
     EntityEntry<TEntity> Add<TEntity>(TEntity entity) where TEntity : class;
 
+    EntityEntry<TEntity> Remove<TEntity>(TEntity entity) where TEntity : class;
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
